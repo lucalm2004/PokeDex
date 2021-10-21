@@ -1,0 +1,148 @@
+@charset "utf-8";
+
+/*---- INICIAL -----*/
+
+@font-face {
+    font-family: 'pixChicago';
+    src: url('fonts/pixchicago.eot');
+    src: url('fonts/pixchicago.eot') format('embedded-opentype'), url('fonts/pixchicago.woff') format('woff'), url('fonts/pixchicago.ttf') format('truetype'), url('fonts/pixchicago.svg#pixChicago') format('svg');
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: 'pixChicago';
+}
+
+
+/*----- POKEDEX -----*/
+
+#pokedex {
+    width: 180px;
+    height: 420px;
+    background-color: #F00;
+    padding: 5px;
+    position: fixed;
+    overflow-y: scroll;
+}
+
+.pokemon {
+    display: block;
+    width: 150px;
+    height: 32px;
+    padding: 5px;
+    text-decoration: none;
+    margin-bottom: 5px;
+    -webkit-border-radius: 15px;
+    -khtml-border-radius: 15px;
+    -moz-border-radius: 15px;
+    border-radius: 15px;
+}
+
+.pokemon img {
+    float: left;
+}
+
+.pokemon span {
+    float: left;
+    text-transform: uppercase;
+    font-size: 8px;
+    line-height: 32px;
+    vertical-align: top;
+    padding-left: 5px;
+}
+
+.par {
+    background-color: #999;
+}
+
+.par:hover {
+    background-color: #333;
+}
+
+.par span {
+    color: #FFF;
+}
+
+.impar {
+    background-color: #CCC;
+}
+
+.impar:hover {
+    background-color: #FFF;
+}
+
+.impar span {
+    color: #000;
+}
+
+
+/*----- POKEINFO -----*/
+
+#pokeinfo {
+    width: 140px;
+    padding: 5px;
+    background-color: #FC0;
+    position: fixed;
+    top: 0;
+    left: 170px;
+}
+
+.pokemon-foto {
+    width: 140px;
+    height: 120px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.pokemon-foto-b,
+.pokemon-foto-f {
+    width: 140px;
+    height: 120px;
+    background-repeat: no-repeat;
+    background-position: bottom center;
+    float: left;
+}
+
+.pokemon-foto-f {
+    border-radius: 20px;
+    background-color: #FFF;
+}
+
+.pokemon-info-elementos {
+    text-align: center;
+}
+
+.pokemon-info-elementos img {
+    margin: 0 10px;
+}
+
+.pokemon-info {
+    margin-bottom: 10px;
+    font-size: 8px;
+}
+
+.pokemon-info-nombre {
+    background: url(etc/pokeball.png) no-repeat;
+    padding-left: 25px;
+    text-transform: uppercase;
+    height: 25px;
+}
+
+.pokemon-stats {
+    width: 140px;
+}
+
+.pokemon-stats-info {
+    width: 140px;
+    font-size: 8px;
+}
+
+.pokemon-stats-bar {
+    height: 15px;
+    background: #0C0;
+    font-size: 8px;
+    text-align: right;
+    margin-bottom: 10px;
+}
