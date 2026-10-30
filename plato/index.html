@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diálogos y Dados</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;1,400&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
+<style>
+/* Layout: vasija de figuras rojas — barro sobre vidriado negro; el grupo a la izquierda, la mesa de juego a la derecha, una columna en móvil */
+:root {
+  --vidriado: #16100c;
+  --panel: #211812;
+  --panel-2: #2c2119;
+  --linea: #4b3626;
+  --barro: #d0743f;
+  --barro-claro: #eaa877;
+  --hueso: #f2e5d1;
+  --ceniza: #b09a83;
+  --exito: #a5b96d;
+  --fallo: #e8695a;
+  --f-titulo: "Marcellus SC", "Trajan Pro", Georgia, serif;
+  --f-texto: "Alegreya", Georgia, "Times New Roman", serif;
+  --f-etiqueta: "Alegreya Sans SC", "Gill Sans", "Trebuchet MS", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--vidriado); color: var(--hueso); }
+body { margin: 0; font-family: var(--f-texto); font-size: 17px; line-height: 1.55; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--barro-claro); outline-offset: 2px; }
+
+.envoltura {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 20px;
+}
+.meandro {
+  height: 14px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cpath d='M0 13H16V1H4V9H12V5H8' fill='none' stroke='%23d0743f' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x;
+  background-size: 20px 14px;
+}
+.etiqueta { font-family: var(--f-etiqueta); font-size: 13px; letter-spacing: .1em; color: var(--ceniza); margin: 0; }
+
+/* Cabecera */
+.cabecera { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.cabecera h1 { font-family: var(--f-titulo); font-weight: 400; font-size: clamp(30px, 5vw, 46px); letter-spacing: .06em; margin: 0; line-height: 1.05; color: var(--barro-claro); text-wrap: balance; }
+.cabecera h1 span { color: var(--hueso); }
+.capitulos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.capitulos li { font-family: var(--f-etiqueta); font-size: 13px; letter-spacing: .06em; padding: 4px 10px; border: 1px solid var(--linea); color: var(--ceniza); }
+.capitulos li b { font-family: var(--f-titulo); font-weight: 400; margin-right: 6px; }
+.capitulos li.hecho { color: var(--barro-claro); border-color: var(--barro); }
+.capitulos li.actual { background: var(--barro); color: var(--vidriado); border-color: var(--barro); }
+.herramientas { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+
+/* Botones */
+.btn { font-family: var(--f-etiqueta); font-weight: 700; letter-spacing: .08em; font-size: 15px; background: var(--barro); color: var(--vidriado); border: 1px solid var(--barro); padding: 10px 18px; border-radius: 2px; }
+.btn:hover:not(:disabled) { background: var(--barro-claro); border-color: var(--barro-claro); }
+.btn.sec { background: transparent; color: var(--barro-claro); }
+.btn.sec:hover:not(:disabled) { background: var(--panel-2); }
+.btn.mini { padding: 5px 10px; font-size: 13px; }
+
+/* Pantalla de inicio */
+.inicio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; align-items: start; }
+.inicio h2 { font-family: var(--f-titulo); font-weight: 400; font-size: clamp(26px, 4vw, 38px); line-height: 1.15; margin: 8px 0 14px; text-wrap: balance; }
+.inicio p { max-width: 60ch; }
+.formulario { background: var(--panel); border: 1px solid var(--linea); padding: 20px; display: grid; gap: 16px; }
+.cuantos { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.cuantos button { width: 40px; height: 40px; background: var(--panel-2); border: 1px solid var(--linea); font-family: var(--f-titulo); font-size: 18px; }
+.cuantos button[aria-pressed="true"] { background: var(--barro); color: var(--vidriado); border-color: var(--barro); }
+.filas { display: grid; gap: 10px; }
+.fila { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+.fila .num { font-family: var(--f-titulo); color: var(--barro-claro); font-size: 20px; text-align: center; }
+.fila input, .fila select { width: 100%; background: var(--vidriado); border: 1px solid var(--linea); padding: 8px 10px; border-radius: 2px; }
+.clases { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.clase { border: 1px solid var(--linea); padding: 12px; display: grid; gap: 4px; align-content: start; }
+.clase h4 { margin: 0; font-family: var(--f-titulo); font-weight: 400; font-size: 18px; display: flex; gap: 8px; align-items: center; }
+.clase p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ceniza); }
+.clase .hab { color: var(--hueso); }
+.reglas { border-top: 1px solid var(--linea); padding-top: 10px; }
+.reglas summary { font-family: var(--f-etiqueta); letter-spacing: .08em; color: var(--barro-claro); cursor: pointer; }
+.reglas ul { padding-left: 20px; margin: 10px 0 0; display: grid; gap: 6px; font-size: 15px; }
+
+/* Juego */
+.juego { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; align-items: start; }
+.grupo { display: grid; gap: 10px; }
+.heroe { background: var(--panel); border: 1px solid var(--linea); padding: 12px 14px; display: grid; gap: 8px; }
+.heroe.activo { border-color: var(--barro); box-shadow: 0 0 0 1px var(--barro); }
+.heroe.caido { opacity: .55; }
+.heroe-cab { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.heroe-cab div { min-width: 0; }
+.heroe-cab strong { display: block; font-weight: 600; font-size: 17px; overflow-wrap: anywhere; line-height: 1.2; }
+.glifo { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--barro); display: grid; place-items: center; font-family: var(--f-titulo); font-size: 20px; color: var(--barro-claro); }
+.activo .glifo { background: var(--barro); color: var(--vidriado); }
+.vida { display: grid; gap: 3px; }
+.vida-txt { display: flex; justify-content: space-between; font-family: var(--f-etiqueta); font-size: 13px; color: var(--ceniza); font-variant-numeric: tabular-nums; }
+.barra { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.barra i { display: block; height: 100%; background: var(--barro); transition: width .4s ease; }
+.barra.enemiga i { background: var(--fallo); }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; text-align: center; font-family: var(--f-etiqueta); font-size: 12px; color: var(--ceniza); }
+.stats b { display: block; font-family: var(--f-titulo); font-weight: 400; font-size: 17px; color: var(--hueso); font-variant-numeric: tabular-nums; }
+.zurron { background: transparent; border: 1px dashed var(--linea); padding: 12px 14px; display: grid; gap: 8px; font-size: 15px; }
+.zurron .item { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.zurron .item span { font-variant-numeric: tabular-nums; }
+
+.columna { display: grid; gap: 16px; min-width: 0; }
+.escena { background: var(--panel); border: 1px solid var(--linea); padding: 24px clamp(16px, 3vw, 32px); display: grid; gap: 14px; min-width: 0; }
+.escena h2 { font-family: var(--f-titulo); font-weight: 400; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.15; margin: 0; text-wrap: balance; color: var(--barro-claro); }
+.escena .texto { max-width: 66ch; display: grid; gap: 10px; }
+.escena .texto p { margin: 0; }
+.quien { font-size: 16px; margin: 0; color: var(--ceniza); }
+.quien b { color: var(--hueso); font-weight: 600; }
+.opciones { display: grid; gap: 8px; }
+.opcion { text-align: left; background: var(--panel-2); border: 1px solid var(--linea); padding: 12px 14px; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 16px; line-height: 1.35; }
+.opcion:hover:not(:disabled) { border-color: var(--barro); }
+.opcion .chip { flex: none; font-family: var(--f-etiqueta); font-size: 13px; letter-spacing: .06em; color: var(--barro-claro); white-space: nowrap; }
+.opcion small { display: block; color: var(--ceniza); font-size: 14px; margin-top: 2px; }
+.sello { justify-self: start; font-family: var(--f-etiqueta); font-weight: 700; letter-spacing: .12em; font-size: 14px; padding: 3px 10px; border: 1.5px solid currentColor; }
+.sello.ok { color: var(--exito); }
+.sello.ko { color: var(--fallo); }
+.linea-tirada { font-family: var(--f-etiqueta); font-size: 14px; letter-spacing: .03em; color: var(--ceniza); margin: 0; }
+.efectos { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.efectos li { font-family: var(--f-etiqueta); font-size: 13px; letter-spacing: .04em; border: 1px solid var(--linea); padding: 3px 8px; }
+.ocupado .opciones, .ocupado .acciones, .ocupado .libres, .ocupado .zurron button { pointer-events: none; opacity: .6; }
+
+/* Combate */
+.enemigo { border: 1px solid var(--linea); background: var(--vidriado); padding: 14px 16px; display: grid; gap: 8px; }
+.enemigo h3 { margin: 0; font-family: var(--f-titulo); font-weight: 400; font-size: 22px; color: var(--fallo); }
+.rasgos { display: flex; flex-wrap: wrap; gap: 6px; }
+.rasgos span { font-family: var(--f-etiqueta); font-size: 13px; letter-spacing: .04em; padding: 2px 8px; border: 1px solid var(--linea); color: var(--ceniza); }
+.rasgos .alerta { color: var(--barro-claro); border-color: var(--barro); }
+.acciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.acciones .opcion { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+/* Mesa de dados */
+.mesa { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 22px; padding: 16px; border: 1px dashed var(--linea); }
+.dado { position: relative; width: 88px; height: 88px; flex: none; display: grid; place-items: center; }
+.dado svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dado svg * { fill: none; stroke: var(--barro); stroke-width: 2; stroke-linejoin: round; }
+.dado svg .cara { fill: var(--panel-2); }
+.dado span { position: relative; top: 4px; font-family: var(--f-titulo); font-size: 26px; color: var(--hueso); font-variant-numeric: tabular-nums; }
+.dado.rodando svg { animation: girar .7s cubic-bezier(.3,.7,.4,1); }
+.dado.critico span { color: var(--exito); }
+.dado.pifia span { color: var(--fallo); }
+@keyframes girar { from { transform: rotate(0) scale(.8); } to { transform: rotate(360deg) scale(1); } }
+.dado-info { display: grid; gap: 8px; min-width: 0; flex: 1 1 260px; }
+#dado-info { margin: 0; font-size: 16px; }
+#dado-info.ok { color: var(--exito); }
+#dado-info.ko { color: var(--fallo); }
+.libres { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.libres button { background: var(--panel-2); border: 1px solid var(--linea); padding: 4px 10px; font-family: var(--f-etiqueta); font-size: 14px; border-radius: 2px; }
+.libres button:hover { border-color: var(--barro); }
+
+.cronica h3 { font-family: var(--f-etiqueta); font-weight: 500; font-size: 14px; letter-spacing: .1em; color: var(--ceniza); margin: 0 0 6px; }
+.cronica ol { list-style: none; margin: 0; padding: 0 4px 0 0; max-height: 240px; overflow-y: auto; display: grid; gap: 4px; font-size: 15px; line-height: 1.4; }
+.cronica li { color: var(--ceniza); }
+.cronica li.ok { color: var(--exito); }
+.cronica li.ko { color: var(--fallo); }
+.cronica li.esc { color: var(--barro-claro); font-family: var(--f-etiqueta); letter-spacing: .06em; margin-top: 6px; }
+.cronica li.nivel { color: var(--hueso); font-weight: 600; }
+
+.resumen { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.resumen div { border: 1px solid var(--linea); padding: 10px 12px; font-size: 15px; }
+.resumen strong { display: block; }
+.confirmar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+@media (max-width: 860px) {
+  .inicio, .juego { grid-template-columns: 1fr; }
+  .grupo { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+}
+@media (max-width: 480px) {
+  .fila { grid-template-columns: 26px minmax(0, 1fr); }
+  .fila select { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="envoltura" id="raiz">
+  <header class="cabecera">
+    <div>
+      <p class="etiqueta">Una aventura de rol platónica</p>
+      <h1>Diálogos <span>y</span> Dados</h1>
+    </div>
+    <div class="herramientas" id="herramientas"></div>
+  </header>
+  <ol class="capitulos" id="capitulos" aria-label="Capítulos"></ol>
+  <div class="meandro" aria-hidden="true"></div>
+
+  <main>
+    <section id="inicio" hidden></section>
+    <div id="juego" class="juego" hidden>
+      <aside id="grupo" class="grupo" aria-label="El grupo"></aside>
+      <div class="columna">
+        <section id="escena" class="escena" aria-live="polite"></section>
+        <section class="mesa" aria-label="Mesa de dados">
+          <div class="dado" id="dado" aria-hidden="true">
+            <svg viewBox="0 0 100 100">
+              <polygon points="50,4 92,27 92,73 50,96 8,73 8,27"/>
+              <polygon class="cara" points="50,22 78,68 22,68"/>
+              <path d="M50 4V22M8 27L50 22M92 27L50 22M8 27L22 68M92 27L78 68M8 73L22 68M92 73L78 68M50 96L22 68M50 96L78 68"/>
+            </svg>
+            <span id="dado-num">20</span>
+          </div>
+          <div class="dado-info">
+            <p class="etiqueta">La mesa</p>
+            <p id="dado-info">Cuando una acción lo pida, el d20 rodará aquí.</p>
+            <div class="libres" aria-label="Tiradas libres">
+              <span class="etiqueta">Tirada libre</span>
+              <button type="button" data-libre="4">d4</button>
+              <button type="button" data-libre="6">d6</button>
+              <button type="button" data-libre="8">d8</button>
+              <button type="button" data-libre="10">d10</button>
+              <button type="button" data-libre="12">d12</button>
+              <button type="button" data-libre="20">d20</button>
+            </div>
+          </div>
+        </section>
+        <section class="cronica" aria-label="Crónica">
+          <h3>Crónica de la partida</h3>
+          <ol id="cronica"></ol>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- Datos ---------- */
+const CLAVE = "dialogos-y-dados-v1";
+const CAPITULOS = ["La Caverna", "Atenas", "El Banquete", "Atlántida", "El Mundo de las Ideas"];
+const ROMANOS = ["I", "II", "III", "IV", "V"];
+const STATS = { raz: "Razón", ani: "Ánimo", elo: "Elocuencia", tem: "Templanza" };
+const ABREV = { raz: "RAZ", ani: "ÁNI", elo: "ELO", tem: "TEM" };
+const NOMBRES = ["Aristocles", "Diotima", "Jenofonte", "Aspasia", "Fedón", "Hiparquia"];
+
+const CLASES = {
+  filosofo: { nombre: "Filósofo", glifo: "Φ", alma: 10, stats: { raz: 3, ani: 0, elo: 1, tem: 2 },
+    hab: "Ironía socrática", habDesc: "Inflige 2d6 + RAZ de daño dialéctico sin tirar.",
+    desc: "Sabe que no sabe nada, y lo usa como arma." },
+  guardian: { nombre: "Guardián", glifo: "Γ", alma: 14, stats: { raz: 0, ani: 3, elo: -1, tem: 1 },
+    hab: "Escudo de la Polis", habDesc: "El siguiente turno del enemigo no hace daño a nadie.",
+    desc: "Soldado de la República ideal, valiente y leal." },
+  sofista: { nombre: "Sofista", glifo: "Σ", alma: 9, stats: { raz: 1, ani: -1, elo: 3, tem: 0 },
+    hab: "Paradoja de Zenón", habDesc: "El enemigo se queda pensando y pierde su próximo turno.",
+    desc: "Cobra por enseñar a ganar cualquier discusión." },
+  rapsoda: { nombre: "Rapsoda", glifo: "Ψ", alma: 10, stats: { raz: 0, ani: 1, elo: 2, tem: 1 },
+    hab: "Canto de las Musas", habDesc: "Cura 1d6 + ELO a todo el grupo y levanta a los caídos.",
+    desc: "Recita a Homero de memoria. Platón no se fía de él." },
+  atleta: { nombre: "Atleta olímpico", glifo: "Α", alma: 12, stats: { raz: 0, ani: 2, elo: 0, tem: 2 },
+    hab: "Pancracio", habDesc: "Golpe seguro de 2d8 + ÁNI de daño físico.",
+    desc: "Campeón de lucha. Dicen que Platón también lo fue." }
+};
+
+/* Escenas. Tipos: prueba (tirada), enigma (respuesta en grupo), combate, relato, final.
+   fx: alma (quien tira), almaTodos, curarTodo, maxTodos, xp (todos), nectar, olivo, dracmas, anillo */
+const ESCENAS = {
+  c1_sombras: { cap: 0, inicio: true, tipo: "prueba", titulo: "Las sombras en la pared",
+    texto: ["Despertáis encadenados en el fondo de una caverna. Desde que nacisteis solo habéis visto sombras que bailan sobre la roca: caballos, héroes, dioses.",
+            "Detrás de vosotros crepita un fuego que nunca habéis mirado. Hoy, por primera vez, uno de los grilletes cede un poco."],
+    opciones: [
+      { txt: "Romper las cadenas a la fuerza", stat: "ani", cd: 12,
+        ok: { t: "El hierro estalla. El ruido despierta ecos por toda la caverna, pero sois libres.", fx: { xp: 2 } },
+        ko: { t: "La cadena aguanta y os desgarra las muñecas antes de ceder por fin.", fx: { alma: -2 } } },
+      { txt: "Deducir qué hay detrás de las sombras", stat: "raz", cd: 11,
+        ok: { t: "Si las sombras tiemblan cuando tiembla el fuego, hay algo detrás. Palpáis el grillete y encontráis su cierre oxidado.", fx: { xp: 3 } },
+        ko: { t: "Pasáis horas convencidos de que las sombras son lo único real. El frío de la roca os cala a todos.", fx: { almaTodos: -1, xp: 1 } } },
+      { txt: "Convencer a los demás prisioneros de que os ayuden", stat: "elo", cd: 12,
+        ok: { t: "Un viejo prisionero os presta un clavo que guardaba desde hace años, y una vasija de néctar escondida.", fx: { nectar: 1, xp: 2 } },
+        ko: { t: "Los prisioneros se burlan: «¡Ahí fuera solo hay más sombras!». Os tiran piedras hasta que os soltáis solos.", fx: { alma: -2 } } }
+    ], sig: "c1_subida" },
+
+  c1_subida: { cap: 0, tipo: "prueba", titulo: "La cuesta hacia la luz",
+    texto: ["Al giraros, el fuego os ciega. Más allá hay un pasadizo empinado que sube hacia una claridad dolorosa.",
+            "Los ojos necesitan tiempo para acostumbrarse a la verdad."],
+    opciones: [
+      { txt: "Trepar a toda velocidad", stat: "ani", cd: 13,
+        ok: { t: "Llegáis arriba jadeando, con los ojos llorosos pero enteros.", fx: { xp: 2 } },
+        ko: { t: "Resbaláis en la roca húmeda y rodáis varios metros cuesta abajo.", fx: { alma: -3 } } },
+      { txt: "Subir despacio, dejando que la vista se adapte", stat: "tem", cd: 11,
+        ok: { t: "La paciencia es la virtud de un alma ordenada. Llegáis descansados.", fx: { xp: 3, almaTodos: 1 } },
+        ko: { t: "Os impacientáis a mitad de camino y acabáis subiendo a ciegas.", fx: { alma: -1 } } },
+      { txt: "Mirar primero los reflejos en los charcos", stat: "raz", cd: 12,
+        ok: { t: "Primero los reflejos, luego las cosas, luego el sol. Junto a la salida encontráis una rama de olivo.", fx: { xp: 3, olivo: 1 } },
+        ko: { t: "Miráis directamente al sol. Error de principiante.", fx: { alma: -2 } } }
+    ], sig: "c1_titiritero" },
+
+  c1_titiritero: { cap: 0, tipo: "combate", titulo: "El Titiritero de Sombras",
+    texto: ["Un ser larguísimo mueve figuras de madera delante del fuego. Si la gente ve el sol, se acaba su espectáculo, y no piensa permitirlo."],
+    enemigo: { nombre: "El Titiritero de Sombras", hp: 16, def: 11, atk: 3, dano: [1, 6, 0], ataques: 1, resiste: "fisica", debil: "dialectica",
+      victoria: { t: "Le demostráis que sus figuras son copias de copias. El Titiritero se deshace como humo y el camino queda libre.", fx: { xp: 5, nectar: 1 } } },
+    sig: "c1_sol" },
+
+  c1_sol: { cap: 0, tipo: "relato", titulo: "El sol",
+    texto: ["Salís a la superficie. Todo es más nítido de lo que imaginabais: los árboles tienen color y el agua refleja el cielo.",
+            "Lo de abajo era una copia pobre de esto. A lo lejos brillan las murallas de Atenas."],
+    fx: { curarTodo: true, xp: 2 }, boton: "Caminar hacia Atenas", sig: "c2_agora" },
+
+  c2_agora: { cap: 1, inicio: true, tipo: "prueba", titulo: "El Ágora",
+    texto: ["Mercaderes, sacerdotes y charlatanes se gritan entre las columnas de la Stoa.",
+            "Junto a una fuente, un muchacho esclavo dibuja cuadrados en la arena. Su amo dice que es incapaz de aprender nada."],
+    opciones: [
+      { txt: "Enseñarle a duplicar un cuadrado solo con preguntas", stat: "raz", cd: 12,
+        ok: { t: "Sin darle la respuesta, pregunta tras pregunta, el muchacho descubre que la diagonal es la clave. Su amo, avergonzado, os paga.", fx: { xp: 4, dracmas: 10 } },
+        ko: { t: "Os liáis con las diagonales y el muchacho acaba enseñándoos a vosotros.", fx: { xp: 1 } } },
+      { txt: "Regatear con un vendedor de ánforas de néctar", stat: "elo", cd: 11,
+        ok: { t: "Le convencéis de que la virtud del comercio es el precio justo. Os lleváis dos ánforas.", fx: { nectar: 2 } },
+        ko: { t: "Salís con un ánfora vacía y la bolsa más ligera.", fx: { dracmas: -5 } } },
+      { txt: "Echar un pulso a un hoplita borracho", stat: "ani", cd: 13,
+        ok: { t: "El hoplita acaba con el brazo en la mesa y paga la apuesta entre risas.", fx: { dracmas: 15, xp: 2 } },
+        ko: { t: "El hoplita gana y, para celebrarlo, os da un abrazo que os cruje las costillas.", fx: { alma: -3 } } }
+    ], sig: "c2_trasimaco" },
+
+  c2_trasimaco: { cap: 1, tipo: "combate", titulo: "Trasímaco el Sofista",
+    texto: ["Salta a vuestro paso como una fiera: «La justicia no es más que lo que conviene al más fuerte». Sus discípulos os rodean.",
+            "Darle un puñetazo solo le daría la razón."],
+    enemigo: { nombre: "Trasímaco", hp: 20, def: 12, atk: 4, dano: [1, 6, 1], ataques: 1, resiste: "fisica", debil: null,
+      victoria: { t: "Trasímaco se pone rojo y se calla, cosa que nadie en Atenas había visto antes. Sus discípulos os pagan para que les deis clase.", fx: { xp: 6, dracmas: 10 } } },
+    sig: "c2_giges" },
+
+  c2_giges: { cap: 1, tipo: "prueba", titulo: "El anillo de Giges",
+    texto: ["Un pastor lidio os ofrece un anillo de oro. «Si giras el engaste, nadie te ve», susurra.",
+            "Con él podríais entrar en el tesoro del tirano sin ser vistos. Nadie lo sabría nunca, salvo vuestra alma."],
+    opciones: [
+      { txt: "Usarlo para saquear el tesoro del tirano", stat: null,
+        ok: { t: "Volvéis cargados de oro. Pero esa noche nadie duerme bien: un alma injusta está en guerra consigo misma.", fx: { dracmas: 40, maxTodos: -2 } } },
+      { txt: "Arrojarlo al mar", stat: "tem", cd: 13,
+        ok: { t: "Ser justo cuando nadie te ve: esa es la prueba de verdad. El anillo se hunde y os sentís más ligeros.", fx: { xp: 6 } },
+        ko: { t: "El anillo os quema en la mano y cuesta soltarlo. Al final cae al agua, pero algo vuestro se va con él.", fx: { alma: -2, xp: 2 } } },
+      { txt: "Estudiar su magia y usarla solo contra el mal", stat: "raz", cd: 14,
+        ok: { t: "Comprendéis su mecanismo. Una vez por combate podréis volveros invisibles y confundir al enemigo.", fx: { anillo: true, xp: 2 } },
+        ko: { t: "Os volvéis invisibles sin querer y tardáis horas en volver. El pastor desaparece con el anillo.", fx: { alma: -2 } } }
+    ], sig: "c3_banquete" },
+
+  c3_banquete: { cap: 2, inicio: true, tipo: "prueba", titulo: "La casa de Agatón",
+    texto: ["Agatón celebra su victoria en el teatro. Los invitados, coronados de hiedra, se recuestan en los divanes.",
+            "De pronto irrumpe Alcibíades, borracho, y exige que alguien se beba con él una crátera entera."],
+    opciones: [
+      { txt: "Beber sin perder la compostura, como Sócrates", stat: "tem", cd: 13,
+        ok: { t: "Al amanecer seguís hablando de filosofía mientras Alcibíades ronca bajo la mesa.", fx: { xp: 4, nectar: 1 } },
+        ko: { t: "El vino sin mezclar os tumba antes del tercer brindis.", fx: { alma: -2 } } },
+      { txt: "Pronunciar un discurso en honor de Eros", stat: "elo", cd: 12,
+        ok: { t: "Los invitados aplauden. Hasta a Aristófanes se le quita el hipo.", fx: { xp: 4, almaTodos: 2 } },
+        ko: { t: "El discurso es tan flojo que Aristófanes lo imita entre hipos.", fx: { alma: -1 } } },
+      { txt: "Sacar a Alcibíades por la puerta", stat: "ani", cd: 12,
+        ok: { t: "Alcibíades acaba en la calle, cantando. Agatón os da una propina por el servicio.", fx: { xp: 2, dracmas: 5 } },
+        ko: { t: "Alcibíades era luchador. El que acaba en la calle sois vosotros.", fx: { alma: -3 } } }
+    ], sig: "c3_diotima" },
+
+  c3_diotima: { cap: 2, tipo: "enigma", titulo: "El enigma de Diotima",
+    texto: ["Una sacerdotisa de Mantinea, Diotima, se levanta y os mira fijamente:",
+            "«Si Eros desea lo bello, es porque no lo tiene. Entonces, ¿qué es Eros?»",
+            "Discutidlo en grupo. Responde quien tiene el turno."],
+    respuestas: ["Un dios hermoso y perfecto", "Un daimon: algo intermedio entre lo mortal y lo divino", "Un simple capricho del cuerpo", "El hijo de Zeus y Hera"],
+    correcta: 1,
+    ok: { t: "«Exacto. Eros es un intermediario: ni sabio ni ignorante, sino amante de la sabiduría. Como el filósofo.»", fx: { xp: 6, almaTodos: 3 } },
+    ko: { t: "Diotima suspira: «Si fuera bello, no desearía la belleza». Os explica que Eros es un daimon, a medio camino entre mortales y dioses.", fx: { almaTodos: -1, xp: 1 } },
+    sig: "c3_androgino" },
+
+  c3_androgino: { cap: 2, tipo: "combate", titulo: "El Andrógino",
+    texto: ["Aristófanes cuenta su mito: al principio los humanos eran seres dobles, con cuatro brazos, cuatro piernas y dos caras, tan fuertes que desafiaron a los dioses.",
+            "Mientras habla, uno de ellos entra rodando por el patio."],
+    enemigo: { nombre: "El Andrógino", hp: 26, def: 12, atk: 4, dano: [1, 8, 0], ataques: 2, resiste: "dialectica", debil: "fisica",
+      victoria: { t: "Como hizo Zeus, lo partís en dos. Cada mitad se marcha buscando a la otra, y así nació el amor, según Aristófanes.", fx: { xp: 7, nectar: 2 } } },
+    sig: "c4_tormenta" },
+
+  c4_tormenta: { cap: 3, inicio: true, tipo: "prueba", titulo: "La tormenta de Poseidón",
+    texto: ["Zarpáis hacia el oeste, más allá de las Columnas de Heracles, en busca de la isla que describió Critias.",
+            "Poseidón, señor de la Atlántida, no quiere visitas: el mar se alza como una muralla."],
+    opciones: [
+      { txt: "Remar contra las olas", stat: "ani", cd: 13,
+        ok: { t: "Con los brazos ardiendo, atravesáis la ola más alta.", fx: { xp: 3 } },
+        ko: { t: "Una ola barre la cubierta y os estrella contra el mástil.", fx: { almaTodos: -2 } } },
+      { txt: "Orientarse por las estrellas", stat: "raz", cd: 13,
+        ok: { t: "Las Pléyades marcan el rumbo. Encontráis un paso de agua tranquila y, flotando en él, una rama de olivo.", fx: { xp: 4, olivo: 1 } },
+        ko: { t: "Confundís Venus con una estrella y navegáis en círculos durante horas.", fx: { almaTodos: -2 } } },
+      { txt: "Rezar a Poseidón con palabras justas", stat: "elo", cd: 14,
+        ok: { t: "Al dios le divierte vuestra osadía y calma el mar.", fx: { xp: 4, almaTodos: 2 } },
+        ko: { t: "A Poseidón no le gusta vuestro tono. El mar se enfada todavía más.", fx: { almaTodos: -2 } } }
+    ], sig: "c4_templo" },
+
+  c4_templo: { cap: 3, tipo: "enigma", titulo: "La puerta de oricalco",
+    texto: ["La Atlántida es una ciudad de anillos de agua y de tierra alrededor de un templo cubierto de oricalco.",
+            "En la puerta hay una inscripción: «Soy lo que no cambia aunque todo cambie. Las cosas me imitan, pero nadie me ha visto con los ojos. ¿Qué soy?»"],
+    respuestas: ["El tiempo", "El reflejo en el agua", "Una Idea, una Forma", "El oricalco"],
+    correcta: 2,
+    ok: { t: "La puerta gira en silencio. Dentro hay ofrendas: néctar y una rama de olivo dorada.", fx: { xp: 6, nectar: 1, olivo: 1 } },
+    ko: { t: "La puerta escupe agua hirviendo antes de abrirse a regañadientes. La respuesta era «una Idea».", fx: { almaTodos: -2, xp: 1 } },
+    sig: "c4_atlas" },
+
+  c4_atlas: { cap: 3, tipo: "combate", titulo: "Atlas, rey de la Atlántida",
+    texto: ["El primer rey de la isla, hijo de Poseidón, se alza en su trono con una lanza de oricalco.",
+            "Su pueblo dejó de ser virtuoso y se llenó de hybris, la desmesura. Ahora quiere conquistar Atenas."],
+    enemigo: { nombre: "Atlas", hp: 36, def: 13, atk: 5, dano: [1, 10, 0], ataques: 2, resiste: null, debil: null,
+      victoria: { t: "Con la caída de Atlas la isla tiembla y empieza a hundirse en el mar, como contaba el mito. Escapáis por los pelos.", fx: { xp: 10, nectar: 2 } } },
+    sig: "c5_linea" },
+
+  c5_linea: { cap: 4, inicio: true, tipo: "prueba", titulo: "La línea dividida",
+    texto: ["Un rayo de luz os arranca de la cubierta. Subís por los cuatro tramos del conocimiento: imágenes, cosas, números y, por fin, Ideas.",
+            "Cada tramo os pide algo distinto."],
+    opciones: [
+      { txt: "Resolver una demostración geométrica", stat: "raz", cd: 14,
+        ok: { t: "El teorema cierra como una puerta bien hecha. Subís un tramo entero de golpe.", fx: { xp: 5 } },
+        ko: { t: "Un error en el tercer paso os hace caer de nuevo al mundo de las opiniones.", fx: { almaTodos: -2 } } },
+      { txt: "Vaciar la mente de deseos", stat: "tem", cd: 13,
+        ok: { t: "Sin hambre ni miedo, flotáis hacia arriba.", fx: { xp: 5, almaTodos: 2 } },
+        ko: { t: "Os acordáis del vino de Agatón y perdéis la concentración.", fx: { almaTodos: -2 } } },
+      { txt: "Dialogar con las Formas", stat: "elo", cd: 14,
+        ok: { t: "La Idea de lo Igual y la Idea de lo Bello os responden. Os indican el camino.", fx: { xp: 5 } },
+        ko: { t: "Las Formas no responden a la retórica barata.", fx: { almaTodos: -2 } } }
+    ], sig: "c5_doxa" },
+
+  c5_doxa: { cap: 4, tipo: "combate", titulo: "Doxa, la Gran Opinión",
+    texto: ["Una nube enorme hecha de rumores, prejuicios y verdades a medias. Cambia de forma cada vez que la miráis.",
+            "Las espadas la atraviesan sin hacerle nada. Solo la razón la disuelve."],
+    enemigo: { nombre: "Doxa", hp: 44, def: 13, atk: 5, dano: [1, 10, 0], ataques: 2, resiste: "fisica", debil: "dialectica",
+      victoria: { t: "La última opinión se disuelve en el aire. Detrás de la niebla aparece una luz que no se parece a nada.", fx: { xp: 10, curarTodo: true } } },
+    sig: "c5_bien" },
+
+  c5_bien: { cap: 4, tipo: "final", titulo: "La Idea del Bien",
+    texto: ["Ante vosotros brilla algo que no es un objeto, sino la luz que hace visibles todas las cosas. Por un instante lo entendéis todo.",
+            "Entonces os acordáis de la caverna, y de los prisioneros que siguen allí encadenados, mirando sombras."],
+    opciones: [
+      { txt: "Bajar a la caverna a liberar a los demás", final: "rey" },
+      { txt: "Quedarse para siempre contemplando el Bien", final: "contemplacion" }
+    ] }
+};
+
+const FINALES = {
+  rey: { titulo: "Los filósofos-reyes",
+    texto: ["Bajáis de nuevo a la oscuridad. Los prisioneros se ríen: tenéis los ojos torpes en la penumbra y habláis de un sol que nadie ha visto.",
+            "Pero insistís, pregunta tras pregunta, como hacía Sócrates. Uno a uno, los grilletes caen.",
+            "Años después, Atenas os llama sus filósofos-reyes. Gobernáis sin desear el poder, y por eso gobernáis bien."] },
+  contemplacion: { titulo: "La contemplación eterna",
+    texto: ["Os quedáis en la luz. No hay hambre, ni miedo, ni opinión. Sois felices como lo son las cosas perfectas.",
+            "Abajo, en la caverna, las sombras siguen bailando sobre la roca y nadie sabe que existís.",
+            "Platón diría que el sabio está obligado a volver. Pero eso ya es otra partida."] }
+};
+
+/* ---------- Utilidades ---------- */
+const $ = s => document.querySelector(s);
+const d = n => 1 + Math.floor(Math.random() * n);
+const tirar = (c, s, b = 0) => { let t = b; for (let i = 0; i < c; i++) t += d(s); return t; };
+const fmt = n => (n >= 0 ? "+" : "−") + Math.abs(n);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const reducido = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let S = null;
+let ocupado = false;
+let confirmando = false;
+let borrador = { n: 3, filas: NOMBRES.map((nombre, i) => ({ nombre, clase: Object.keys(CLASES)[i % 5] })) };
+
+function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {} }
+function cargar() { try { const t = localStorage.getItem(CLAVE); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+function borrar() { try { localStorage.removeItem(CLAVE); } catch (e) {} }
+
+function log(t, cls = "") { S.log.push({ t, cls }); if (S.log.length > 120) S.log.shift(); }
+function vivos() { return S.players.map((p, i) => i).filter(i => S.players[i].alma > 0); }
+function siguienteVivo(desde) {
+  const n = S.players.length;
+  for (let k = 0; k < n; k++) { const i = (desde + k) % n; if (S.players[i].alma > 0) return i; }
+  return 0;
+}
+function masHerido() {
+  return S.players.slice().sort((a, b) => a.alma / a.max - b.alma / b.max)[0];
+}
+function curar(p, n) { const antes = p.alma; p.alma = Math.min(p.max, p.alma + n); return p.alma - antes; }
+
+/* ---------- Progreso ---------- */
+function ganarXp(n) {
+  const out = [];
+  if (!n) return out;
+  out.push(`${fmt(n)} Sabiduría`);
+  S.players.forEach(p => {
+    p.xp = Math.max(0, p.xp + n);
+    while (p.nivel < 1 + Math.floor(p.xp / 10)) {
+      p.nivel++; p.max += 2; p.alma = Math.min(p.max, p.alma + 2);
+      const bajo = Object.keys(STATS).reduce((a, k) => (p.stats[k] < p.stats[a] ? k : a), "raz");
+      if (p.stats[bajo] < 5) p.stats[bajo]++;
+      const t = `${p.nombre} sube a nivel ${p.nivel}: +2 Alma máxima y +1 ${STATS[bajo]}`;
+      log(t, "nivel"); out.push(t);
+    }
+  });
+  return out;
+}
+
+function aplicarFx(fx = {}, actor) {
+  const out = [];
+  const vida = (p, n) => { p.alma = Math.max(1, Math.min(p.max, p.alma + n)); };
+  if (fx.alma && actor) { vida(actor, fx.alma); out.push(`${fmt(fx.alma)} Alma para ${actor.nombre}`); }
+  if (fx.almaTodos) { S.players.forEach(p => vida(p, fx.almaTodos)); out.push(`${fmt(fx.almaTodos)} Alma para todo el grupo`); }
+  if (fx.maxTodos) {
+    S.players.forEach(p => { p.max = Math.max(4, p.max + fx.maxTodos); p.alma = Math.min(p.alma, p.max); });
+    out.push(`${fmt(fx.maxTodos)} Alma máxima para todos`);
+  }
+  if (fx.curarTodo) { S.players.forEach(p => { p.alma = p.max; }); out.push("Alma restaurada por completo"); }
+  if (fx.nectar) { S.nectar = Math.max(0, S.nectar + fx.nectar); out.push(`${fmt(fx.nectar)} Néctar`); }
+  if (fx.olivo) { S.olivo += fx.olivo; out.push(`${fmt(fx.olivo)} Rama de olivo`); }
+  if (fx.dracmas) { S.dracmas = Math.max(0, S.dracmas + fx.dracmas); out.push(`${fmt(fx.dracmas)} dracmas`); }
+  if (fx.anillo) { S.anillo = true; out.push("Anillo de Giges"); }
+  out.push(...ganarXp(fx.xp));
+  return out;
+}
+
+/* ---------- Dados ---------- */
+function tirarDado(final, caras, cb) {
+  const el = $("#dado"), num = $("#dado-num");
+  el.classList.remove("critico", "pifia");
+  const terminar = () => {
+    num.textContent = final;
+    el.classList.remove("rodando");
+    if (caras === 20 && final === 20) el.classList.add("critico");
+    if (caras === 20 && final === 1) el.classList.add("pifia");
+    ocupado = false; document.body.classList.remove("ocupado");
+    cb();
+  };
+  ocupado = true; document.body.classList.add("ocupado");
+  if (reducido) return terminar();
+  void el.offsetWidth; el.classList.add("rodando");
+  const iv = setInterval(() => { num.textContent = d(caras); }, 55);
+  setTimeout(() => { clearInterval(iv); terminar(); }, 700);
+}
+function mostrarTirada(texto, ok) {
+  const info = $("#dado-info");
+  info.textContent = texto;
+  info.className = ok === true ? "ok" : ok === false ? "ko" : "";
+}
+function usarOlivo() {
+  if (S.olivoActivo && S.olivo > 0) { S.olivo--; S.olivoActivo = false; return 2; }
+  return 0;
+}
+function lineaTirada(quien, accion, r, mod, bono, total, contra) {
+  let t = `${quien} ${accion}: ${r} ${fmt(mod)}${bono ? " +2 olivo" : ""} = ${total} contra ${contra}`;
+  if (r === 20) t += " · ¡crítico!";
+  if (r === 1) t += " · ¡pifia!";
+  return t;
+}
+
+/* ---------- Flujo de escenas ---------- */
+function nuevaPartida(filas) {
+  S = {
+    players: filas.map(f => {
+      const c = CLASES[f.clase];
+      return { nombre: f.nombre.trim() || "Anónimo", clase: f.clase, stats: { ...c.stats }, alma: c.alma, max: c.alma, xp: 0, nivel: 1, habUsada: false };
+    }),
+    nectar: 1, olivo: 0, olivoActivo: false, dracmas: 0, anillo: false,
+    escena: null, turno: 0, fase: "elegir", resultado: null, combate: null,
+    derrota: false, final: null, guardadoCap: null, log: []
+  };
+  log(`Comienza la partida: ${S.players.map(p => p.nombre).join(", ")}.`);
+  entrarEscena("c1_sombras");
+}
+
+function entrarEscena(id) {
+  const sc = ESCENAS[id];
+  S.escena = id; S.fase = "elegir"; S.resultado = null; S.combate = null;
+  S.turno = siguienteVivo(S.turno);
+  if (sc.inicio) { S.guardadoCap = null; S.guardadoCap = JSON.stringify(S); }
+  log(`${ROMANOS[sc.cap]} · ${sc.titulo}`, "esc");
+  if (sc.tipo === "combate") iniciarCombate(sc);
+  guardar(); render();
+}
+
+function elegirOpcion(i) {
+  if (ocupado) return;
+  const sc = ESCENAS[S.escena], op = sc.opciones[i], p = S.players[S.turno];
+  if (!op.stat) return resolver(op.ok, op.ok, true, null, op.sig || sc.sig, false);
+  const mod = p.stats[op.stat], bono = usarOlivo(), r = d(20);
+  tirarDado(r, 20, () => {
+    const total = r + mod + bono;
+    const ok = r === 20 || (r !== 1 && total >= op.cd);
+    const linea = lineaTirada(p.nombre, `tira ${STATS[op.stat]}`, r, mod, bono, total, `CD ${op.cd}`);
+    mostrarTirada(linea, ok);
+    resolver(op.ok, op.ko, ok, linea, op.sig || sc.sig, r === 20);
+  });
+}
+
+function responder(i) {
+  if (ocupado) return;
+  const sc = ESCENAS[S.escena];
+  resolver(sc.ok, sc.ko, i === sc.correcta, `${S.players[S.turno].nombre} responde: «${sc.respuestas[i]}»`, sc.sig, false, "enigma");
+}
+
+function resolver(okRama, koRama, ok, linea, sig, critico, tipo = "prueba") {
+  const p = S.players[S.turno], rama = ok ? okRama : koRama;
+  const efectos = aplicarFx(rama.fx, p);
+  if (critico) efectos.push(...ganarXp(1));
+  S.fase = "resultado";
+  S.resultado = { ok, tipo, linea, texto: rama.t, efectos, siguiente: sig };
+  log(linea ? `${linea} → ${ok ? "éxito" : "fracaso"}` : `${p.nombre} decide sin tirar.`, ok ? "ok" : "ko");
+  guardar(); render();
+}
+
+function continuar() {
+  if (ocupado) return;
+  S.turno = siguienteVivo(S.turno + 1);
+  entrarEscena(S.resultado.siguiente);
+}
+
+function continuarRelato() {
+  const sc = ESCENAS[S.escena];
+  const efectos = aplicarFx(sc.fx);
+  if (efectos.length) log(efectos.join(" · "), "ok");
+  entrarEscena(sc.sig);
+}
+
+function elegirFinal(clave) {
+  S.final = clave;
+  log(`Final: ${FINALES[clave].titulo}`, "esc");
+  guardar(); render();
+}
+
+function reencarnar() {
+  const g = JSON.parse(S.guardadoCap);
+  g.log = S.log; g.guardadoCap = S.guardadoCap;
+  S = g;
+  S.players.forEach(p => { p.alma = p.max; });
+  log("Como en el mito de Er, vuestras almas eligen una nueva vida y volvéis al inicio del capítulo.", "esc");
+  entrarEscena(S.escena);
+}
+
+function beberFuera() {
+  if (S.nectar <= 0 || S.combate || ocupado) return;
+  const p = masHerido();
+  if (p.alma >= p.max) return;
+  S.nectar--;
+  const c = curar(p, 8);
+  log(`${p.nombre} bebe néctar y recupera ${c} de Alma.`, "ok");
+  guardar(); render();
+}
+
+/* ---------- Combate ---------- */
+function iniciarCombate(sc) {
+  const n = S.players.length, e = sc.enemigo;
+  const hp = Math.round(e.hp * (0.5 + 0.25 * n));
+  S.combate = { hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0), ronda: 1, actuaron: [], aturdido: false, escudo: false, anilloUsado: false, enemigoActua: false };
+  S.players.forEach(p => { p.habUsada = false; });
+}
+
+function multiplicar(base, tipo, e) {
+  if (e.resiste === tipo) return [Math.max(1, Math.floor(base / 2)), " (lo resiste)"];
+  if (e.debil === tipo) return [base * 2, " (¡punto débil!)"];
+  return [base, ""];
+}
+
+function accion(tipo) {
+  if (ocupado || !S.combate || S.combate.enemigoActua) return;
+  const sc = ESCENAS[S.escena], e = sc.enemigo, c = S.combate, p = S.players[S.turno];
+  const fin = () => {
+    c.actuaron.push(S.turno);
+    guardar();
+    if (c.hp <= 0) return victoria();
+    avanzarTurno();
+  };
+  const danar = (base, clase) => {
+    const [dmg, nota] = multiplicar(base, clase, e);
+    c.hp = Math.max(0, c.hp - dmg);
+    return `${dmg} de daño${nota}`;
+  };
+
+  if (tipo === "golpear" || tipo === "refutar") {
+    const st = tipo === "golpear" ? "ani" : (p.stats.raz >= p.stats.elo ? "raz" : "elo");
+    const mod = p.stats[st], bono = usarOlivo(), r = d(20);
+    tirarDado(r, 20, () => {
+      const total = r + mod + bono;
+      const ok = r === 20 || (r !== 1 && total >= e.def);
+      const linea = lineaTirada(p.nombre, tipo === "golpear" ? "golpea" : "refuta", r, mod, bono, total, `Defensa ${e.def}`);
+      if (ok) {
+        const res = danar(Math.max(1, tirar(r === 20 ? 2 : 1, 8, mod)), tipo === "golpear" ? "fisica" : "dialectica");
+        log(`${linea} → ${res}`, "ok"); mostrarTirada(`${linea} → ${res}`, true);
+      } else {
+        log(`${linea} → falla`, "ko"); mostrarTirada(`${linea} → falla`, false);
+      }
+      fin();
+    });
+    return;
+  }
+  if (tipo === "meditar") {
+    const r = d(20);
+    tirarDado(r, 20, () => {
+      const obj = masHerido(), mod = p.stats.tem;
+      const ok = r === 20 || (r !== 1 && r + mod >= 10);
+      const c2 = curar(obj, ok ? Math.max(1, d(6) + mod) : 1);
+      const t = `${p.nombre} medita (TEM ${r} ${fmt(mod)} contra CD 10) y ${obj === p ? "recupera" : `devuelve a ${obj.nombre}`} ${c2} de Alma`;
+      log(t, ok ? "ok" : "ko"); mostrarTirada(t, ok);
+      fin();
+    });
+    return;
+  }
+  if (tipo === "nectar") {
+    if (S.nectar <= 0) return;
+    S.nectar--;
+    const obj = masHerido(), c2 = curar(obj, 8);
+    log(`${p.nombre} da néctar a ${obj.nombre}: +${c2} Alma.`, "ok");
+    return fin();
+  }
+  if (tipo === "anillo") {
+    if (!S.anillo || c.anilloUsado) return;
+    c.anilloUsado = true; c.aturdido = true;
+    log(`${p.nombre} gira el Anillo de Giges y desaparece. ${e.nombre} no sabe a quién atacar.`, "ok");
+    return fin();
+  }
+  if (tipo === "habilidad") {
+    if (p.habUsada) return;
+    p.habUsada = true;
+    const hab = CLASES[p.clase].hab;
+    if (p.clase === "filosofo") log(`${p.nombre} usa ${hab}: «Solo sé que no sé nada... ¿y tú?» → ${danar(tirar(2, 6, p.stats.raz), "dialectica")}`, "ok");
+    if (p.clase === "atleta") log(`${p.nombre} usa ${hab} → ${danar(tirar(2, 8, p.stats.ani), "fisica")}`, "ok");
+    if (p.clase === "guardian") { c.escudo = true; log(`${p.nombre} alza el ${hab}. El próximo turno del enemigo no hará daño.`, "ok"); }
+    if (p.clase === "sofista") { c.aturdido = true; log(`${p.nombre} plantea la ${hab}: Aquiles nunca alcanzará a la tortuga. ${e.nombre} se queda pensando.`, "ok"); }
+    if (p.clase === "rapsoda") {
+      const n = tirar(1, 6, p.stats.elo);
+      S.players.forEach(x => curar(x, Math.max(1, n)));
+      log(`${p.nombre} entona el ${hab}: todo el grupo recupera ${Math.max(1, n)} de Alma.`, "ok");
+    }
+    return fin();
+  }
+}
+
+function avanzarTurno() {
+  const c = S.combate;
+  const pend = vivos().filter(i => !c.actuaron.includes(i));
+  if (pend.length) {
+    S.turno = pend.find(i => i > S.turno) ?? pend[0];
+    guardar(); render();
+  } else turnoEnemigo();
+}
+
+function turnoEnemigo() {
+  const c = S.combate, e = ESCENAS[S.escena].enemigo;
+  c.enemigoActua = true;
+  ocupado = true; document.body.classList.add("ocupado");
+  render();
+  setTimeout(() => {
+    if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; }
+    else if (c.escudo) { log(`${e.nombre} ataca, pero el Escudo de la Polis lo detiene todo.`, "ok"); c.escudo = false; }
+    else {
+      for (let k = 0; k < c.ataques; k++) {
+        const vs = vivos();
+        if (!vs.length) break;
+        const t = S.players[vs[Math.floor(Math.random() * vs.length)]];
+        const r = d(20), defensa = 10 + t.stats.ani;
+        const ok = r === 20 || (r !== 1 && r + e.atk >= defensa);
+        $("#dado-num").textContent = r;
+        if (ok) {
+          const dmg = tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2]);
+          t.alma = Math.max(0, t.alma - dmg);
+          const t2 = `${e.nombre} ataca a ${t.nombre}: ${r} ${fmt(e.atk)} contra ${defensa} → ${dmg} de daño${t.alma === 0 ? `. ¡${t.nombre} cae!` : ""}`;
+          log(t2, "ko"); mostrarTirada(t2, false);
+        } else {
+          const t2 = `${e.nombre} ataca a ${t.nombre}: ${r} ${fmt(e.atk)} contra ${defensa} → falla`;
+          log(t2, "ok"); mostrarTirada(t2, true);
+        }
+      }
+    }
+    c.enemigoActua = false; c.actuaron = []; c.ronda++;
+    ocupado = false; document.body.classList.remove("ocupado");
+    if (!vivos().length) { S.derrota = true; log("Todo el grupo ha caído.", "ko"); }
+    else S.turno = siguienteVivo(0);
+    guardar(); render();
+  }, reducido ? 150 : 900);
+}
+
+function victoria() {
+  const sc = ESCENAS[S.escena], e = sc.enemigo;
+  S.players.forEach(p => { if (p.alma <= 0) p.alma = 1; p.habUsada = false; });
+  S.combate = null;
+  const efectos = aplicarFx(e.victoria.fx);
+  S.fase = "resultado";
+  S.resultado = { ok: true, tipo: "victoria", linea: null, texto: e.victoria.t, efectos, siguiente: sc.sig };
+  log(`¡${e.nombre} ha sido derrotado!`, "ok");
+  guardar(); render();
+}
+
+/* ---------- Render ---------- */
+function render() {
+  renderCapitulos(); renderHerramientas();
+  $("#inicio").hidden = !!S; $("#juego").hidden = !S;
+  if (!S) return renderInicio();
+  renderGrupo(); renderEscena(); renderCronica();
+}
+
+function renderCapitulos() {
+  const actual = S ? ESCENAS[S.escena].cap : -1;
+  $("#capitulos").innerHTML = CAPITULOS.map((c, i) => {
+    const cls = S && S.final ? "hecho" : i < actual ? "hecho" : i === actual ? "actual" : "";
+    return `<li class="${cls}"><b>${ROMANOS[i]}</b>${c}</li>`;
+  }).join("");
+}
+
+function renderHerramientas() {
+  const h = $("#herramientas");
+  if (!S) { h.innerHTML = ""; return; }
+  h.innerHTML = confirmando
+    ? `<div class="confirmar"><span>Se perderá la partida actual.</span>
+        <button type="button" class="btn mini" data-acc="reiniciar">Empezar de nuevo</button>
+        <button type="button" class="btn sec mini" data-acc="cancelar">Seguir jugando</button></div>`
+    : `<button type="button" class="btn sec mini" data-acc="confirmar">Nueva partida</button>`;
+}
+
+function renderInicio() {
+  const guardada = cargar();
+  const claves = Object.keys(CLASES);
+  const filas = borrador.filas.slice(0, borrador.n).map((f, i) => `
+    <div class="fila">
+      <span class="num">${ROMANOS[i] || i + 1}</span>
+      <input id="nombre-${i}" data-i="${i}" data-campo="nombre" value="${esc(f.nombre)}" maxlength="24" aria-label="Nombre del jugador ${i + 1}">
+      <select id="clase-${i}" data-i="${i}" data-campo="clase" aria-label="Clase del jugador ${i + 1}">
+        ${claves.map(k => `<option value="${k}"${k === f.clase ? " selected" : ""}>${CLASES[k].glifo} · ${CLASES[k].nombre}</option>`).join("")}
+      </select>
+    </div>`).join("");
+  $("#inicio").innerHTML = `
+    <div class="inicio">
+      <div>
+        <p class="etiqueta">De 1 a 6 jugadores · un solo dispositivo · unos 40 minutos</p>
+        <h2>Salid de la caverna y llegad hasta la Idea del Bien.</h2>
+        <p>Cinco capítulos inspirados en los diálogos de Platón: la alegoría de la caverna, el debate con Trasímaco, el anillo de Giges, el Banquete, la Atlántida y la línea dividida. Por turnos, cada jugador decide qué hace el grupo y tira el d20.</p>
+        <p>Pasaos el móvil o jugad en una pantalla grande. La partida se guarda sola en este navegador.</p>
+        ${guardada && !guardada.final ? `<p><button type="button" class="btn" data-acc="cargar">Continuar partida: ${esc(CAPITULOS[ESCENAS[guardada.escena].cap])}</button></p>` : ""}
+        <details class="reglas">
+          <summary>Cómo se juega</summary>
+          <ul>
+            <li><b>Tiradas:</b> d20 + atributo. Si iguala o supera la CD, es un éxito. Un 20 natural siempre sale bien; un 1, siempre mal.</li>
+            <li><b>Atributos:</b> Razón (lógica, números), Ánimo (fuerza y coraje; también os defiende), Elocuencia (persuadir) y Templanza (autocontrol y curación).</li>
+            <li><b>Combate:</b> cada jugador actúa una vez por ronda y después ataca el enemigo. Golpear usa Ánimo y hace daño físico; Refutar usa vuestra mejor Razón o Elocuencia y hace daño dialéctico. Algunos enemigos resisten un tipo o son débiles a él.</li>
+            <li><b>Alma</b> es vuestra vida. Quien cae a 0 en combate pierde sus turnos hasta que lo curen o acabe la pelea.</li>
+            <li><b>Sabiduría</b> es la experiencia. Cada 10 puntos subís de nivel: +2 de Alma máxima y +1 a vuestro atributo más bajo, porque el alma busca la armonía.</li>
+            <li>Si cae todo el grupo, podéis reencarnar al inicio del capítulo, como en el mito de Er.</li>
+            <li>Los dados libres sirven para improvisar si uno de vosotros hace de narrador.</li>
+          </ul>
+        </details>
+      </div>
+      <form class="formulario" id="form-inicio">
+        <div class="cuantos" role="group" aria-label="Número de jugadores">
+          <span class="etiqueta">Jugadores</span>
+          ${[1, 2, 3, 4, 5, 6].map(n => `<button type="button" data-n="${n}" aria-pressed="${n === borrador.n}">${n}</button>`).join("")}
+        </div>
+        <div class="filas">${filas}</div>
+        <div class="clases">
+          ${claves.map(k => { const c = CLASES[k]; return `
+            <div class="clase">
+              <h4><span class="glifo">${c.glifo}</span>${c.nombre}</h4>
+              <p>${c.desc}</p>
+              <p>Alma ${c.alma} · ${Object.keys(STATS).map(s => `${ABREV[s]} ${fmt(c.stats[s])}`).join(" · ")}</p>
+              <p class="hab"><b>${c.hab}:</b> ${c.habDesc}</p>
+            </div>`; }).join("")}
+        </div>
+        <button type="submit" class="btn">Comenzar la aventura</button>
+      </form>
+    </div>`;
+}
+
+function renderGrupo() {
+  const enCombate = !!S.combate;
+  const heroes = S.players.map((p, i) => {
+    const c = CLASES[p.clase];
+    const activo = i === S.turno && !S.final && !S.derrota && !(S.combate && S.combate.enemigoActua);
+    return `
+    <div class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}">
+      <div class="heroe-cab"><span class="glifo">${c.glifo}</span>
+        <div><strong>${esc(p.nombre)}</strong><span class="etiqueta">${c.nombre} · nivel ${p.nivel}${p.alma <= 0 ? " · caído" : ""}</span></div>
+      </div>
+      <div class="vida">
+        <div class="vida-txt"><span>Alma ${p.alma}/${p.max}</span><span>Sabiduría ${p.xp}/${p.nivel * 10}</span></div>
+        <div class="barra"><i style="width:${Math.round(100 * p.alma / p.max)}%"></i></div>
+      </div>
+      <div class="stats">${Object.keys(STATS).map(s => `<div><b>${fmt(p.stats[s])}</b>${ABREV[s]}</div>`).join("")}</div>
+      ${enCombate ? `<span class="etiqueta">${c.hab}: ${p.habUsada ? "usada" : "disponible"}</span>` : ""}
+    </div>`;
+  }).join("");
+  const herido = S.players.some(p => p.alma < p.max);
+  const zurron = `
+    <div class="zurron">
+      <span class="etiqueta">Zurrón del grupo</span>
+      <div class="item"><span>Néctar × ${S.nectar}</span>
+        ${!enCombate && !S.final ? `<button type="button" class="btn sec mini" data-acc="beber" ${S.nectar > 0 && herido ? "" : "disabled"}>Beber (+8)</button>` : ""}</div>
+      <div class="item"><span>Rama de olivo × ${S.olivo}</span>
+        ${S.olivo > 0 && !S.final ? `<button type="button" class="btn ${S.olivoActivo ? "" : "sec "}mini" data-acc="olivo" aria-pressed="${S.olivoActivo}">${S.olivoActivo ? "Lista: +2" : "Usar en la próxima tirada"}</button>` : ""}</div>
+      <div class="item"><span>Dracmas: ${S.dracmas}</span></div>
+      ${S.anillo ? `<div class="item"><span>Anillo de Giges</span><span class="etiqueta">1 vez por combate</span></div>` : ""}
+    </div>`;
+  $("#grupo").innerHTML = heroes + zurron;
+}
+
+function parrafos(arr) { return `<div class="texto">${arr.map(t => `<p>${t}</p>`).join("")}</div>`; }
+function cabecera(sc) {
+  return `<p class="etiqueta">Capítulo ${ROMANOS[sc.cap]} · ${CAPITULOS[sc.cap]}</p><h2>${sc.titulo}</h2>`;
+}
+
+function renderEscena() {
+  const sc = ESCENAS[S.escena], p = S.players[S.turno], cl = CLASES[p.clase];
+  const el = $("#escena");
+
+  if (S.final) {
+    const f = FINALES[S.final];
+    el.innerHTML = `<p class="etiqueta">Fin de la aventura</p><h2>${f.titulo}</h2>${parrafos(f.texto)}
+      <div class="resumen">${S.players.map(x => `<div><strong>${esc(x.nombre)}</strong>${CLASES[x.clase].nombre} · nivel ${x.nivel}<br>Sabiduría ${x.xp}</div>`).join("")}</div>
+      <p class="quien">Dracmas en la bolsa: <b>${S.dracmas}</b>${S.dracmas >= 40 ? " (el oro del tirano todavía pesa en vuestras conciencias)" : ""}</p>
+      <div><button type="button" class="btn" data-acc="reiniciar">Jugar otra vez</button></div>`;
+    return;
+  }
+  if (S.derrota) {
+    el.innerHTML = `<p class="etiqueta">Capítulo ${ROMANOS[sc.cap]} · ${CAPITULOS[sc.cap]}</p><h2>Descenso al Hades</h2>
+      ${parrafos(["Vuestras almas cruzan el río del Olvido. Pero, como cuenta el soldado Er, las almas pueden elegir una nueva vida antes de volver."])}
+      <div class="confirmar"><button type="button" class="btn" data-acc="reencarnar">Reencarnar al inicio del capítulo</button>
+      <button type="button" class="btn sec" data-acc="reiniciar">Empezar desde la caverna</button></div>`;
+    return;
+  }
+
+  const quien = `<p class="quien">Decide <b>${esc(p.nombre)}</b> (${cl.nombre}).${S.olivoActivo && S.olivo > 0 ? " La rama de olivo dará +2 a esta tirada." : ""}</p>`;
+
+  if (S.fase === "resultado") {
+    const r = S.resultado;
+    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Decisión tomada";
+    const siguiente = S.players[siguienteVivo(S.turno + 1)];
+    el.innerHTML = `${cabecera(sc)}
+      <span class="sello ${r.ok ? "ok" : "ko"}">${sello}</span>
+      ${r.linea ? `<p class="linea-tirada">${esc(r.linea)}</p>` : ""}
+      ${parrafos([r.texto])}
+      ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      <div><button type="button" class="btn" data-acc="continuar">Continuar · turno de ${esc(siguiente.nombre)}</button></div>`;
+    return;
+  }
+
+  if (sc.tipo === "prueba") {
+    el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}${quien}
+      <div class="opciones">${sc.opciones.map((op, i) => `
+        <button type="button" class="opcion" data-op="${i}">
+          <span>${op.txt}</span>
+          <span class="chip">${op.stat ? `${ABREV[op.stat]} ${fmt(p.stats[op.stat])} · CD ${op.cd}` : "Sin tirada"}</span>
+        </button>`).join("")}</div>`;
+  } else if (sc.tipo === "enigma") {
+    el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
+      <p class="quien">Responde <b>${esc(p.nombre)}</b>. Aquí no hay dados: solo vuestra cabeza.</p>
+      <div class="opciones">${sc.respuestas.map((t, i) => `<button type="button" class="opcion" data-resp="${i}"><span>${t}</span></button>`).join("")}</div>`;
+  } else if (sc.tipo === "relato") {
+    el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
+      <ul class="efectos"><li>Alma restaurada por completo</li><li>+${sc.fx.xp} Sabiduría</li></ul>
+      <div><button type="button" class="btn" data-acc="relato">${sc.boton}</button></div>`;
+  } else if (sc.tipo === "final") {
+    el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
+      <p class="quien">Decidid entre todos. Esta elección cierra la partida.</p>
+      <div class="opciones">${sc.opciones.map(op => `<button type="button" class="opcion" data-final="${op.final}"><span>${op.txt}</span></button>`).join("")}</div>`;
+  } else if (sc.tipo === "combate") {
+    const e = sc.enemigo, c = S.combate;
+    const nombreTipo = { fisica: "golpes", dialectica: "argumentos" };
+    const refStat = p.stats.raz >= p.stats.elo ? "raz" : "elo";
+    const acciones = [
+      { k: "golpear", t: "Golpear", s: `d20 ${fmt(p.stats.ani)} · 1d8 ${fmt(p.stats.ani)} físico` },
+      { k: "refutar", t: "Refutar", s: `d20 ${fmt(p.stats[refStat])} · 1d8 ${fmt(p.stats[refStat])} dialéctico` },
+      { k: "meditar", t: "Meditar", s: `Cura al más herido · TEM ${fmt(p.stats.tem)} contra CD 10` },
+      { k: "habilidad", t: cl.hab, s: cl.habDesc, off: p.habUsada },
+      { k: "nectar", t: `Dar néctar (${S.nectar})`, s: "+8 Alma al más herido", off: S.nectar <= 0 },
+      ...(S.anillo ? [{ k: "anillo", t: "Anillo de Giges", s: "El enemigo pierde su turno", off: c.anilloUsado }] : [])
+    ];
+    el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
+      <div class="enemigo">
+        <h3>${e.nombre}</h3>
+        <div class="vida">
+          <div class="vida-txt"><span>Alma ${c.hp}/${c.hpMax}</span><span>Ronda ${c.ronda}</span></div>
+          <div class="barra enemiga"><i style="width:${Math.round(100 * c.hp / c.hpMax)}%"></i></div>
+        </div>
+        <div class="rasgos">
+          <span>Defensa ${e.def}</span><span>${c.ataques} ataque${c.ataques > 1 ? "s" : ""} por ronda</span>
+          ${e.resiste ? `<span>Resiste ${nombreTipo[e.resiste]}</span>` : ""}
+          ${e.debil ? `<span class="alerta">Débil a ${nombreTipo[e.debil]}</span>` : ""}
+          ${c.aturdido ? `<span class="alerta">Perderá su turno</span>` : ""}
+          ${c.escudo ? `<span class="alerta">Escudo de la Polis activo</span>` : ""}
+        </div>
+      </div>
+      ${c.enemigoActua
+        ? `<p class="quien"><b>${e.nombre}</b> contraataca…</p>`
+        : `${quien}<div class="acciones">${acciones.map(a => `
+          <button type="button" class="opcion" data-accion="${a.k}" ${a.off ? "disabled" : ""}>
+            <span>${a.t}</span><small>${a.s}</small>
+          </button>`).join("")}</div>`}`;
+  }
+}
+
+function renderCronica() {
+  const ol = $("#cronica");
+  ol.innerHTML = S.log.slice(-60).map(l => `<li class="${l.cls}">${esc(l.t)}</li>`).join("");
+  ol.scrollTop = ol.scrollHeight;
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener("click", ev => {
+  const b = ev.target.closest("button");
+  if (!b || b.disabled) return;
+  if (b.dataset.n) { borrador.n = +b.dataset.n; return renderInicio(); }
+  if (b.dataset.libre) {
+    if (ocupado) return;
+    const caras = +b.dataset.libre, r = d(caras);
+    return tirarDado(r, caras, () => { mostrarTirada(`Tirada libre de d${caras}: ${r}`); if (S) { log(`Tirada libre de d${caras}: ${r}`); renderCronica(); } });
+  }
+  if (b.dataset.op) return elegirOpcion(+b.dataset.op);
+  if (b.dataset.resp) return responder(+b.dataset.resp);
+  if (b.dataset.final) return elegirFinal(b.dataset.final);
+  if (b.dataset.accion) return accion(b.dataset.accion);
+  switch (b.dataset.acc) {
+    case "continuar": return continuar();
+    case "relato": return continuarRelato();
+    case "beber": return beberFuera();
+    case "olivo": S.olivoActivo = !S.olivoActivo; guardar(); return render();
+    case "reencarnar": return reencarnar();
+    case "confirmar": confirmando = true; return renderHerramientas();
+    case "cancelar": confirmando = false; return renderHerramientas();
+    case "reiniciar": confirmando = false; S = null; borrar(); return render();
+    case "cargar": S = cargar(); return arrancar();
+  }
+});
+document.addEventListener("input", ev => {
+  const t = ev.target;
+  if (t.dataset && t.dataset.campo) borrador.filas[+t.dataset.i][t.dataset.campo] = t.value;
+});
+document.addEventListener("submit", ev => {
+  if (ev.target.id !== "form-inicio") return;
+  ev.preventDefault();
+  nuevaPartida(borrador.filas.slice(0, borrador.n));
+});
+
+function arrancar() {
+  if (S && S.combate) {
+    S.combate.enemigoActua = false;
+    if (vivos().length && vivos().every(i => S.combate.actuaron.includes(i))) return turnoEnemigo();
+  }
+  render();
+}
+render();
+})();
+</script>
+</body>
+</html>
