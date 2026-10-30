@@ -520,7 +520,7 @@ function esAnfitrion() { return (!!S && !S.online) || (!!red.info && red.info.an
 function avisar(t) { const a = $("#aviso"); a.textContent = t || ""; a.hidden = !t; }
 function avisarError(e) {
   const code = e && e.code;
-  if (code === "invalid_argument") avisar("No tienes permiso para jugar en esta mesa. Pide a quien te pasó el juego que te dé acceso de Colaborador.");
+  if (code === "invalid_argument") avisar("No tienes permiso para jugar en esta mesa. Pide al dueño del juego que te invite por correo con permiso de edición (el enlace público solo deja mirar).");
   else if (code === "quota_exceeded") avisar("El almacén de partidas está lleno. Borrad mesas antiguas o jugad en este dispositivo.");
   else if (code === "revoked") avisar("Has perdido el acceso a este juego.");
   else avisar("No se pudo guardar la jugada. Revisa la conexión e inténtalo de nuevo.");
