@@ -95,7 +95,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .heroe.activo { border-color: var(--barro); box-shadow: 0 0 0 1px var(--barro); }
 .heroe.caido { opacity: .55; }
 .heroe-cab { display: flex; gap: 10px; align-items: center; min-width: 0; }
-.heroe-cab div { min-width: 0; }
+.heroe-cab div { min-width: 0; flex: 1; }
 .heroe-cab strong { display: block; font-weight: 600; font-size: 17px; overflow-wrap: anywhere; line-height: 1.2; }
 .glifo { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--barro); display: grid; place-items: center; font-family: var(--f-titulo); font-size: 20px; color: var(--barro-claro); }
 .activo .glifo { background: var(--barro); color: var(--vidriado); }
@@ -171,8 +171,37 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .resumen strong { display: block; }
 .confirmar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
+/* Mesas en línea */
+.aviso { margin: 0; padding: 10px 14px; border: 1px solid var(--barro); color: var(--barro-claro); font-size: 15px; }
+.modos { display: flex; border-bottom: 1px solid var(--linea); }
+.modos button { background: transparent; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 14px; font-family: var(--f-etiqueta); font-size: 15px; letter-spacing: .08em; color: var(--ceniza); }
+.modos button[aria-selected="true"] { color: var(--barro-claro); border-bottom-color: var(--barro); }
+.panel { display: grid; gap: 20px; }
+.bloque { display: grid; gap: 8px; }
+.bloque h3, .formulario h3 { margin: 0; font-family: var(--f-titulo); font-weight: 400; font-size: 20px; }
+.bloque p, .formulario > p { margin: 0; color: var(--ceniza); font-size: 15px; }
+.unirse { display: flex; gap: 8px; flex-wrap: wrap; }
+.unirse input { width: 7.5ch; background: var(--vidriado); border: 1px solid var(--linea); padding: 6px 10px; font-family: var(--f-titulo); font-size: 20px; letter-spacing: .2em; text-transform: uppercase; }
+.mesas { display: grid; gap: 6px; }
+.mesa-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border: 1px solid var(--linea); }
+.mesa-fila b { font-family: var(--f-titulo); font-weight: 400; font-size: 18px; letter-spacing: .15em; color: var(--barro-claro); }
+.mesa-fila span { flex: 1; min-width: 0; font-size: 14px; color: var(--ceniza); }
+.sala { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; align-items: start; }
+.sala-info { display: grid; gap: 14px; }
+.sala-info > p { margin: 0; max-width: 46ch; }
+.codigo { margin: 0; font-family: var(--f-titulo); font-size: clamp(60px, 11vw, 104px); line-height: 1; letter-spacing: .18em; color: var(--barro-claro); user-select: all; }
+.asientos { display: grid; gap: 8px; }
+.asiento { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--linea); background: var(--panel); }
+.asiento div { flex: 1; min-width: 0; }
+.asiento strong { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.punto { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--linea); }
+.punto.on { background: var(--exito); }
+.espera { margin: 0; color: var(--ceniza); font-style: italic; }
+.chip-mesa { font-family: var(--f-etiqueta); font-size: 14px; letter-spacing: .08em; color: var(--ceniza); }
+.chip-mesa b { font-family: var(--f-titulo); font-weight: 400; letter-spacing: .15em; color: var(--barro-claro); }
+
 @media (max-width: 860px) {
-  .inicio, .juego { grid-template-columns: 1fr; }
+  .inicio, .juego, .sala { grid-template-columns: 1fr; }
   .grupo { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 }
 @media (max-width: 480px) {
@@ -195,6 +224,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   </header>
   <ol class="capitulos" id="capitulos" aria-label="Capítulos"></ol>
   <div class="meandro" aria-hidden="true"></div>
+  <p id="aviso" class="aviso" role="status" hidden></p>
 
   <main>
     <section id="inicio" hidden></section>
@@ -460,10 +490,178 @@ const reducido = window.matchMedia && matchMedia("(prefers-reduced-motion: reduc
 let S = null;
 let ocupado = false;
 let confirmando = false;
-let borrador = { n: 3, filas: NOMBRES.map((nombre, i) => ({ nombre, clase: Object.keys(CLASES)[i % 5] })) };
+let borrador = {
+  modo: window.claude && window.claude.use ? "online" : "local",
+  n: 3, filas: NOMBRES.map((nombre, i) => ({ nombre, clase: Object.keys(CLASES)[i % 5] })),
+  mios: { n: 1, filas: [0, 1, 2].map(i => ({ nombre: NOMBRES[(Math.floor(Math.random() * 6) + i) % 6], clase: Object.keys(CLASES)[(Math.floor(Math.random() * 5) + i) % 5] })) }
+};
 
-function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {} }
-function cargar() { try { const t = localStorage.getItem(CLAVE); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+/* Mesa en línea: db guarda la partida (mesas/<código>) y los asientos (mesas/<código>/asientos/<uid>);
+   room dice quién está conectado; user identifica de quién es cada héroe. */
+const CLAVE_MESA = "dialogos-y-dados-mesa";
+const red = { listo: false, db: null, room: null, yo: null, mesas: [], info: null, asientos: [], enLinea: new Set(),
+  sala: null, subs: [], ultimo: null, pendiente: null, escribiendo: false };
+let mesa = null;
+let dadoVisto = 0;
+let pantalla = "";
+
+function guardar() {
+  if (!S) return;
+  S.rev = (S.rev || 0) + 1;
+  if (S.online) { if (mesa) escribirMesa(); return; }
+  try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {}
+}
+function cargar() {
+  try { const t = localStorage.getItem(CLAVE); const g = t ? JSON.parse(t) : null; return g && !g.online ? g : null; } catch (e) { return null; }
+}
+function puedoActuar() { return !S || !S.online || (!!S.players[S.turno] && S.players[S.turno].uid === red.yo); }
+function esAnfitrion() { return (!!S && !S.online) || (!!red.info && red.info.anfitrion === red.yo); }
+
+function avisar(t) { const a = $("#aviso"); a.textContent = t || ""; a.hidden = !t; }
+function avisarError(e) {
+  const code = e && e.code;
+  if (code === "invalid_argument") avisar("No tienes permiso para jugar en esta mesa. Pide a quien te pasó el juego que te dé acceso de Colaborador.");
+  else if (code === "quota_exceeded") avisar("El almacén de partidas está lleno. Borrad mesas antiguas o jugad en este dispositivo.");
+  else if (code === "revoked") avisar("Has perdido el acceso a este juego.");
+  else avisar("No se pudo guardar la jugada. Revisa la conexión e inténtalo de nuevo.");
+}
+
+async function conectar() {
+  if (!window.claude || !window.claude.use) { red.listo = true; pantalla = ""; return render(); }
+  const [db, user, room] = await Promise.all(["db", "user", "room"].map(n => window.claude.use(n).catch(() => null)));
+  red.db = db; red.room = room;
+  red.yo = user ? await user.id().catch(() => null) : null;
+  red.listo = true;
+  if (red.db && red.yo) {
+    red.db.collection("mesas").orderBy("creada", "desc").limit(20).onSnapshot(snap => {
+      red.mesas = snap.docs.map(d => d.data()).filter(m => m.estado !== "fin" && Date.now() - (m.creada || 0) < 2 * 864e5);
+      if (!S && !mesa) actualizarListaMesas();
+    }, () => { red.mesas = []; });
+    let recordada = null;
+    try { recordada = localStorage.getItem(CLAVE_MESA); } catch (e) {}
+    if (recordada && !S) return entrarMesa(recordada, true);
+  } else if (!S) borrador.modo = "local";
+  pantalla = ""; render();
+}
+
+async function crearMesa() {
+  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let c = "";
+  for (let i = 0; i < 4; i++) c += letras[Math.floor(Math.random() * letras.length)];
+  try {
+    await red.db.doc(`mesas/${c}`).set({ codigo: c, anfitrion: red.yo, estado: "sala", creada: Date.now(), actualizada: Date.now(), juego: null, jugadores: 0, capitulo: 0 });
+    entrarMesa(c);
+  } catch (e) { avisarError(e); }
+}
+
+function entrarMesa(codigo, silencioso) {
+  salirMesa(true);
+  mesa = codigo; avisar("");
+  try { localStorage.setItem(CLAVE_MESA, codigo); } catch (e) {}
+  let confirmado = false;
+  const reloj = setTimeout(() => { if (!confirmado) avisar("La mesa tarda en responder. Puede que la conexión vaya lenta."); }, 10000);
+  red.subs.push(red.db.doc(`mesas/${codigo}`).onSnapshot(snap => {
+    if (!snap.metadata.fromCache && !confirmado) { confirmado = true; clearTimeout(reloj); avisar(""); }
+    if (!snap.exists) {
+      if (confirmado) { salirMesa(); if (!silencioso) avisar(`No hay ninguna mesa con el código ${codigo}.`); }
+      return;
+    }
+    recibirMesa(snap.data());
+  }, e => { clearTimeout(reloj); avisarError(e); }));
+  red.subs.push(red.db.collection(`mesas/${codigo}/asientos`).onSnapshot(s => {
+    red.asientos = s.docs.map(d => d.data()).sort((a, b) => (a.t || 0) - (b.t || 0));
+    if (!S) render();
+  }, () => {}));
+  if (red.room) {
+    red.room.join(`mesa-${codigo.toLowerCase()}`).then(r => {
+      if (mesa !== codigo) return r.leave();
+      red.sala = r;
+      r.presence({ uid: red.yo }).catch(() => {});
+      red.subs.push(r.onPeers(ch => {
+        red.enLinea = new Set(ch.peers.map(p => p.presence && p.presence.uid).filter(Boolean));
+        S ? renderGrupo() : render();
+        renderHerramientas();
+      }, () => {}));
+    }).catch(() => {});
+  }
+  pantalla = ""; render();
+}
+
+function salirMesa(silencioso) {
+  if (mesa && red.yo && red.info && red.info.estado === "sala") red.db.doc(`mesas/${mesa}/asientos/${red.yo}`).delete().catch(() => {});
+  red.subs.forEach(u => u()); red.subs = [];
+  if (red.sala) red.sala.leave().catch(() => {});
+  red.sala = null; red.enLinea = new Set(); red.info = null; red.asientos = []; red.ultimo = null;
+  if (S && S.online) S = null;
+  mesa = null;
+  try { localStorage.removeItem(CLAVE_MESA); } catch (e) {}
+  if (!silencioso) { pantalla = ""; render(); }
+}
+
+function recibirMesa(m) {
+  red.info = m;
+  if (m.estado === "sala" || !m.juego) {
+    if (S && S.online) { S = null; pantalla = ""; }
+    return render();
+  }
+  if (m.juego === red.ultimo) return;
+  let nuevo;
+  try { nuevo = JSON.parse(m.juego); } catch (e) { return; }
+  const primero = !S || !S.online;
+  if (!primero && (nuevo.rev || 0) <= (S.rev || 0)) return;
+  S = nuevo; red.ultimo = m.juego;
+  const t = S.dado;
+  if (t && !primero && t.seq > dadoVisto && !ocupado) {
+    dadoVisto = t.seq; render();
+    return tirarDado(t.n, t.caras || 20, () => mostrarTirada(t.texto, t.ok, false));
+  }
+  if (t) { dadoVisto = t.seq; $("#dado-num").textContent = t.n; mostrarTirada(t.texto, t.ok, false); }
+  render();
+}
+
+function escribirMesa() {
+  red.pendiente = JSON.stringify(S);
+  red.ultimo = red.pendiente;
+  if (!red.escribiendo) vaciarCola();
+}
+async function vaciarCola() {
+  red.escribiendo = true;
+  while (red.pendiente && mesa) {
+    const juego = red.pendiente, g = JSON.parse(juego);
+    red.pendiente = null;
+    const datos = { juego, estado: g.final ? "fin" : "jugando", capitulo: ESCENAS[g.escena].cap, jugadores: g.players.length, actualizada: Date.now() };
+    for (let intento = 0; intento < 2; intento++) {
+      try { await red.db.doc(`mesas/${mesa}`).update(datos); break; }
+      catch (e) {
+        if (e.code === "unavailable" && intento === 0) { await new Promise(r => setTimeout(r, 600 + Math.random() * 800)); continue; }
+        avisarError(e); break;
+      }
+    }
+  }
+  red.escribiendo = false;
+}
+
+async function sentarse() {
+  const m = borrador.mios;
+  const heroes = m.filas.slice(0, m.n).map(f => ({ nombre: f.nombre.trim().slice(0, 24) || "Anónimo", clase: f.clase }));
+  const previo = red.asientos.find(a => a.uid === red.yo);
+  try {
+    await red.db.doc(`mesas/${mesa}/asientos/${red.yo}`).set({ uid: red.yo, heroes, t: previo ? previo.t : Date.now() });
+    avisar("");
+  } catch (e) { avisarError(e); }
+}
+
+function comenzarEnLinea() {
+  const filas = [];
+  red.asientos.forEach(a => (a.heroes || []).forEach(h => filas.push({ ...h, uid: a.uid })));
+  if (!filas.length || !esAnfitrion()) return;
+  nuevaPartida(filas.slice(0, 6), mesa);
+}
+
+async function volverASala() {
+  try { await red.db.doc(`mesas/${mesa}`).update({ estado: "sala", juego: null, actualizada: Date.now() }); }
+  catch (e) { avisarError(e); }
+}
 function borrar() { try { localStorage.removeItem(CLAVE); } catch (e) {} }
 
 function log(t, cls = "") { S.log.push({ t, cls }); if (S.log.length > 120) S.log.shift(); }
@@ -532,10 +730,15 @@ function tirarDado(final, caras, cb) {
   const iv = setInterval(() => { num.textContent = d(caras); }, 55);
   setTimeout(() => { clearInterval(iv); terminar(); }, 700);
 }
-function mostrarTirada(texto, ok) {
+function mostrarTirada(texto, ok, enPartida = true) {
   const info = $("#dado-info");
   info.textContent = texto;
   info.className = ok === true ? "ok" : ok === false ? "ko" : "";
+  if (enPartida && S) {
+    const seq = ((S.dado && S.dado.seq) || 0) + 1;
+    S.dado = { seq, n: +$("#dado-num").textContent, caras: 20, texto, ok };
+    dadoVisto = seq;
+  }
 }
 function usarOlivo() {
   if (S.olivoActivo && S.olivo > 0) { S.olivo--; S.olivoActivo = false; return 2; }
@@ -549,11 +752,12 @@ function lineaTirada(quien, accion, r, mod, bono, total, contra) {
 }
 
 /* ---------- Flujo de escenas ---------- */
-function nuevaPartida(filas) {
+function nuevaPartida(filas, codigo) {
   S = {
+    online: codigo ? { codigo } : null, rev: 0, dado: null,
     players: filas.map(f => {
-      const c = CLASES[f.clase];
-      return { nombre: f.nombre.trim() || "Anónimo", clase: f.clase, stats: { ...c.stats }, alma: c.alma, max: c.alma, xp: 0, nivel: 1, habUsada: false };
+      const c = CLASES[f.clase] || CLASES.filosofo;
+      return { nombre: f.nombre.trim() || "Anónimo", clase: CLASES[f.clase] ? f.clase : "filosofo", uid: f.uid || null, stats: { ...c.stats }, alma: c.alma, max: c.alma, xp: 0, nivel: 1, habUsada: false };
     }),
     nectar: 1, olivo: 0, olivoActivo: false, dracmas: 0, anillo: false,
     escena: null, turno: 0, fase: "elegir", resultado: null, combate: null,
@@ -624,7 +828,7 @@ function elegirFinal(clave) {
 
 function reencarnar() {
   const g = JSON.parse(S.guardadoCap);
-  g.log = S.log; g.guardadoCap = S.guardadoCap;
+  g.log = S.log; g.guardadoCap = S.guardadoCap; g.rev = S.rev; g.dado = S.dado;
   S = g;
   S.players.forEach(p => { p.alma = p.max; });
   log("Como en el mito de Er, vuestras almas eligen una nueva vida y volvéis al inicio del capítulo.", "esc");
@@ -660,7 +864,6 @@ function accion(tipo) {
   const sc = ESCENAS[S.escena], e = sc.enemigo, c = S.combate, p = S.players[S.turno];
   const fin = () => {
     c.actuaron.push(S.turno);
-    guardar();
     if (c.hp <= 0) return victoria();
     avanzarTurno();
   };
@@ -788,8 +991,118 @@ function victoria() {
 function render() {
   renderCapitulos(); renderHerramientas();
   $("#inicio").hidden = !!S; $("#juego").hidden = !S;
-  if (!S) return renderInicio();
+  if (!S) {
+    const clave = mesa ? `sala-${mesa}` : `inicio-${borrador.modo}-${red.listo}-${!!red.db}`;
+    if (clave !== pantalla) { pantalla = clave; mesa ? pintarSala() : renderInicio(); }
+    return mesa ? actualizarSala() : actualizarListaMesas();
+  }
+  pantalla = "juego";
   renderGrupo(); renderEscena(); renderCronica();
+}
+
+function htmlClases() {
+  return `<div class="clases">${Object.keys(CLASES).map(k => { const c = CLASES[k]; return `
+    <div class="clase">
+      <h4><span class="glifo">${c.glifo}</span>${c.nombre}</h4>
+      <p>${c.desc}</p>
+      <p>Alma ${c.alma} · ${Object.keys(STATS).map(s => `${ABREV[s]} ${fmt(c.stats[s])}`).join(" · ")}</p>
+      <p class="hab"><b>${c.hab}:</b> ${c.habDesc}</p>
+    </div>`; }).join("")}</div>`;
+}
+function htmlFilas(grupo, n, prefijo) {
+  const claves = Object.keys(CLASES);
+  return grupo.filas.slice(0, n).map((f, i) => `
+    <div class="fila">
+      <span class="num">${ROMANOS[i] || i + 1}</span>
+      <input id="${prefijo}nombre-${i}" data-i="${i}" data-grupo="${prefijo}" data-campo="nombre" value="${esc(f.nombre)}" maxlength="24" aria-label="Nombre del héroe ${i + 1}">
+      <select id="${prefijo}clase-${i}" data-i="${i}" data-grupo="${prefijo}" data-campo="clase" aria-label="Clase del héroe ${i + 1}">
+        ${claves.map(k => `<option value="${k}"${k === f.clase ? " selected" : ""}>${CLASES[k].glifo} · ${CLASES[k].nombre}</option>`).join("")}
+      </select>
+    </div>`).join("");
+}
+
+function panelOnline() {
+  if (!red.listo) return `<p class="espera">Conectando con las mesas…</p>`;
+  if (!red.db || !red.yo) return `<p class="aviso">Las mesas en línea funcionan al abrir el juego en claude.ai con la sesión iniciada. Mientras tanto podéis jugar todos en este dispositivo.</p>`;
+  return `
+    <div class="bloque">
+      <h3>Crear una mesa</h3>
+      <p>Serás el anfitrión. Tus amigos entran con el código y cada uno juega su héroe desde su propio móvil.</p>
+      <div><button type="button" class="btn" data-acc="crear">Crear mesa nueva</button></div>
+    </div>
+    <form class="bloque" id="form-unirse">
+      <h3>Entrar con un código</h3>
+      <div class="unirse">
+        <input id="codigo-mesa" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD" aria-label="Código de la mesa">
+        <button type="submit" class="btn sec">Entrar</button>
+      </div>
+    </form>
+    <div class="bloque">
+      <h3>Mesas abiertas</h3>
+      <div id="lista-mesas" class="mesas"></div>
+    </div>`;
+}
+
+function actualizarListaMesas() {
+  const el = $("#lista-mesas");
+  if (!el) return;
+  if (!red.mesas.length) { el.innerHTML = `<p class="espera">No hay mesas abiertas. Crea una y comparte el código.</p>`; return; }
+  el.innerHTML = red.mesas.map(m => {
+    const min = Math.max(1, Math.round((Date.now() - (m.creada || 0)) / 60000));
+    const hace = min < 60 ? `hace ${min} min` : `hace ${Math.round(min / 60)} h`;
+    const estado = m.estado === "jugando" ? `Jugando · capítulo ${ROMANOS[m.capitulo || 0]} · ${m.jugadores} héroes` : "En la sala, esperando";
+    return `<div class="mesa-fila"><b>${esc(m.codigo)}</b><span>${estado} · creada ${hace}</span>
+      <button type="button" class="btn sec mini" data-unirse="${esc(m.codigo)}">Entrar</button></div>`;
+  }).join("");
+}
+
+function pintarSala() {
+  const m = borrador.mios;
+  $("#inicio").innerHTML = `
+    <div class="sala">
+      <div class="sala-info">
+        <p class="etiqueta">Código de la mesa</p>
+        <p class="codigo">${esc(mesa)}</p>
+        <p>Pasa este código a tus amigos. Tienen que abrir este mismo juego en claude.ai, elegir «Mesa en línea» y escribirlo.</p>
+        <div id="sala-asientos" class="asientos"></div>
+        <div id="sala-acciones" class="confirmar"></div>
+      </div>
+      <form class="formulario" id="form-asiento">
+        <h3>Tus héroes</h3>
+        <p>Lo normal es uno por persona. Si alguien juega sin móvil, añádelo aquí y os turnáis este dispositivo.</p>
+        <div class="cuantos" role="group" aria-label="Héroes en este dispositivo">
+          <span class="etiqueta">Héroes</span>
+          ${[1, 2, 3].map(n => `<button type="button" data-nmios="${n}" aria-pressed="${n === m.n}">${n}</button>`).join("")}
+        </div>
+        <div class="filas">${htmlFilas(m, m.n, "mios")}</div>
+        <button type="submit" class="btn" id="btn-sentarse">Sentarme a la mesa</button>
+        ${htmlClases()}
+      </form>
+    </div>`;
+}
+
+function actualizarSala() {
+  const lista = $("#sala-asientos"), acc = $("#sala-acciones");
+  if (!lista) return;
+  const anfitrion = red.info && red.info.anfitrion;
+  const heroes = [];
+  red.asientos.forEach(a => (a.heroes || []).forEach(h => heroes.push({ ...h, uid: a.uid })));
+  lista.innerHTML = heroes.length ? heroes.map(h => {
+    const c = CLASES[h.clase] || CLASES.filosofo;
+    const etiquetas = [c.nombre, h.uid === red.yo ? "tú" : "", h.uid === anfitrion ? "anfitrión" : ""].filter(Boolean).join(" · ");
+    const on = red.enLinea.has(h.uid) || h.uid === red.yo;
+    return `<div class="asiento"><span class="glifo">${c.glifo}</span>
+      <div><strong>${esc(h.nombre)}</strong><span class="etiqueta">${etiquetas}</span></div>
+      <span class="punto${on ? " on" : ""}" title="${on ? "Conectado" : "Sin conexión"}"></span></div>`;
+  }).join("") : `<p class="espera">Todavía no se ha sentado nadie.</p>`;
+  const sentado = red.asientos.some(a => a.uid === red.yo);
+  const btn = $("#btn-sentarse");
+  if (btn) btn.textContent = sentado ? "Actualizar mis héroes" : "Sentarme a la mesa";
+  const extra = heroes.length > 6 ? `<p class="espera">Hay ${heroes.length} héroes: solo jugarán los 6 primeros.</p>` : "";
+  acc.innerHTML = (esAnfitrion()
+    ? `<button type="button" class="btn" data-acc="comenzar" ${heroes.length ? "" : "disabled"}>Comenzar con ${Math.min(6, heroes.length)} héroe${heroes.length === 1 ? "" : "s"}</button>`
+    : `<p class="espera">Esperando a que el anfitrión empiece la partida.</p>`)
+    + `<button type="button" class="btn sec" data-acc="salir">Salir de la mesa</button>` + extra;
 }
 
 function renderCapitulos() {
@@ -802,6 +1115,15 @@ function renderCapitulos() {
 
 function renderHerramientas() {
   const h = $("#herramientas");
+  if (S && S.online) {
+    const conectados = S.players.filter(p => p.uid === red.yo || red.enLinea.has(p.uid)).length;
+    h.innerHTML = `<span class="chip-mesa">Mesa <b>${esc(mesa || S.online.codigo)}</b> · ${conectados} de ${S.players.length} conectados</span>` + (confirmando
+      ? `<div class="confirmar"><span>La partida sigue para los demás.</span>
+          <button type="button" class="btn mini" data-acc="salir">Salir</button>
+          <button type="button" class="btn sec mini" data-acc="cancelar">Quedarme</button></div>`
+      : `<button type="button" class="btn sec mini" data-acc="confirmar">Salir de la mesa</button>`);
+    return;
+  }
   if (!S) { h.innerHTML = ""; return; }
   h.innerHTML = confirmando
     ? `<div class="confirmar"><span>Se perderá la partida actual.</span>
@@ -812,23 +1134,15 @@ function renderHerramientas() {
 
 function renderInicio() {
   const guardada = cargar();
-  const claves = Object.keys(CLASES);
-  const filas = borrador.filas.slice(0, borrador.n).map((f, i) => `
-    <div class="fila">
-      <span class="num">${ROMANOS[i] || i + 1}</span>
-      <input id="nombre-${i}" data-i="${i}" data-campo="nombre" value="${esc(f.nombre)}" maxlength="24" aria-label="Nombre del jugador ${i + 1}">
-      <select id="clase-${i}" data-i="${i}" data-campo="clase" aria-label="Clase del jugador ${i + 1}">
-        ${claves.map(k => `<option value="${k}"${k === f.clase ? " selected" : ""}>${CLASES[k].glifo} · ${CLASES[k].nombre}</option>`).join("")}
-      </select>
-    </div>`).join("");
+  const online = borrador.modo === "online";
   $("#inicio").innerHTML = `
     <div class="inicio">
       <div>
-        <p class="etiqueta">De 1 a 6 jugadores · un solo dispositivo · unos 40 minutos</p>
+        <p class="etiqueta">De 1 a 6 jugadores · cada uno en su móvil o todos en uno · unos 40 minutos</p>
         <h2>Salid de la caverna y llegad hasta la Idea del Bien.</h2>
         <p>Cinco capítulos inspirados en los diálogos de Platón: la alegoría de la caverna, el debate con Trasímaco, el anillo de Giges, el Banquete, la Atlántida y la línea dividida. Por turnos, cada jugador decide qué hace el grupo y tira el d20.</p>
-        <p>Pasaos el móvil o jugad en una pantalla grande. La partida se guarda sola en este navegador.</p>
-        ${guardada && !guardada.final ? `<p><button type="button" class="btn" data-acc="cargar">Continuar partida: ${esc(CAPITULOS[ESCENAS[guardada.escena].cap])}</button></p>` : ""}
+        <p>En una mesa en línea cada amigo controla su héroe desde su dispositivo y todos veis rodar los mismos dados. Si estáis juntos con una sola pantalla, jugad en este dispositivo y pasaos el móvil.</p>
+        ${!online && guardada && !guardada.final ? `<p><button type="button" class="btn" data-acc="cargar">Continuar partida: ${esc(CAPITULOS[ESCENAS[guardada.escena].cap])}</button></p>` : ""}
         <details class="reglas">
           <summary>Cómo se juega</summary>
           <ul>
@@ -842,23 +1156,22 @@ function renderInicio() {
           </ul>
         </details>
       </div>
-      <form class="formulario" id="form-inicio">
+      <div class="formulario">
+        <div class="modos" role="tablist" aria-label="Cómo jugar">
+          <button type="button" role="tab" data-modo="online" aria-selected="${online}">Mesa en línea</button>
+          <button type="button" role="tab" data-modo="local" aria-selected="${!online}">Este dispositivo</button>
+        </div>
+        ${online ? `<div class="panel">${panelOnline()}</div>` : `
+      <form class="panel" id="form-inicio">
         <div class="cuantos" role="group" aria-label="Número de jugadores">
           <span class="etiqueta">Jugadores</span>
           ${[1, 2, 3, 4, 5, 6].map(n => `<button type="button" data-n="${n}" aria-pressed="${n === borrador.n}">${n}</button>`).join("")}
         </div>
-        <div class="filas">${filas}</div>
-        <div class="clases">
-          ${claves.map(k => { const c = CLASES[k]; return `
-            <div class="clase">
-              <h4><span class="glifo">${c.glifo}</span>${c.nombre}</h4>
-              <p>${c.desc}</p>
-              <p>Alma ${c.alma} · ${Object.keys(STATS).map(s => `${ABREV[s]} ${fmt(c.stats[s])}`).join(" · ")}</p>
-              <p class="hab"><b>${c.hab}:</b> ${c.habDesc}</p>
-            </div>`; }).join("")}
-        </div>
+        <div class="filas">${htmlFilas(borrador, borrador.n, "")}</div>
+        ${htmlClases()}
         <button type="submit" class="btn">Comenzar la aventura</button>
-      </form>
+      </form>`}
+      </div>
     </div>`;
 }
 
@@ -870,7 +1183,8 @@ function renderGrupo() {
     return `
     <div class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}">
       <div class="heroe-cab"><span class="glifo">${c.glifo}</span>
-        <div><strong>${esc(p.nombre)}</strong><span class="etiqueta">${c.nombre} · nivel ${p.nivel}${p.alma <= 0 ? " · caído" : ""}</span></div>
+        <div><strong>${esc(p.nombre)}</strong><span class="etiqueta">${c.nombre} · nivel ${p.nivel}${p.alma <= 0 ? " · caído" : ""}${S.online && p.uid === red.yo ? " · tú" : ""}</span></div>
+        ${S.online ? `<span class="punto${p.uid === red.yo || red.enLinea.has(p.uid) ? " on" : ""}" title="${p.uid === red.yo || red.enLinea.has(p.uid) ? "Conectado" : "Sin conexión"}"></span>` : ""}
       </div>
       <div class="vida">
         <div class="vida-txt"><span>Alma ${p.alma}/${p.max}</span><span>Sabiduría ${p.xp}/${p.nivel * 10}</span></div>
@@ -881,13 +1195,14 @@ function renderGrupo() {
     </div>`;
   }).join("");
   const herido = S.players.some(p => p.alma < p.max);
+  const turno = puedoActuar() ? "" : " disabled";
   const zurron = `
     <div class="zurron">
       <span class="etiqueta">Zurrón del grupo</span>
       <div class="item"><span>Néctar × ${S.nectar}</span>
-        ${!enCombate && !S.final ? `<button type="button" class="btn sec mini" data-acc="beber" ${S.nectar > 0 && herido ? "" : "disabled"}>Beber (+8)</button>` : ""}</div>
+        ${!enCombate && !S.final ? `<button type="button" class="btn sec mini" data-acc="beber" ${S.nectar > 0 && herido && !turno ? "" : "disabled"}>Beber (+8)</button>` : ""}</div>
       <div class="item"><span>Rama de olivo × ${S.olivo}</span>
-        ${S.olivo > 0 && !S.final ? `<button type="button" class="btn ${S.olivoActivo ? "" : "sec "}mini" data-acc="olivo" aria-pressed="${S.olivoActivo}">${S.olivoActivo ? "Lista: +2" : "Usar en la próxima tirada"}</button>` : ""}</div>
+        ${S.olivo > 0 && !S.final ? `<button type="button" class="btn ${S.olivoActivo ? "" : "sec "}mini" data-acc="olivo" aria-pressed="${S.olivoActivo}"${turno}>${S.olivoActivo ? "Lista: +2" : "Usar en la próxima tirada"}</button>` : ""}</div>
       <div class="item"><span>Dracmas: ${S.dracmas}</span></div>
       ${S.anillo ? `<div class="item"><span>Anillo de Giges</span><span class="etiqueta">1 vez por combate</span></div>` : ""}
     </div>`;
@@ -908,18 +1223,25 @@ function renderEscena() {
     el.innerHTML = `<p class="etiqueta">Fin de la aventura</p><h2>${f.titulo}</h2>${parrafos(f.texto)}
       <div class="resumen">${S.players.map(x => `<div><strong>${esc(x.nombre)}</strong>${CLASES[x.clase].nombre} · nivel ${x.nivel}<br>Sabiduría ${x.xp}</div>`).join("")}</div>
       <p class="quien">Dracmas en la bolsa: <b>${S.dracmas}</b>${S.dracmas >= 40 ? " (el oro del tirano todavía pesa en vuestras conciencias)" : ""}</p>
-      <div><button type="button" class="btn" data-acc="reiniciar">Jugar otra vez</button></div>`;
+      <div class="confirmar">${!S.online ? `<button type="button" class="btn" data-acc="reiniciar">Jugar otra vez</button>`
+        : esAnfitrion() ? `<button type="button" class="btn" data-acc="volver-sala">Volver a la sala con el grupo</button><button type="button" class="btn sec" data-acc="salir">Salir de la mesa</button>`
+        : `<p class="espera">El anfitrión puede llevaros de vuelta a la sala para otra partida.</p><button type="button" class="btn sec" data-acc="salir">Salir de la mesa</button>`}</div>`;
     return;
   }
   if (S.derrota) {
     el.innerHTML = `<p class="etiqueta">Capítulo ${ROMANOS[sc.cap]} · ${CAPITULOS[sc.cap]}</p><h2>Descenso al Hades</h2>
       ${parrafos(["Vuestras almas cruzan el río del Olvido. Pero, como cuenta el soldado Er, las almas pueden elegir una nueva vida antes de volver."])}
-      <div class="confirmar"><button type="button" class="btn" data-acc="reencarnar">Reencarnar al inicio del capítulo</button>
-      <button type="button" class="btn sec" data-acc="reiniciar">Empezar desde la caverna</button></div>`;
+      <div class="confirmar">${esAnfitrion() ? `<button type="button" class="btn" data-acc="reencarnar">Reencarnar al inicio del capítulo</button>
+      ${S.online ? `<button type="button" class="btn sec" data-acc="volver-sala">Volver a la sala</button>` : `<button type="button" class="btn sec" data-acc="reiniciar">Empezar desde la caverna</button>`}`
+      : `<p class="espera">El anfitrión decide si reencarnáis.</p>`}</div>`;
     return;
   }
 
-  const quien = `<p class="quien">Decide <b>${esc(p.nombre)}</b> (${cl.nombre}).${S.olivoActivo && S.olivo > 0 ? " La rama de olivo dará +2 a esta tirada." : ""}</p>`;
+  const mio = puedoActuar(), off = mio ? "" : " disabled";
+  const espera = `<p class="quien">Le toca a <b>${esc(p.nombre)}</b> (${cl.nombre}). Esperando su decisión en su dispositivo…</p>`;
+  const quien = mio
+    ? `<p class="quien">Decide <b>${esc(p.nombre)}</b> (${cl.nombre}).${S.olivoActivo && S.olivo > 0 ? " La rama de olivo dará +2 a esta tirada." : ""}</p>`
+    : espera;
 
   if (S.fase === "resultado") {
     const r = S.resultado;
@@ -930,29 +1252,29 @@ function renderEscena() {
       ${r.linea ? `<p class="linea-tirada">${esc(r.linea)}</p>` : ""}
       ${parrafos([r.texto])}
       ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <div><button type="button" class="btn" data-acc="continuar">Continuar · turno de ${esc(siguiente.nombre)}</button></div>`;
+      ${mio ? `<div><button type="button" class="btn" data-acc="continuar">Continuar · turno de ${esc(siguiente.nombre)}</button></div>` : `<p class="espera">${esc(p.nombre)} pasará el turno a ${esc(siguiente.nombre)}.</p>`}`;
     return;
   }
 
   if (sc.tipo === "prueba") {
     el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}${quien}
       <div class="opciones">${sc.opciones.map((op, i) => `
-        <button type="button" class="opcion" data-op="${i}">
+        <button type="button" class="opcion" data-op="${i}"${off}>
           <span>${op.txt}</span>
           <span class="chip">${op.stat ? `${ABREV[op.stat]} ${fmt(p.stats[op.stat])} · CD ${op.cd}` : "Sin tirada"}</span>
         </button>`).join("")}</div>`;
   } else if (sc.tipo === "enigma") {
     el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
-      <p class="quien">Responde <b>${esc(p.nombre)}</b>. Aquí no hay dados: solo vuestra cabeza.</p>
-      <div class="opciones">${sc.respuestas.map((t, i) => `<button type="button" class="opcion" data-resp="${i}"><span>${t}</span></button>`).join("")}</div>`;
+      ${mio ? `<p class="quien">Responde <b>${esc(p.nombre)}</b>. Aquí no hay dados: solo vuestra cabeza. Discutidlo antes.</p>` : espera}
+      <div class="opciones">${sc.respuestas.map((t, i) => `<button type="button" class="opcion" data-resp="${i}"${off}><span>${t}</span></button>`).join("")}</div>`;
   } else if (sc.tipo === "relato") {
     el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
       <ul class="efectos"><li>Alma restaurada por completo</li><li>+${sc.fx.xp} Sabiduría</li></ul>
-      <div><button type="button" class="btn" data-acc="relato">${sc.boton}</button></div>`;
+      ${mio ? `<div><button type="button" class="btn" data-acc="relato">${sc.boton}</button></div>` : espera}`;
   } else if (sc.tipo === "final") {
     el.innerHTML = `${cabecera(sc)}${parrafos(sc.texto)}
-      <p class="quien">Decidid entre todos. Esta elección cierra la partida.</p>
-      <div class="opciones">${sc.opciones.map(op => `<button type="button" class="opcion" data-final="${op.final}"><span>${op.txt}</span></button>`).join("")}</div>`;
+      <p class="quien">Decidid entre todos. Esta elección cierra la partida${mio ? "" : ` y la marca ${esc(p.nombre)}`}.</p>
+      <div class="opciones">${sc.opciones.map(op => `<button type="button" class="opcion" data-final="${op.final}"${off}><span>${op.txt}</span></button>`).join("")}</div>`;
   } else if (sc.tipo === "combate") {
     const e = sc.enemigo, c = S.combate;
     const nombreTipo = { fisica: "golpes", dialectica: "argumentos" };
@@ -983,7 +1305,7 @@ function renderEscena() {
       ${c.enemigoActua
         ? `<p class="quien"><b>${e.nombre}</b> contraataca…</p>`
         : `${quien}<div class="acciones">${acciones.map(a => `
-          <button type="button" class="opcion" data-accion="${a.k}" ${a.off ? "disabled" : ""}>
+          <button type="button" class="opcion" data-accion="${a.k}" ${a.off || !mio ? "disabled" : ""}>
             <span>${a.t}</span><small>${a.s}</small>
           </button>`).join("")}</div>`}`;
   }
@@ -996,15 +1318,21 @@ function renderCronica() {
 }
 
 /* ---------- Eventos ---------- */
+const DE_TURNO = new Set(["continuar", "relato", "beber", "olivo"]);
 document.addEventListener("click", ev => {
   const b = ev.target.closest("button");
   if (!b || b.disabled) return;
-  if (b.dataset.n) { borrador.n = +b.dataset.n; return renderInicio(); }
+  if (b.dataset.n) { borrador.n = +b.dataset.n; pantalla = ""; return render(); }
+  if (b.dataset.nmios) { borrador.mios.n = +b.dataset.nmios; pantalla = ""; return render(); }
+  if (b.dataset.modo) { borrador.modo = b.dataset.modo; avisar(""); return render(); }
+  if (b.dataset.unirse) return entrarMesa(b.dataset.unirse);
   if (b.dataset.libre) {
     if (ocupado) return;
     const caras = +b.dataset.libre, r = d(caras);
-    return tirarDado(r, caras, () => { mostrarTirada(`Tirada libre de d${caras}: ${r}`); if (S) { log(`Tirada libre de d${caras}: ${r}`); renderCronica(); } });
+    return tirarDado(r, caras, () => { mostrarTirada(`Tirada libre de d${caras}: ${r}`, undefined, false); if (S) { log(`Tirada libre de d${caras}: ${r}`); renderCronica(); } });
   }
+  const juega = b.dataset.op || b.dataset.resp || b.dataset.final || b.dataset.accion || DE_TURNO.has(b.dataset.acc);
+  if (S && juega && !puedoActuar()) return;
   if (b.dataset.op) return elegirOpcion(+b.dataset.op);
   if (b.dataset.resp) return responder(+b.dataset.resp);
   if (b.dataset.final) return elegirFinal(b.dataset.final);
@@ -1014,21 +1342,32 @@ document.addEventListener("click", ev => {
     case "relato": return continuarRelato();
     case "beber": return beberFuera();
     case "olivo": S.olivoActivo = !S.olivoActivo; guardar(); return render();
-    case "reencarnar": return reencarnar();
+    case "reencarnar": return esAnfitrion() && reencarnar();
     case "confirmar": confirmando = true; return renderHerramientas();
     case "cancelar": confirmando = false; return renderHerramientas();
-    case "reiniciar": confirmando = false; S = null; borrar(); return render();
+    case "reiniciar": confirmando = false; S = null; borrar(); pantalla = ""; return render();
     case "cargar": S = cargar(); return arrancar();
+    case "crear": return crearMesa();
+    case "comenzar": return comenzarEnLinea();
+    case "salir": confirmando = false; return salirMesa();
+    case "volver-sala": return volverASala();
   }
 });
 document.addEventListener("input", ev => {
   const t = ev.target;
-  if (t.dataset && t.dataset.campo) borrador.filas[+t.dataset.i][t.dataset.campo] = t.value;
+  if (!t.dataset || !t.dataset.campo) return;
+  const grupo = t.dataset.grupo === "mios" ? borrador.mios : borrador;
+  grupo.filas[+t.dataset.i][t.dataset.campo] = t.value;
 });
 document.addEventListener("submit", ev => {
-  if (ev.target.id !== "form-inicio") return;
   ev.preventDefault();
-  nuevaPartida(borrador.filas.slice(0, borrador.n));
+  if (ev.target.id === "form-inicio") return nuevaPartida(borrador.filas.slice(0, borrador.n));
+  if (ev.target.id === "form-asiento") return sentarse();
+  if (ev.target.id === "form-unirse") {
+    const c = ($("#codigo-mesa").value || "").trim().toUpperCase();
+    if (!/^[A-Z]{4}$/.test(c)) return avisar("El código tiene 4 letras, por ejemplo KRTO.");
+    return entrarMesa(c);
+  }
 });
 
 function arrancar() {
@@ -1036,9 +1375,10 @@ function arrancar() {
     S.combate.enemigoActua = false;
     if (vivos().length && vivos().every(i => S.combate.actuaron.includes(i))) return turnoEnemigo();
   }
-  render();
+  pantalla = ""; render();
 }
 render();
+conectar();
 })();
 </script>
 </body>
