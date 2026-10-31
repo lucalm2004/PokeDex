@@ -17,6 +17,11 @@ Juego de rol por turnos al estilo de Dungeons & Dragons, dibujado en pixel art (
 - **Runas y logros:** 12 logros y un altar donde gastar runas en ventajas para las siguientes partidas.
 - **Decisiones con memoria:** ayudar a la mercader, liberar al enano o saquear el santuario tiene consecuencias en actos posteriores.
 - **Música y animaciones:** chiptune generado para cada acto y los jefes; flechas, tajos, orbes y rayos según la clase.
+- **Estados:** veneno, quemadura, sangrado, parálisis, congelación, ceguera, debilidad, maldición y regeneración, para héroes y enemigos. Cada monstruo tiene un ataque especial anunciado de antemano.
+- **Acto V, el Abismo:** tras matar al dragón (o siempre en Pesadilla) se baja al Abismo, con monstruos nuevos y el jefe secreto Nhazgul, el Devorador de Estrellas.
+- **Votaciones:** en línea, el camino y las decisiones se votan entre todos.
+- **Mapas más grandes:** 6 filas con hasta 4 caminos, altares malditos y casillas misterio; 46 sucesos y lore ampliado.
+- **Final con premios:** más daño, mejor golpe, sanador, el muro… y la tabla de cada héroe.
 - **Golpe certero:** al atacar, una marca recorre una barra; tocar en el centro da +2 o, si es perfecto, +5 a la tirada (o más daño en los ataques seguros).
 - **Bendiciones:** tras cada jefe o élite el grupo elige 1 de 3 mejoras permanentes (más daño, más vida, emboscadas, curas tras la victoria…).
 - **Élites:** combates marcados en rojo en el mapa, más duros, con botín raro asegurado y una bendición.

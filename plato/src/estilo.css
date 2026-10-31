@@ -462,7 +462,7 @@ h1, h2, h3 { text-wrap: balance; }
 .bloqueo {
   --dur: 900ms;
   position: fixed; z-index: 66; left: 50%; bottom: max(110px, calc(env(safe-area-inset-bottom, 0px) + 110px)); transform: translateX(-50%);
-  width: 150px; height: 150px; border: 0; border-radius: 50%; display: grid; place-content: center; gap: 2px; text-align: center;
+  width: 128px; height: 128px; border: 0; border-radius: 50%; display: grid; place-content: center; gap: 2px; text-align: center;
   background: radial-gradient(circle at 50% 40%, #5ec8ff, #2f6fe0); color: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, .25), 0 0 40px rgba(94, 200, 255, .7);
   animation: aparece .12s ease-out; touch-action: manipulation;
 }

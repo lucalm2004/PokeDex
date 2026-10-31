@@ -2151,7 +2151,7 @@ const FONDOS = (() => {
     for (let x = 96; x <= 128; x++) for (let y = 0; y < 22 + (x - 96) * 0.35 + hash(x >> 1, 3) * 4; y++) if (x > 100) arco.off(x, y);
     sillares(g, 64, 0, 129, [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6], RUINA, x => (x < 96 ? 2.2 : 2.5), { sem: 81, ancho: 7, bisel: 0.6, junta: 1.3, vari: 0.5, masc: arco });
     cada(arco, (x, y) => {
-      if (!arco.tiene(x, y - 1) || (!arco.tiene(x + 1, y) && x > 96 && y < 28) || (!arco.tiene(x - 1, y) && x >= 80 && x < 96)) g.set(x, y, RUINA[5]);
+      if ((y > 0 && !arco.tiene(x, y - 1)) || (!arco.tiene(x + 1, y) && x > 96 && y < 28) || (!arco.tiene(x - 1, y) && x >= 80 && x < 96)) g.set(x, y, RUINA[5]);
       else if (!arco.tiene(x + 1, y) && x < 96) g.set(x, y, RUINA[6]);
       else if (!arco.tiene(x - 1, y) && x > 96) g.set(x, y, RUINA[6]);
       else if (!arco.tiene(x - 1, y) || !arco.tiene(x + 1, y)) g.set(x, y, RUINA[1]);

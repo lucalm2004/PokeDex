@@ -2263,7 +2263,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (/^#prueba/.test(location.hash)) window.__dym = { estado: () => S, H, render: () => render() };
+if (/^#prueba/.test(location.hash)) window.__dym = { estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo() };
 render();
 conectar();
 })();
