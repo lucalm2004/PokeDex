@@ -1,4 +1,4 @@
-/* Diálogos y Dados · motor de pixel art.
+/* Dados y Mazmorras · motor de pixel art.
    Rejillas pequeñas (36×36 para personajes, 192×108 para escenarios), capas con sombreado
    por relieve (luz desde arriba a la izquierda) y contorno automático. */
 const PX = (() => {

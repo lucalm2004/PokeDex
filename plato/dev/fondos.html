@@ -9,11 +9,14 @@ canvas{image-rendering:pixelated;display:block}.mal{color:#e2604a}</style></head
 const q = new URLSearchParams(location.search);
 const esc = +(q.get("e") || 3), tFijo = q.has("t") ? +q.get("t") : null;
 const claves = q.get("k") ? q.get("k").split(",") : Object.keys(FONDOS);
+/* Figurantes: razas y clases que existan en HEROES en este momento. */
+const razas = Object.keys(HEROES.RAZAS || {}), clases = Object.keys(HEROES.TELA_CLASE || {});
+const de = (lista, i, def) => (lista.length ? lista[i % lista.length] : def);
 const figuras = [
-  [{ raza: "humano", clase: "guardian" }, 40, 100],
-  [{ raza: "elfo", clase: "filosofo", pelo: "rubio" }, 72, 94],
-  [{ raza: "tiefling", clase: "hechicero" }, 100, 102],
-  [{ raza: "semiorco", clase: "sofista", espejo: true }, 150, 98]
+  [{ raza: de(razas, 0, "humano"), clase: de(clases, 1, "guerrero") }, 40, 100],
+  [{ raza: de(razas, 1, "elfo"), clase: de(clases, 0, "mago") }, 72, 94],
+  [{ raza: de(razas, 2, "enano"), clase: de(clases, 7, "clerigo") }, 100, 102],
+  [{ raza: de(razas, 4, "semiorco"), clase: de(clases, 2, "picaro"), espejo: true }, 150, 98]
 ].map(([a, x, y]) => ({ cv: HEROES.componer(a).aCanvas(1), x: x - (a.espejo ? 18 : 17), y: y - 34 }));
 const medidas = window.MEDIDAS = {};
 const escenas = claves.map(k => {

@@ -1,107 +1,108 @@
-/* Diálogos y Dados · datos de la aventura: razas, clases, alineamientos, objetos, tiendas,
-   enemigos, escenas y lore del códice. */
+/* Dados y Mazmorras · datos de la aventura: razas, clases, alineamientos, objetos, tiendas,
+   monstruos, escenas y lore del compendio de Valdren. */
 const DATOS = (() => {
   "use strict";
 
-  const STATS = { raz: "Razón", ani: "Ánimo", elo: "Elocuencia", tem: "Templanza" };
-  const ABREV = { raz: "RAZ", ani: "ÁNI", elo: "ELO", tem: "TEM" };
-  const CAPITULOS = ["La Caverna", "Atenas", "El Banquete", "Atlántida", "El Mundo de las Ideas"];
+  /* Cuatro atributos abreviados: Fuerza cuenta también como Constitución y Sabiduría como Destreza. */
+  const STATS = { raz: "Inteligencia", ani: "Fuerza", elo: "Carisma", tem: "Sabiduría" };
+  const ABREV = { raz: "INT", ani: "FUE", elo: "CAR", tem: "SAB" };
+  const CAPITULOS = ["Villabruma", "El Bosque Susurrante", "La Cripta de los Reyes", "Las Minas de Barak-Thur", "La Guarida de Ignárax"];
   const ROMANOS = ["I", "II", "III", "IV", "V", "VI"];
-  /* Sabiduría acumulada necesaria para cada nivel (nivel 1 = índice 0). */
+  /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
   const NIVELES = [0, 10, 25, 45, 70, 100];
-  const NOMBRES = ["Aristocles", "Diotima", "Jenofonte", "Aspasia", "Fedón", "Hiparquia", "Teeteto", "Arete", "Critón", "Axiotea", "Glaucón", "Perictíone", "Lisis", "Teano", "Cármides", "Damo"];
+  const NOMBRES = ["Aldric", "Lyra", "Borin", "Elowen", "Garrick", "Isolde", "Kael", "Mirela", "Rowan", "Sylva", "Thalor", "Vesna", "Wulfric", "Yara", "Corwin", "Ilsa"];
 
   const RAZAS = {
     humano: {
       nombre: "Humano", mods: { raz: 1, ani: 1, elo: 1, tem: 1 }, alma: 0,
-      pasiva: "Ambición", pasivaDesc: "Gana 1 de Sabiduría extra cada vez que el grupo gana Sabiduría.",
-      lore: "Los mortales de la Hélade. Viven poco, preguntan mucho y fundan ciudades por todas partes."
+      pasiva: "Ambición", pasivaDesc: "Gana 1 PX extra cada vez que el grupo gana PX.",
+      lore: "La raza más numerosa de Valdren. Viven poco y por eso lo quieren todo ya."
     },
     elfo: {
       nombre: "Elfo", mods: { raz: 1, tem: 1 }, alma: 0,
-      pasiva: "Ascendencia feérica", pasivaDesc: "No le afectan la ceguera, el aturdimiento ni la petrificación, y no oye cantos de sirena.",
-      lore: "Llegaron de los bosques de Arcadia antes que los dioses del Olimpo. Recuerdan cosas que los humanos ya olvidaron."
+      pasiva: "Linaje feérico", pasivaDesc: "No le afectan la parálisis, el sueño ni los encantamientos: nunca queda atrapado ni aturdido.",
+      lore: "Llegaron del Reino Feérico hace milenios. No duermen: meditan cuatro horas y les basta."
     },
     enano: {
       nombre: "Enano", mods: { ani: 1, tem: 1 }, alma: 4,
-      pasiva: "Aguante enano", pasivaDesc: "Recibe 1 punto menos de daño de cada golpe (mínimo 1).",
-      lore: "Herreros de las entrañas del Etna. Trabajaron en la fragua de Hefesto y no dejan que nadie lo olvide."
+      pasiva: "Resistencia enana", pasivaDesc: "Recibe 1 punto menos de daño de cada golpe (mínimo 1).",
+      lore: "Mineros y herreros de las montañas. Nunca olvidan una deuda ni perdonan un agravio."
     },
     mediano: {
       nombre: "Mediano", mods: { tem: 2 }, alma: 0,
       pasiva: "Afortunado", pasivaDesc: "Si saca un 1 natural, repite la tirada.",
-      lore: "Gente pequeña de las colinas de Beocia. Tique, la diosa de la fortuna, les tiene un cariño especial."
+      lore: "Gente pequeña de las colinas. Les gustan las comidas largas, las pipas y volver a casa enteros."
     },
     semiorco: {
       nombre: "Semiorco", mods: { ani: 2 }, alma: 2,
-      pasiva: "Aguante implacable", pasivaDesc: "La primera vez que cae en cada combate, se queda con 1 de Alma.",
-      lore: "Hijos de dos mundos que nunca los quisieron. En las palestras de Esparta aprendieron a no rendirse."
+      pasiva: "Aguante implacable", pasivaDesc: "La primera vez que cae en cada combate, se queda con 1 PG.",
+      lore: "Hijos de dos pueblos que se odian. Han aprendido a no rendirse nunca."
     },
     tiefling: {
       nombre: "Tiefling", mods: { elo: 2 }, alma: 0,
-      pasiva: "Legado infernal", pasivaDesc: "Cuando un enemigo le hiere, recibe 2 de daño de fuego de vuelta.",
-      lore: "Su sangre guarda una gota del Tártaro. Tienen cuernos, cola y una labia de abogado."
+      pasiva: "Reprensión infernal", pasivaDesc: "Cuando un enemigo le hiere, recibe 2 de daño de fuego de vuelta.",
+      lore: "Algún antepasado hizo un trato con los Nueve Infiernos. Ellos heredaron los cuernos, la cola y la mala fama."
     },
     draconido: {
       nombre: "Dracónido", mods: { ani: 1, elo: 1 }, alma: 2,
-      pasiva: "Aliento de dragón", pasivaDesc: "Al empezar cada combate, inflige 1d6 de daño mágico al enemigo.",
-      lore: "Descienden de los dientes de dragón que Cadmo sembró en Tebas. Nacieron de la tierra ya armados."
+      pasiva: "Aliento de dragón", pasivaDesc: "Al empezar cada combate, inflige 1d6 de daño arcano al enemigo.",
+      lore: "Orgullosos descendientes de los dragones. Para ellos, Ignárax es una vergüenza de familia."
     },
-    satiro: {
-      nombre: "Sátiro", mods: { elo: 1, tem: 1 }, alma: 0,
-      pasiva: "Juerga de Dioniso", pasivaDesc: "El néctar y la ambrosía le curan el doble.",
-      lore: "Del cortejo de Dioniso. Mitad cabra, mitad poeta, y siempre con sed."
+    gnomo: {
+      nombre: "Gnomo", mods: { raz: 2 }, alma: 0,
+      pasiva: "Astucia gnoma", pasivaDesc: "+2 en las pruebas de Inteligencia. Con un gnomo en el grupo, los acertijos tachan una respuesta falsa.",
+      lore: "Inventores, alquimistas y bromistas. Su curiosidad ha volado más laboratorios que cualquier dragón."
     }
   };
 
   const CLASES = {
-    filosofo: {
-      nombre: "Filósofo", dnd: "Mago", alma: 8, stats: { raz: 3, ani: 0, elo: 1, tem: 1 }, patron: "Atenea",
-      hab: "Ironía socrática", habDesc: "2d6 + RAZ de daño dialéctico, sin tirada.",
-      pasiva: "Docta ignorancia", pasivaDesc: "+2 en las pruebas de Razón. Con un filósofo en el grupo, los enigmas tachan una respuesta falsa.",
-      desc: "Sabe que no sabe nada, y lo usa como arma."
+    guerrero: {
+      nombre: "Guerrero", rol: "Defensor", alma: 13, stats: { raz: 0, ani: 3, elo: -1, tem: 1 }, patron: "Valdur, señor de la guerra justa",
+      hab: "Muro de escudos", habDesc: "El próximo turno del enemigo no hace daño a nadie.",
+      pasiva: "Estilo defensivo", pasivaDesc: "+2 a la Clase de Armadura.",
+      desc: "Veterano de mil batallas. Primero el escudo y luego las preguntas."
     },
-    guardian: {
-      nombre: "Guardián", dnd: "Guerrero", alma: 13, stats: { raz: 0, ani: 3, elo: -1, tem: 1 }, patron: "Ares",
-      hab: "Escudo de la Polis", habDesc: "El próximo turno del enemigo no hace daño a nadie.",
-      pasiva: "Falange", pasivaDesc: "+2 a la Clase de Armadura.",
-      desc: "Soldado de la República ideal: valiente, leal y educado en gimnasia y música."
+    barbaro: {
+      nombre: "Bárbaro", rol: "Atacante", alma: 14, stats: { raz: -1, ani: 3, elo: 0, tem: 1 }, patron: "Orsun, el Cazador Salvaje",
+      hab: "Furia", habDesc: "Golpe seguro de 2d8 + FUE de daño físico.",
+      pasiva: "Sentido del peligro", pasivaDesc: "El primer ataque que recibe en cada combate falla.",
+      desc: "Viene de las tundras del norte. Habla poco y golpea mucho."
     },
-    sofista: {
-      nombre: "Sofista", dnd: "Pícaro", alma: 9, stats: { raz: 1, ani: 0, elo: 3, tem: 0 }, patron: "Hermes",
-      hab: "Paradoja de Zenón", habDesc: "El enemigo se queda pensando en Aquiles y la tortuga y pierde su próximo turno.",
-      pasiva: "Lengua de plata", pasivaDesc: "Paga un 25 % menos en las tiendas.",
-      desc: "Cobra por enseñar a ganar cualquier discusión, tenga o no razón."
+    picaro: {
+      nombre: "Pícaro", rol: "Astuto", alma: 9, stats: { raz: 1, ani: 2, elo: 2, tem: 0 }, patron: "Lysa, la de los Mil Caminos",
+      hab: "Bomba de humo", habDesc: "El enemigo os pierde de vista y pierde su próximo turno.",
+      pasiva: "Dedos largos", pasivaDesc: "Paga un 25 % menos en las tiendas.",
+      desc: "Abre cerraduras, bolsillos y, si hace falta, gargantas."
     },
-    rapsoda: {
-      nombre: "Rapsoda", dnd: "Bardo", alma: 10, stats: { raz: 0, ani: 1, elo: 2, tem: 1 }, patron: "Apolo y las Musas",
-      hab: "Canto de las Musas", habDesc: "Cura 1d6 + ELO a todo el grupo y levanta a los caídos.",
-      pasiva: "Épica", pasivaDesc: "Tras cada victoria, todo el grupo recupera 3 de Alma.",
-      desc: "Recita a Homero de memoria. Platón no se fía de él."
+    explorador: {
+      nombre: "Explorador", rol: "Tirador", alma: 10, stats: { raz: 1, ani: 2, elo: 0, tem: 1 }, patron: "Orsun, el Cazador Salvaje",
+      hab: "Lluvia de flechas", habDesc: "Dos disparos seguros de 1d6 + FUE de daño físico.",
+      pasiva: "Enemigo predilecto", pasivaDesc: "+2 a las tiradas de ataque físico.",
+      desc: "Rastreador de las fronteras. Conoce cada sendero del Bosque Susurrante."
     },
-    atleta: {
-      nombre: "Atleta olímpico", dnd: "Monje", alma: 11, stats: { raz: 0, ani: 2, elo: 0, tem: 2 }, patron: "Heracles",
-      hab: "Pancracio", habDesc: "Golpe seguro de 2d8 + ÁNI de daño físico.",
-      pasiva: "Reflejos olímpicos", pasivaDesc: "El primer ataque que recibe en cada combate falla.",
-      desc: "Campeón de lucha. Dicen que Platón también lo fue, y que de ahí le viene el nombre: «el ancho»."
+    mago: {
+      nombre: "Mago", rol: "Arcano", alma: 8, stats: { raz: 3, ani: -1, elo: 1, tem: 1 }, patron: "Myrrh, la Tejedora de Conjuros",
+      hab: "Bola de fuego", habDesc: "2d6 + INT de daño arcano, sin tirada.",
+      pasiva: "Erudición arcana", pasivaDesc: "Sus conjuros hacen 2 puntos más de daño.",
+      desc: "Pasó veinte años estudiando en una torre. Ahora quiere probar lo aprendido."
     },
-    oraculo: {
-      nombre: "Oráculo", dnd: "Clérigo", alma: 10, stats: { raz: 1, ani: 0, elo: 0, tem: 3 }, patron: "Apolo",
-      hab: "Luz de Apolo", habDesc: "2d6 + TEM de daño mágico. Las criaturas de sombra reciben el doble.",
-      pasiva: "Don de sanación", pasivaDesc: "Meditar cura el doble.",
-      desc: "Sacerdotisa de Delfos. Sus profecías se cumplen, aunque nadie las entiende a la primera."
+    brujo: {
+      nombre: "Brujo", rol: "Arcano", alma: 8, stats: { raz: 1, ani: -1, elo: 3, tem: 1 }, patron: "El Príncipe sin Nombre, un archidemonio",
+      hab: "Maleficio", habDesc: "El enemigo queda maldito: recibe +2 de daño de cada golpe hasta el final del combate.",
+      pasiva: "Pacto oscuro", pasivaDesc: "Cada vez que el grupo gana un combate, recupera 4 PG.",
+      desc: "Firmó un pacto con algo que vive entre las estrellas. Todavía no ha leído la letra pequeña."
     },
-    cazadora: {
-      nombre: "Cazadora", dnd: "Explorador", alma: 10, stats: { raz: 1, ani: 2, elo: 0, tem: 1 }, patron: "Artemisa",
-      hab: "Lluvia de flechas", habDesc: "Dos disparos seguros de 1d6 + ÁNI de daño físico.",
-      pasiva: "Ojo de halcón", pasivaDesc: "+2 a las tiradas de ataque físico.",
-      desc: "Del séquito de Artemisa. Rastrea cualquier bestia del Peloponeso."
+    clerigo: {
+      nombre: "Clérigo", rol: "Sanador", alma: 10, stats: { raz: 0, ani: 1, elo: 0, tem: 3 }, patron: "Solara, la Dama del Alba",
+      hab: "Luz sagrada", habDesc: "2d6 + SAB de daño sagrado. Los no muertos reciben el doble.",
+      pasiva: "Manos sanadoras", pasivaDesc: "Curar heridas cura el doble.",
+      desc: "Sacerdote de Solara. Cura heridas, bendice armas y no soporta a los no muertos."
     },
-    hechicero: {
-      nombre: "Hechicero", dnd: "Brujo", alma: 8, stats: { raz: 2, ani: -1, elo: 2, tem: 1 }, patron: "Hécate",
-      hab: "Maldición de Hécate", habDesc: "El enemigo queda maldito: recibe +2 de daño de cada golpe hasta el final del combate.",
-      pasiva: "Pacto con Hécate", pasivaDesc: "Cada vez que el grupo gana un combate, recupera 4 de Alma.",
-      desc: "Hizo un pacto en una encrucijada a medianoche. Hécate cumple, pero cobra."
+    bardo: {
+      nombre: "Bardo", rol: "Apoyo", alma: 9, stats: { raz: 0, ani: 0, elo: 3, tem: 1 }, patron: "Myrrh, la Tejedora de Conjuros",
+      hab: "Canción de descanso", habDesc: "Cura 1d6 + CAR a todo el grupo y levanta a los caídos.",
+      pasiva: "Inspiración bárdica", pasivaDesc: "Tras cada victoria, todo el grupo recupera 3 PG.",
+      desc: "Toca el laúd en todas las tabernas de Valdren. Sus canciones curan, aunque no lo parezca."
     }
   };
 
@@ -122,438 +123,430 @@ const DATOS = (() => {
   }
 
   const OBJETOS = {
-    nectar: { nombre: "Néctar", tipo: "consumible", precio: 10, desc: "Cura 8 de Alma al que más lo necesite." },
-    ambrosia: { nombre: "Ambrosía", tipo: "consumible", precio: 30, desc: "Cura todo el Alma y levanta a un caído." },
-    olivo: { nombre: "Rama de olivo", tipo: "consumible", precio: 8, desc: "+2 a la próxima tirada del grupo." },
-    fuego: { nombre: "Fuego griego", tipo: "consumible", precio: 25, desc: "En combate: 3d6 de daño mágico." },
-    leteo: { nombre: "Agua del Leteo", tipo: "consumible", precio: 20, desc: "En combate: el enemigo olvida qué hacía y pierde su turno." },
-    posada: { nombre: "Noche en la posada", tipo: "servicio", precio: 15, desc: "Todo el grupo recupera todo el Alma." },
-    xifos: { nombre: "Xifos de bronce", tipo: "arma", precio: 30, fis: 2, desc: "+2 al daño físico." },
-    lanza: { nombre: "Lanza de fresno", tipo: "arma", precio: 25, golpe: 1, fis: 1, desc: "+1 para golpear y +1 al daño físico." },
-    arco: { nombre: "Arco de tejo", tipo: "arma", precio: 35, golpe: 2, fis: 1, desc: "+2 para golpear y +1 al daño físico." },
-    zenon: { nombre: "Pergamino de Zenón", tipo: "arma", precio: 30, dial: 2, desc: "+2 al daño dialéctico." },
-    lira: { nombre: "Lira de Orfeo", tipo: "arma", precio: 40, cura: 2, dial: 1, desc: "+2 a tus curaciones y +1 al daño dialéctico." },
-    hoz: { nombre: "Hoz de Crono", tipo: "arma", precio: 90, golpe: 1, fis: 4, desc: "+1 para golpear y +4 al daño físico." },
-    parmenides: { nombre: "Poema de Parménides", tipo: "arma", precio: 90, golpe: 1, dial: 4, desc: "+1 para refutar y +4 al daño dialéctico." },
-    linotorax: { nombre: "Linotórax", tipo: "armadura", precio: 25, ca: 1, desc: "+1 a la Clase de Armadura." },
-    coraza: { nombre: "Coraza de bronce", tipo: "armadura", precio: 50, ca: 2, desc: "+2 a la Clase de Armadura." },
-    egida: { nombre: "Égida de oricalco", tipo: "armadura", precio: 95, ca: 3, alma: 4, desc: "+3 a la CA y +4 de Alma máxima." },
-    lechuza: { nombre: "Lechuza de Atenea", tipo: "talisman", precio: 40, stat: "raz", desc: "+1 a Razón." },
-    laurel: { nombre: "Corona de laurel", tipo: "talisman", precio: 40, stat: "elo", desc: "+1 a Elocuencia." },
-    heracles: { nombre: "Brazalete de Heracles", tipo: "talisman", precio: 40, stat: "ani", desc: "+1 a Ánimo." },
-    hestia: { nombre: "Amuleto de Hestia", tipo: "talisman", precio: 40, stat: "tem", desc: "+1 a Templanza." },
-    sandalias: { nombre: "Sandalias aladas", tipo: "talisman", precio: 60, ca: 1, ini: 3, desc: "+1 a la CA y +3 a la iniciativa." },
-    tique: { nombre: "Dado de Tique", tipo: "talisman", precio: 90, critico: 19, desc: "Críticos con 19 o 20." }
+    pocion: { nombre: "Poción de curación", tipo: "consumible", precio: 10, desc: "Cura 8 PG al que más lo necesite." },
+    superior: { nombre: "Poción de curación superior", tipo: "consumible", precio: 30, desc: "Cura todos los PG y levanta a un caído." },
+    bendicion: { nombre: "Pergamino de bendición", tipo: "consumible", precio: 8, desc: "+2 a la próxima tirada del grupo." },
+    fuego: { nombre: "Fuego de alquimista", tipo: "consumible", precio: 25, desc: "En combate: 3d6 de daño arcano." },
+    sueno: { nombre: "Polvo de sueño", tipo: "consumible", precio: 20, desc: "En combate: el enemigo se duerme y pierde su turno." },
+    posada: { nombre: "Noche en la posada", tipo: "servicio", precio: 15, desc: "Todo el grupo recupera todos sus PG." },
+    espada: { nombre: "Espada larga", tipo: "arma", precio: 30, fis: 2, desc: "+2 al daño físico." },
+    hacha: { nombre: "Hacha de batalla", tipo: "arma", precio: 25, golpe: 1, fis: 1, desc: "+1 para atacar y +1 al daño físico." },
+    arco: { nombre: "Arco largo", tipo: "arma", precio: 35, golpe: 2, fis: 1, desc: "+2 para atacar y +1 al daño físico." },
+    varita: { nombre: "Varita de proyectiles mágicos", tipo: "arma", precio: 30, arc: 2, desc: "+2 al daño arcano." },
+    laud: { nombre: "Laúd encantado", tipo: "arma", precio: 40, cura: 2, arc: 1, desc: "+2 a tus curaciones y +1 al daño arcano." },
+    vorpal: { nombre: "Espada vorpal", tipo: "arma", precio: 90, golpe: 1, fis: 4, desc: "+1 para atacar y +4 al daño físico." },
+    baculo: { nombre: "Bastón del archimago", tipo: "arma", precio: 90, golpe: 1, arc: 4, desc: "+1 a los conjuros y +4 al daño arcano." },
+    cuero: { nombre: "Cuero tachonado", tipo: "armadura", precio: 25, ca: 1, desc: "+1 a la Clase de Armadura." },
+    malla: { nombre: "Cota de mallas", tipo: "armadura", precio: 50, ca: 2, desc: "+2 a la Clase de Armadura." },
+    mithril: { nombre: "Armadura de mithril", tipo: "armadura", precio: 95, ca: 3, alma: 4, desc: "+3 a la CA y +4 PG máximos." },
+    diadema: { nombre: "Diadema del intelecto", tipo: "talisman", precio: 40, stat: "raz", desc: "+1 a Inteligencia." },
+    broche: { nombre: "Broche del orador", tipo: "talisman", precio: 40, stat: "elo", desc: "+1 a Carisma." },
+    guanteletes: { nombre: "Guanteletes de fuerza de ogro", tipo: "talisman", precio: 40, stat: "ani", desc: "+1 a Fuerza." },
+    amuleto: { nombre: "Amuleto de la sabiduría", tipo: "talisman", precio: 40, stat: "tem", desc: "+1 a Sabiduría." },
+    botas: { nombre: "Botas aladas", tipo: "talisman", precio: 60, ca: 1, ini: 3, desc: "+1 a la CA y +3 a la iniciativa." },
+    piedra: { nombre: "Piedra de la suerte", tipo: "talisman", precio: 90, critico: 19, desc: "Críticos con 19 o 20." }
   };
-  const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Talismán" };
+  const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
   const TIENDAS = {
-    agora: {
-      nombre: "El puesto de Demetria", pnj: "demetria",
-      saludo: "«Todo lo que un héroe necesita, a precio de ágora. Y si regateas bien, a precio de sofista.»",
-      objetos: ["nectar", "olivo", "posada", "xifos", "lanza", "zenon", "linotorax", "lechuza", "laurel"]
+    villa: {
+      nombre: "El bazar de Brunilda", pnj: "mercader",
+      saludo: "«¿Aventureros? Entonces necesitáis de todo. Y yo tengo de todo.»",
+      objetos: ["pocion", "bendicion", "posada", "espada", "hacha", "varita", "cuero", "diadema", "broche"]
     },
-    bodega: {
-      nombre: "La bodega de Sileno", pnj: "sileno", precios: { nectar: 8 },
-      saludo: "«¡Pasad, pasad! El vino es para los invitados, pero todo lo demás está a la venta.»",
-      objetos: ["nectar", "ambrosia", "leteo", "olivo", "lira", "hestia", "laurel"]
+    gnomo: {
+      nombre: "El carromato de Fizwick", pnj: "gnomo", precios: { pocion: 8 },
+      saludo: "«¡Pociones recién hervidas! Solo explota una de cada diez.»",
+      objetos: ["pocion", "superior", "sueno", "bendicion", "laud", "amuleto", "broche"]
     },
-    pireo: {
-      nombre: "La armería de Hefesto", pnj: "hefesto",
-      saludo: "«Me echaron del Olimpo por cojo y aquí sigo, forjando lo mejor de la Hélade. Se paga en dracmas.»",
-      objetos: ["nectar", "fuego", "posada", "arco", "xifos", "coraza", "heracles", "sandalias"]
+    forja: {
+      nombre: "La forja de Durgan", pnj: "herrero",
+      saludo: "«Acero enano. Si se rompe, os devuelvo el dinero. No se rompe.»",
+      objetos: ["pocion", "fuego", "posada", "arco", "espada", "malla", "guanteletes", "botas"]
     },
-    bazar: {
-      nombre: "El bazar de Hermes", pnj: "hermes",
-      saludo: "«Soy el dios de los mercaderes, de los viajeros y de los ladrones. Elegid en cuál de los tres confiáis.»",
-      objetos: ["ambrosia", "fuego", "leteo", "hoz", "parmenides", "egida", "tique"]
+    planar: {
+      nombre: "El Mercader de los Planos", pnj: "planar",
+      saludo: "«Vendo en todos los planos de existencia. Aquí, por suerte para vosotros, acepto oro.»",
+      objetos: ["superior", "fuego", "sueno", "vorpal", "baculo", "mithril", "piedra"]
     }
   };
 
-  /* Tipos de daño: fisica (golpes), dialectica (argumentos), magica (luz, fuego y hechizos). */
-  const TIPOS_DANO = { fisica: "golpes", dialectica: "argumentos", magica: "magia" };
+  /* Tipos de daño: fisica (armas), arcana (conjuros y fuego) y sagrada (luz divina). */
+  const TIPOS_DANO = { fisica: "armas", arcana: "magia arcana", sagrada: "luz sagrada" };
 
+  /* Monstruos. Trucos opcionales: roba (oro por golpe), furia (ataque extra bajo la mitad de PG),
+     regenera (PG por turno salvo si recibió daño arcano), cura {cada, n, txt}, area {cada, dado, txt}
+     y estado {cada, txt} (un héroe pierde su turno; los elfos son inmunes). */
   const ENEMIGOS = {
-    sombra: {
-      nombre: "Sombra hambrienta", tipo: "No muerto mediano", alin: "Neutral malvado", vd: "1/2", sombra: true,
-      alma: 12, ca: 10, atk: 2, dano: [1, 4, 1], ataques: 1, ini: 1, resiste: "fisica", debil: "magica",
-      rasgo: "drenar", rasgoDesc: "Drena: se cura la mitad del daño que hace.",
-      lore: "Una silueta de la pared que lleva tanto tiempo siendo mirada que ha empezado a tener hambre."
+    rata: {
+      nombre: "La plaga de ratas", tipo: "Enjambre de bestias pequeñas", alin: "Sin alineamiento", vd: "1/4",
+      alma: 12, ca: 10, atk: 2, dano: [1, 4, 0], ataques: 2, ini: 2, resiste: null, debil: null,
+      rasgoDesc: "Enjambre: ataca dos veces por ronda.",
+      lore: "Del tamaño de un perro y con el hambre de diez. Todo sótano de taberna que se precie tiene unas cuantas."
     },
-    titiritero: {
-      nombre: "El Titiritero de Sombras", tipo: "Feérico grande", alin: "Legal malvado", vd: "2", sombra: true,
-      alma: 18, ca: 11, atk: 3, dano: [1, 6, 0], ataques: 1, ini: 2, resiste: "fisica", debil: "dialectica",
-      rasgo: "cegar", rasgoDesc: "Teatro de sombras: cada 2 rondas ciega a un héroe (−4 a su próxima tirada).",
-      lore: "Mueve las figuras delante del fuego para que los prisioneros crean que el mundo es eso. Vive de que nadie se dé la vuelta."
+    goblin: {
+      nombre: "Krug, el jefe goblin", tipo: "Humanoide pequeño (goblinoide)", alin: "Neutral malvado", vd: "1",
+      alma: 18, ca: 12, atk: 3, dano: [1, 6, 1], ataques: 1, ini: 3, resiste: null, debil: null, roba: 5,
+      rasgoDesc: "Ladrón: cada golpe roba hasta 5 po. Si lo vencéis, lo recuperáis.",
+      lore: "Los goblins viven de asaltar caminos. Krug es el más listo de su tribu, lo cual no es mucho decir."
     },
-    trasimaco: {
-      nombre: "Trasímaco", tipo: "Humanoide mediano (sofista)", alin: "Legal malvado", vd: "2",
-      alma: 22, ca: 12, atk: 4, dano: [1, 6, 1], ataques: 1, ini: 3, resiste: "fisica", debil: null,
-      rasgo: "reafirmarse", rasgoDesc: "Se reafirma: cada 2 rondas recupera 5 de Alma gritando más fuerte.",
-      lore: "Sofista de Calcedonia. En el libro I de la República sostiene que la justicia es lo que le conviene al más fuerte."
+    osolechuza: {
+      nombre: "Oso-lechuza", tipo: "Monstruosidad grande", alin: "Sin alineamiento", vd: "3",
+      alma: 24, ca: 12, atk: 4, dano: [1, 8, 1], ataques: 1, ini: 1, resiste: null, debil: null, furia: true,
+      rasgoDesc: "Furia: por debajo de la mitad de sus PG ataca una vez más por ronda.",
+      lore: "Nadie sabe qué mago loco cruzó un oso con una lechuza. Lo que sí se sabe es que no se le puede razonar."
     },
-    harpia: {
-      nombre: "Harpías del Pireo", tipo: "Monstruosidad mediana", alin: "Caótico malvado", vd: "2",
-      alma: 20, ca: 12, atk: 4, dano: [1, 6, 0], ataques: 2, ini: 4, resiste: null, debil: "fisica",
-      rasgo: "robar", rasgoDesc: "Rapiña: cada golpe roba hasta 5 dracmas. Si las vencéis, lo recuperáis.",
-      lore: "Las «arrebatadoras». Zeus las mandó a robarle la comida al rey Fineo. Ahora roban bolsas en el puerto."
+    trol: {
+      nombre: "El trol del puente", tipo: "Gigante grande", alin: "Caótico malvado", vd: "5",
+      alma: 28, ca: 13, atk: 5, dano: [1, 8, 0], ataques: 2, ini: 1, resiste: null, debil: "arcana", regenera: 3,
+      rasgoDesc: "Regeneración: recupera 3 PG cada turno, salvo si ha recibido daño arcano (fuego) desde su último turno.",
+      lore: "Los trols se regeneran de cualquier herida: se les puede cortar un brazo y les sale otro. Solo el fuego y el ácido les detienen."
     },
-    androgino: {
-      nombre: "El Andrógino", tipo: "Monstruosidad grande", alin: "Caótico neutral", vd: "3",
-      alma: 26, ca: 12, atk: 4, dano: [1, 8, 0], ataques: 2, ini: 2, resiste: "dialectica", debil: "fisica",
-      rasgo: "partirse", rasgoDesc: "Dos mitades: por debajo de la mitad de Alma se enfurece y ataca una vez más por ronda.",
-      lore: "Según Aristófanes, los primeros humanos eran dobles y rodaban como ruedas. Zeus los partió en dos, y desde entonces cada mitad busca a la otra."
+    esqueleto: {
+      nombre: "La guardia esqueleto", tipo: "No muertos medianos", alin: "Legal malvado", vd: "2", nomuerto: true,
+      alma: 22, ca: 13, atk: 4, dano: [1, 8, 0], ataques: 1, ini: 2, resiste: null, debil: "sagrada",
+      cura: { cada: 2, n: 5, txt: "Los huesos de la guardia se recomponen" },
+      rasgoDesc: "Se recompone: cada 2 rondas recupera 5 PG.",
+      lore: "La guardia personal de los reyes de Valdren. Juraron protegerlos para siempre, y se lo tomaron al pie de la letra."
     },
-    talos: {
-      nombre: "Talos", tipo: "Constructo enorme", alin: "Neutral", vd: "4",
-      alma: 30, ca: 14, atk: 5, dano: [1, 8, 1], ataques: 1, ini: 0, resiste: "fisica", debil: "magica",
-      rasgo: "vapor", rasgoDesc: "Vapor hirviente: cada 3 rondas abrasa a todo el grupo (1d4).",
-      lore: "Gigante de bronce forjado por Hefesto. Una sola vena le recorre el cuerpo, cerrada con un clavo en el tobillo."
+    mimico: {
+      nombre: "El mímico", tipo: "Monstruosidad mediana (cambiaformas)", alin: "Neutral", vd: "2",
+      alma: 22, ca: 12, atk: 4, dano: [1, 8, 1], ataques: 1, ini: 1, resiste: "fisica", debil: null,
+      estado: { cada: 2, txt: "{x} se queda pegado a la lengua del mímico y pierde su turno" },
+      rasgoDesc: "Adhesivo: cada 2 rondas deja pegado a un héroe, que pierde su turno.",
+      lore: "Se hace pasar por cofres, puertas o escaleras. Por eso los aventureros veteranos le dan una patada a todo antes de abrirlo."
     },
-    atlas: {
-      nombre: "Atlas, rey de la Atlántida", tipo: "Gigante enorme", alin: "Legal malvado", vd: "5",
-      alma: 40, ca: 14, atk: 5, dano: [1, 10, 0], ataques: 2, ini: 3, resiste: null, debil: null,
-      rasgo: "sismo", rasgoDesc: "Hybris: cada 3 rondas golpea el suelo y hiere a todo el grupo (1d6).",
-      lore: "Hijo de Poseidón y primer rey de la isla. Su pueblo olvidó la virtud y se llenó de desmesura."
+    liche: {
+      nombre: "Malakar, el liche", tipo: "No muerto mediano", alin: "Legal malvado", vd: "6", nomuerto: true,
+      alma: 32, ca: 14, atk: 5, dano: [1, 8, 0], ataques: 2, ini: 3, resiste: "arcana", debil: "sagrada",
+      area: { cada: 3, dado: 6, txt: "Malakar lanza un rayo necrótico contra todo el grupo" },
+      rasgoDesc: "Rayo necrótico: cada 3 rondas hiere a todo el grupo (1d6).",
+      lore: "El consejero que traicionó al último rey. Guardó su alma en una filacteria para no morir nunca. Mientras exista, volverá."
     },
-    esfinge: {
-      nombre: "La Esfinge", tipo: "Monstruosidad grande", alin: "Legal neutral", vd: "4",
-      alma: 30, ca: 13, atk: 5, dano: [1, 8, 1], ataques: 2, ini: 3, resiste: "dialectica", debil: null,
-      rasgo: "petrificar", rasgoDesc: "Mirada antigua: cada 2 rondas deja de piedra a un héroe, que pierde su turno.",
-      lore: "Guardiana de los umbrales. Quien no responde a su enigma no pasa, y quien lo responde no suele volver igual."
+    cubo: {
+      nombre: "Cubo gelatinoso", tipo: "Cieno grande", alin: "Sin alineamiento", vd: "2",
+      alma: 28, ca: 8, atk: 4, dano: [1, 6, 2], ataques: 1, ini: -2, resiste: "fisica", debil: "arcana",
+      estado: { cada: 2, txt: "El cubo engulle a {x}, que pierde su turno" },
+      rasgoDesc: "Engullir: cada 2 rondas atrapa a un héroe, que pierde su turno.",
+      lore: "Limpia las mazmorras de todo lo que encuentra, incluidos los aventureros. Es casi invisible hasta que lo tienes encima."
     },
-    doxa: {
-      nombre: "Doxa, la Gran Opinión", tipo: "Aberración gargantuesca", alin: "Caótico neutral", vd: "7",
-      alma: 46, ca: 13, atk: 5, dano: [1, 10, 0], ataques: 2, ini: 2, resiste: "fisica", debil: "dialectica",
-      rasgo: "cambiar", rasgoDesc: "Cambia de forma: cada 2 rondas intercambia lo que resiste y lo que le duele.",
-      lore: "Está hecha de todo lo que se repite sin pensarlo. Cuanta más gente la cree, más grande se vuelve."
+    golem: {
+      nombre: "El gólem de hierro", tipo: "Constructo grande", alin: "Sin alineamiento", vd: "5",
+      alma: 32, ca: 14, atk: 5, dano: [1, 10, 0], ataques: 1, ini: 0, resiste: "arcana", debil: null,
+      area: { cada: 3, dado: 4, txt: "El gólem suelta una nube de gas venenoso" },
+      rasgoDesc: "Gas venenoso: cada 3 rondas hace 1d4 de daño a todo el grupo. Casi inmune a la magia.",
+      lore: "Los enanos lo forjaron para guardar Barak-Thur. Obedece a quien tenga la llave de la forja, y la llave la tiene Ignárax."
+    },
+    dragon: {
+      nombre: "Ignárax, el dragón rojo", tipo: "Dragón enorme", alin: "Caótico malvado", vd: "10",
+      alma: 40, ca: 15, atk: 5, dano: [1, 10, 0], ataques: 2, ini: 2, resiste: "arcana", debil: null,
+      area: { cada: 3, dado: 6, txt: "Ignárax escupe un torrente de fuego" },
+      rasgoDesc: "Aliento de fuego: cada 3 rondas abrasa a todo el grupo (1d6).",
+      lore: "El último de los grandes dragones rojos de Valdren. Durmió cien años sobre el oro de Barak-Thur y ha despertado con hambre."
     }
   };
 
-  /* Escenas. Tipos: prueba (tirada), enigma (respuesta en grupo), combate, relato, tienda y final.
-     fx: alma (quien decide), almaTodos, curarTodo, maxTodos, xp (todos), nectar, olivo, dracmas (cada héroe),
-     anillo, moral (mueve el alineamiento de quien decide: +1 hacia bueno, −1 hacia malvado). */
+  /* Escenas. Tipos: prueba (tirada), enigma (acertijo en grupo), combate, relato, tienda y final.
+     fx: alma (quien decide), almaTodos, curarTodo, maxTodos, xp (todos), pocion, bendicion, superior,
+     oro (cada héroe), anillo, moral (mueve el alineamiento de quien decide: +1 hacia bueno, −1 hacia malvado). */
   const ESCENAS = {
-    c1_sombras: {
-      cap: 0, inicio: true, tipo: "prueba", fondo: "caverna", titulo: "Las sombras en la pared",
-      texto: ["Despertáis encadenados en el fondo de una caverna. Desde que nacisteis solo habéis visto sombras que bailan sobre la roca: caballos, héroes, dioses.",
-        "Detrás de vosotros crepita un fuego que nunca habéis mirado. Hoy, por primera vez, uno de los grilletes cede un poco."],
+    c1_taberna: {
+      cap: 0, inicio: true, tipo: "prueba", fondo: "taberna", pnj: "tabernero", titulo: "El Grifo Tuerto",
+      texto: ["Toda gran aventura empieza en una taberna, y la vuestra no iba a ser menos. El Grifo Tuerto está lleno de humo, cerveza y rumores: dicen que el dragón Ignárax ha despertado en el Pico Cenizo.",
+        "Antes de que podáis presentaros, un mercenario borracho tira vuestras jarras al suelo y se ríe en vuestra cara."],
       opciones: [
-        { txt: "Romper las cadenas a la fuerza", stat: "ani", cd: 12,
-          ok: { t: "El hierro estalla. El ruido despierta ecos por toda la caverna, pero sois libres.", fx: { xp: 2 } },
-          ko: { t: "La cadena aguanta y os desgarra las muñecas antes de ceder por fin.", fx: { alma: -2 } } },
-        { txt: "Deducir qué hay detrás de las sombras", stat: "raz", cd: 11,
-          ok: { t: "Si las sombras tiemblan cuando tiembla el fuego, hay algo detrás. Palpáis el grillete y encontráis su cierre oxidado.", fx: { xp: 3 } },
-          ko: { t: "Pasáis horas convencidos de que las sombras son lo único real. El frío de la roca os cala a todos.", fx: { almaTodos: -1, xp: 1 } } },
-        { txt: "Convencer a los demás prisioneros de que os ayuden", stat: "elo", cd: 12,
-          ok: { t: "Un viejo prisionero os presta un clavo que guardaba desde hace años, y una vasija de néctar escondida.", fx: { nectar: 1, xp: 2 } },
-          ko: { t: "Los prisioneros se burlan: «¡Ahí fuera solo hay más sombras!». Os tiran piedras hasta que os soltáis solos.", fx: { alma: -2 } } }
+        { txt: "Echarle un pulso para darle una lección", stat: "ani", cd: 12,
+          ok: { t: "El mercenario acaba con el brazo en la mesa y toda la taberna os invita a una ronda.", fx: { xp: 2, oro: 5 } },
+          ko: { t: "El mercenario gana, os tira de la silla y toda la taberna se ríe.", fx: { alma: -2 } } },
+        { txt: "Calmar los ánimos con una buena historia", stat: "elo", cd: 11,
+          ok: { t: "Le contáis una historia tan buena que acaba llorando y pagando las bebidas.", fx: { xp: 3 } },
+          ko: { t: "La historia es tan aburrida que el mercenario se duerme encima de la mesa. Al menos se calla.", fx: { xp: 1 } } },
+        { txt: "Descubrir que juega con dados trucados", stat: "raz", cd: 12,
+          ok: { t: "Sus dados están cargados. Se los cambiáis por unos buenos y le ganáis la bolsa en una apuesta.", fx: { oro: 10, xp: 2 } },
+          ko: { t: "No veis el truco y perdéis la apuesta.", fx: { oro: -5 } } }
       ],
-      sig: "c1_sombra"
+      sig: "c1_ratas"
     },
-    c1_sombra: {
-      cap: 0, tipo: "combate", fondo: "caverna", titulo: "Una sombra con hambre", enemigo: "sombra",
-      texto: ["Al moveros, una de las siluetas de la pared se despega de la roca. Tiene forma de hombre, pero camina a cuatro patas.",
-        "Lleva tanto tiempo siendo mirada que ha empezado a tener hambre."],
-      victoria: { t: "La sombra se deshace como humo frío. Donde estaba queda un frasco de néctar que algún prisionero escondió hace siglos.", fx: { xp: 3, nectar: 1, dracmas: 5 } },
-      sig: "c1_subida"
+    c1_ratas: {
+      cap: 0, tipo: "combate", fondo: "sotano", titulo: "Ratas en el sótano", enemigo: "rata",
+      texto: ["Bram, el tabernero, os ofrece una habitación gratis si limpiáis su sótano. «Son solo unas ratas», dice.",
+        "No son solo unas ratas. Son ratas del tamaño de un perro."],
+      victoria: { t: "Las ratas huyen por un agujero de la pared. Bram cumple su palabra y además os da una poción que guardaba detrás de un barril.", fx: { xp: 3, pocion: 1, oro: 5 } },
+      sig: "c1_encargo"
     },
-    c1_subida: {
-      cap: 0, tipo: "prueba", fondo: "salida", titulo: "La cuesta hacia la luz",
-      texto: ["Al giraros, el fuego os ciega. Más allá hay un pasadizo empinado que sube hacia una claridad dolorosa.",
-        "Los ojos necesitan tiempo para acostumbrarse a la verdad."],
-      opciones: [
-        { txt: "Trepar a toda velocidad", stat: "ani", cd: 13,
-          ok: { t: "Llegáis arriba jadeando, con los ojos llorosos pero enteros.", fx: { xp: 2 } },
-          ko: { t: "Resbaláis en la roca húmeda y rodáis varios metros cuesta abajo.", fx: { alma: -3 } } },
-        { txt: "Subir despacio, dejando que la vista se adapte", stat: "tem", cd: 11,
-          ok: { t: "La paciencia es la virtud de un alma ordenada. Llegáis descansados.", fx: { xp: 3, almaTodos: 1 } },
-          ko: { t: "Os impacientáis a mitad de camino y acabáis subiendo a ciegas.", fx: { alma: -1 } } },
-        { txt: "Mirar primero los reflejos en los charcos", stat: "raz", cd: 12,
-          ok: { t: "Primero los reflejos, luego las cosas, luego el sol. Junto a la salida encontráis una rama de olivo.", fx: { xp: 3, olivo: 1 } },
-          ko: { t: "Miráis directamente al sol. Error de principiante.", fx: { alma: -2 } } }
-      ],
-      sig: "c1_titiritero"
+    c1_encargo: {
+      cap: 0, tipo: "relato", fondo: "taberna", pnj: "forastero", titulo: "El forastero encapuchado",
+      texto: ["Al volver, un forastero encapuchado os espera en vuestra mesa y despliega un mapa: «Ignárax quemará Villabruma antes de la próxima luna. El único camino a su guarida cruza el Bosque Susurrante, la Cripta de los Reyes y las minas de los enanos».",
+        "«El concejo paga quinientas monedas de oro por su cabeza. Yo os adelanto algo.» Y deja una bolsa sobre la mesa."],
+      fx: { oro: 20, xp: 2, curarTodo: true }, boton: "Aceptar el encargo", sig: "c1_mercado"
     },
-    c1_titiritero: {
-      cap: 0, tipo: "combate", fondo: "salida", titulo: "El Titiritero de Sombras", enemigo: "titiritero",
-      texto: ["Un ser larguísimo os corta el paso con sus figuras de madera. Si la gente ve el sol, se le acaba el espectáculo, y no piensa permitirlo."],
-      victoria: { t: "Le demostráis que sus figuras son copias de copias. El Titiritero se deshace y suelta su bolsa: los prisioneros le pagaban sin saberlo.", fx: { xp: 5, dracmas: 15, nectar: 1 } },
-      sig: "c1_sol"
+    c1_mercado: {
+      cap: 0, tipo: "tienda", fondo: "aldea", pnj: "mercader", tienda: "villa", titulo: "El mercado de Villabruma",
+      texto: ["A la mañana siguiente, la plaza de Villabruma está llena de puestos. Brunilda, la mercader, ya se ha enterado de lo del dragón y os ha preparado «un surtido para héroes».",
+        "Cada héroe pasa por el mostrador con su propio oro."],
+      sig: "c1_emboscada"
     },
-    c1_sol: {
-      cap: 0, tipo: "relato", fondo: "superficie", titulo: "El sol",
-      texto: ["Salís a la superficie. Todo es más nítido de lo que imaginabais: los árboles tienen color y el agua refleja el cielo.",
-        "Lo de abajo era una copia pobre de esto. A lo lejos brillan las murallas de Atenas y, sobre su colina, el Partenón."],
-      fx: { curarTodo: true, xp: 2 }, boton: "Caminar hacia Atenas", sig: "c2_agora"
+    c1_emboscada: {
+      cap: 0, tipo: "combate", fondo: "camino", titulo: "Emboscada en el camino", enemigo: "goblin",
+      texto: ["Al caer la tarde, un carro volcado corta el camino del bosque. Demasiado fácil.",
+        "De los arbustos salen goblins aullando y, detrás de ellos, su jefe Krug, con una cimitarra oxidada y una sonrisa podrida."],
+      victoria: { t: "Krug huye chillando hacia el bosque y deja caer su botín. Entre las monedas robadas hay un pergamino de bendición.", fx: { xp: 5, bendicion: 1, oro: 10 } },
+      sig: "c2_sendero"
     },
 
-    c2_agora: {
-      cap: 1, inicio: true, tipo: "tienda", fondo: "agora", pnj: "demetria", tienda: "agora", titulo: "El Ágora",
-      texto: ["Atenas hierve. En el Ágora se mezclan mercaderes, sacerdotes, charlatanes y algún que otro filósofo descalzo.",
-        "Demetria, la mercader más lista de la Stoa, os hace señas desde su puesto. Cada héroe pasa por el mostrador con sus propias dracmas."],
-      sig: "c2_menon"
-    },
-    c2_menon: {
-      cap: 1, tipo: "prueba", fondo: "agora", pnj: "muchacho", titulo: "El esclavo de Menón",
-      texto: ["Junto a una fuente, un muchacho esclavo dibuja cuadrados en la arena. Su amo, Menón, dice que es incapaz de aprender nada.",
-        "Pero Sócrates decía que saber es recordar. Quizá el chico ya lo sepa y solo haya que preguntarle bien."],
+    c2_sendero: {
+      cap: 1, inicio: true, tipo: "prueba", fondo: "bosque", titulo: "El Bosque Susurrante",
+      texto: ["Los árboles del Bosque Susurrante son tan altos que no dejan ver el cielo. Entre las hojas se oyen voces que repiten vuestros nombres.",
+        "El sendero se bifurca una y otra vez. Es fácil perderse aquí para siempre."],
       opciones: [
-        { txt: "Enseñarle a duplicar un cuadrado solo con preguntas", stat: "raz", cd: 12,
-          ok: { t: "Sin darle la respuesta, pregunta tras pregunta, el muchacho descubre que la diagonal es la clave. Su amo, avergonzado, os paga.", fx: { xp: 4, dracmas: 10, moral: 1 } },
-          ko: { t: "Os liáis con las diagonales y el muchacho acaba enseñándoos a vosotros.", fx: { xp: 2 } } },
-        { txt: "Regatear con un vendedor de ánforas de néctar", stat: "elo", cd: 11,
-          ok: { t: "Le convencéis de que la virtud del comercio es el precio justo. Os lleváis dos ánforas.", fx: { nectar: 2 } },
-          ko: { t: "Salís con un ánfora vacía y la bolsa más ligera.", fx: { dracmas: -5 } } },
-        { txt: "Echar un pulso a un hoplita borracho", stat: "ani", cd: 13,
-          ok: { t: "El hoplita acaba con el brazo en la mesa y paga la apuesta entre risas.", fx: { dracmas: 15, xp: 2 } },
-          ko: { t: "El hoplita gana y, para celebrarlo, os da un abrazo que os cruje las costillas.", fx: { alma: -3 } } }
+        { txt: "Orientarse por el musgo y las estrellas", stat: "raz", cd: 12,
+          ok: { t: "El musgo crece hacia el norte. Encontráis el camino y, al lado, un corro de setas con monedas de plata.", fx: { xp: 3, oro: 5 } },
+          ko: { t: "Dais vueltas durante horas hasta volver al mismo árbol.", fx: { almaTodos: -1, xp: 1 } } },
+        { txt: "Seguir unas huellas sin hacer ruido", stat: "tem", cd: 12,
+          ok: { t: "Las huellas os llevan a un claro tranquilo donde descansáis un rato.", fx: { xp: 3, almaTodos: 2 } },
+          ko: { t: "Pisáis una rama seca, algo enorme se despierta y tenéis que correr.", fx: { alma: -2 } } },
+        { txt: "Responder a las voces y pedirles el camino", stat: "elo", cd: 13,
+          ok: { t: "Las voces son de duendecillos, que se ríen y os señalan el sendero.", fx: { xp: 4 } },
+          ko: { t: "Los duendecillos os mandan directos a una zarza.", fx: { almaTodos: -1 } } }
       ],
-      sig: "c2_trasimaco"
+      sig: "c2_osolechuza"
     },
-    c2_trasimaco: {
-      cap: 1, tipo: "combate", fondo: "agora", titulo: "Trasímaco el Sofista", enemigo: "trasimaco",
-      texto: ["Salta a vuestro paso como una fiera: «¡La justicia no es más que lo que le conviene al más fuerte!». Sus discípulos os rodean.",
-        "Darle un puñetazo solo le daría la razón."],
-      victoria: { t: "Trasímaco se pone rojo y se calla, cosa que nadie en Atenas había visto antes. Sus discípulos os pagan para que les deis clase.", fx: { xp: 6, dracmas: 15 } },
-      sig: "c2_giges"
+    c2_osolechuza: {
+      cap: 1, tipo: "combate", fondo: "bosque", titulo: "Un graznido en la maleza", enemigo: "osolechuza",
+      texto: ["Un graznido grave hace temblar las hojas. De entre los helechos sale un oso enorme con cabeza de lechuza.",
+        "Los oso-lechuzas no son malvados. Solo tienen mucha, mucha hambre."],
+      victoria: { t: "El oso-lechuza huye entre los árboles. En su madriguera hay restos de aventureros menos afortunados, y sus bolsas.", fx: { xp: 6, oro: 15 } },
+      sig: "c2_driada"
     },
-    c2_giges: {
-      cap: 1, tipo: "prueba", fondo: "pireo", pnj: "pastor", titulo: "El anillo de Giges",
-      texto: ["Al caer la tarde, en los muelles del Pireo, un pastor lidio os enseña un anillo de oro. «Si giras el engaste, nadie te ve», susurra.",
-        "Con él podríais entrar en el tesoro del tirano sin ser vistos. Nadie lo sabría nunca, salvo vuestra alma."],
-      opciones: [
-        { txt: "Usarlo para saquear el tesoro del tirano", stat: null,
-          ok: { t: "Volvéis cargados de oro. Pero esa noche nadie duerme bien: un alma injusta está en guerra consigo misma.", fx: { dracmas: 40, maxTodos: -2, moral: -1 } } },
-        { txt: "Arrojarlo al mar", stat: "tem", cd: 13,
-          ok: { t: "Ser justo cuando nadie te ve: esa es la prueba de verdad. El anillo se hunde y os sentís más ligeros.", fx: { xp: 6, moral: 1 } },
-          ko: { t: "El anillo os quema en la mano y cuesta soltarlo. Al final cae al agua, pero algo vuestro se va con él.", fx: { alma: -2, xp: 2 } } },
-        { txt: "Estudiar su magia y usarla solo contra el mal", stat: "raz", cd: 14,
-          ok: { t: "Comprendéis su mecanismo. Una vez por combate podréis volveros invisibles y confundir al enemigo.", fx: { anillo: true, xp: 2 } },
-          ko: { t: "Os volvéis invisibles sin querer y tardáis horas en volver. El pastor desaparece con el anillo.", fx: { alma: -2 } } }
-      ],
-      sig: "c2_harpias"
-    },
-    c2_harpias: {
-      cap: 1, tipo: "combate", fondo: "pireo", titulo: "Harpías en el puerto", enemigo: "harpia",
-      texto: ["Un graznido rasga el aire. Una bandada de harpías se lanza sobre los muelles arrancando bolsas, cestas y algún que otro sombrero.",
-        "Van directas a vuestras dracmas."],
-      victoria: { t: "Las harpías huyen chillando hacia el mar y sueltan todo lo robado. Entre el botín hay una rama de olivo de Delfos.", fx: { xp: 6, olivo: 1, dracmas: 5 } },
-      sig: "c3_banquete"
-    },
-
-    c3_banquete: {
-      cap: 2, inicio: true, tipo: "prueba", fondo: "banquete", pnj: "alcibiades", titulo: "La casa de Agatón",
-      texto: ["Agatón celebra su victoria en el teatro. Los invitados, coronados de hiedra, se recuestan en los divanes.",
-        "De pronto irrumpe Alcibíades, borracho, y exige que alguien se beba con él una crátera entera."],
-      opciones: [
-        { txt: "Beber sin perder la compostura, como Sócrates", stat: "tem", cd: 13,
-          ok: { t: "Al amanecer seguís hablando de filosofía mientras Alcibíades ronca bajo la mesa.", fx: { xp: 4, nectar: 1 } },
-          ko: { t: "El vino sin mezclar os tumba antes del tercer brindis.", fx: { alma: -2 } } },
-        { txt: "Pronunciar un discurso en honor de Eros", stat: "elo", cd: 12,
-          ok: { t: "Los invitados aplauden. Hasta a Aristófanes se le quita el hipo.", fx: { xp: 4, almaTodos: 2 } },
-          ko: { t: "El discurso es tan flojo que Aristófanes lo imita entre hipos.", fx: { alma: -1 } } },
-        { txt: "Sacar a Alcibíades por la puerta", stat: "ani", cd: 12,
-          ok: { t: "Alcibíades acaba en la calle, cantando. Agatón os da una propina por el servicio.", fx: { xp: 2, dracmas: 10 } },
-          ko: { t: "Alcibíades era luchador. El que acaba en la calle sois vosotros.", fx: { alma: -3 } } }
-      ],
-      sig: "c3_bodega"
-    },
-    c3_bodega: {
-      cap: 2, tipo: "tienda", fondo: "banquete", pnj: "sileno", tienda: "bodega", titulo: "La bodega de Sileno",
-      texto: ["Entre ánforas que huelen a resina os espera Sileno, el viejo sátiro que crió a Dioniso.",
-        "Dice que en su juventud vio a Sócrates beber toda una noche sin emborracharse. Nadie le cree, pero sus precios son buenos."],
-      sig: "c3_diotima"
-    },
-    c3_diotima: {
-      cap: 2, tipo: "enigma", fondo: "banquete", pnj: "diotima", titulo: "El enigma de Diotima",
-      texto: ["Una sacerdotisa de Mantinea, Diotima, se levanta y os mira fijamente:",
-        "«Si Eros desea lo bello, es porque no lo tiene. Entonces, ¿qué es Eros?»"],
-      respuestas: ["Un dios hermoso y perfecto", "Un daimon: algo intermedio entre lo mortal y lo divino", "Un simple capricho del cuerpo", "El hijo de Zeus y Hera"],
+    c2_driada: {
+      cap: 1, tipo: "enigma", fondo: "bosque", pnj: "driada", titulo: "El acertijo de la dríada",
+      texto: ["Una dríada sale del tronco de un roble milenario. «Nadie cruza mi bosque sin responder a mi acertijo», dice.",
+        "«Tengo ciudades, pero no casas. Tengo bosques, pero no árboles. Tengo ríos, pero no agua. ¿Qué soy?»"],
+      respuestas: ["Un sueño", "Un mapa", "Un espejo", "Una canción"],
       correcta: 1,
-      ok: { t: "«Exacto. Eros es un intermediario: ni sabio ni ignorante, sino amante de la sabiduría. Como el filósofo.»", fx: { xp: 6, almaTodos: 3 } },
-      ko: { t: "Diotima suspira: «Si fuera bello, no desearía la belleza». Os explica que Eros es un daimon, a medio camino entre mortales y dioses.", fx: { almaTodos: -1, xp: 2 } },
-      sig: "c3_androgino"
+      ok: { t: "La dríada sonríe y os regala unas bayas que cierran las heridas. «Que el bosque os guarde.»", fx: { xp: 6, almaTodos: 4 } },
+      ko: { t: "«Un mapa», suspira la dríada. Las raíces os hacen tropezar durante todo el camino.", fx: { almaTodos: -2, xp: 2 } },
+      sig: "c2_carromato"
     },
-    c3_androgino: {
-      cap: 2, tipo: "combate", fondo: "banquete", titulo: "El Andrógino", enemigo: "androgino",
-      texto: ["Aristófanes cuenta su mito: al principio los humanos eran seres dobles, con cuatro brazos, cuatro piernas y dos caras.",
-        "Mientras habla, uno de ellos entra rodando por el patio."],
-      victoria: { t: "Como hizo Zeus, lo partís en dos. Cada mitad se marcha buscando a la otra, y así nació el amor, según Aristófanes.", fx: { xp: 7, nectar: 1, dracmas: 15 } },
-      sig: "c4_pireo"
+    c2_carromato: {
+      cap: 1, tipo: "tienda", fondo: "bosque", pnj: "gnomo", tienda: "gnomo", titulo: "El carromato de Fizwick",
+      texto: ["En un claro hay un carromato envuelto en humo de colores. Un gnomo con gafas de soldador asoma la cabeza: «¡Clientes! ¡Por fin!».",
+        "Fizwick vende pociones, polvos y cosas que ni él sabe muy bien para qué sirven."],
+      sig: "c2_puente"
+    },
+    c2_puente: {
+      cap: 1, tipo: "combate", fondo: "puente", titulo: "El puente del trol", enemigo: "trol",
+      texto: ["Al salir del bosque, un viejo puente de piedra cruza un barranco. Debajo vive un trol que cobra un peaje de una oreja por cabeza.",
+        "Los trols se curan de cualquier herida. De cualquiera menos del fuego."],
+      victoria: { t: "El trol cae al barranco. Se oye un chapoteo al fondo y luego, por fin, silencio.", fx: { xp: 8, oro: 20, pocion: 1 } },
+      sig: "c3_trampas"
     },
 
-    c4_pireo: {
-      cap: 3, inicio: true, tipo: "tienda", fondo: "pireo", pnj: "hefesto", tienda: "pireo", titulo: "La armería de Hefesto",
-      texto: ["Alquiláis un trirreme para cruzar las Columnas de Heracles en busca de la Atlántida que describió Critias.",
-        "Antes de zarpar, un herrero cojo os llama desde su fragua. Es Hefesto en persona, que ha bajado del Olimpo a hacer negocio."],
-      sig: "c4_tormenta"
-    },
-    c4_tormenta: {
-      cap: 3, tipo: "prueba", fondo: "mar", titulo: "La tormenta de Poseidón",
-      texto: ["Más allá de las Columnas de Heracles el mar se oscurece. Poseidón, señor de la Atlántida, no quiere visitas.",
-        "El agua se alza como una muralla."],
+    c3_trampas: {
+      cap: 2, inicio: true, tipo: "prueba", fondo: "cripta", titulo: "El pasillo de las trampas",
+      texto: ["La Cripta de los Reyes Olvidados huele a polvo y a siglos. El pasillo de entrada tiene unas baldosas sospechosamente limpias.",
+        "En mitad del camino hay un esqueleto atravesado por cuchillas. Es un buen consejo."],
       opciones: [
-        { txt: "Remar contra las olas", stat: "ani", cd: 13,
-          ok: { t: "Con los brazos ardiendo, atravesáis la ola más alta.", fx: { xp: 3 } },
-          ko: { t: "Una ola barre la cubierta y os estrella contra el mástil.", fx: { almaTodos: -2 } } },
-        { txt: "Orientarse por las estrellas", stat: "raz", cd: 13,
-          ok: { t: "Las Pléyades marcan el rumbo. Encontráis un paso de agua tranquila y, flotando en él, una rama de olivo.", fx: { xp: 4, olivo: 1 } },
-          ko: { t: "Confundís Venus con una estrella y navegáis en círculos durante horas.", fx: { almaTodos: -2 } } },
-        { txt: "Rezar a Poseidón con palabras justas", stat: "elo", cd: 14,
-          ok: { t: "Al dios le divierte vuestra osadía y calma el mar.", fx: { xp: 4, almaTodos: 2 } },
-          ko: { t: "A Poseidón no le gusta vuestro tono. El mar se enfada todavía más.", fx: { almaTodos: -2 } } }
+        { txt: "Buscar los mecanismos de las trampas", stat: "raz", cd: 12,
+          ok: { t: "Encontráis las placas de presión y las desactiváis una a una.", fx: { xp: 4 } },
+          ko: { t: "Pisáis una baldosa equivocada y salen dardos de las paredes.", fx: { almaTodos: -2 } } },
+        { txt: "Cruzar saltando de baldosa en baldosa", stat: "tem", cd: 13,
+          ok: { t: "Pasáis como bailarines entre las cuchillas.", fx: { xp: 3 } },
+          ko: { t: "Una cuchilla os alcanza al pasar.", fx: { alma: -3 } } },
+        { txt: "Romper las trampas a martillazos", stat: "ani", cd: 12,
+          ok: { t: "Las cuchillas saltan en pedazos. Sutil no ha sido, pero funciona.", fx: { xp: 2 } },
+          ko: { t: "Las trampas son más duras que vuestros brazos.", fx: { alma: -2 } } }
       ],
-      sig: "c4_sirenas"
+      sig: "c3_esqueletos"
     },
-    c4_sirenas: {
-      cap: 3, tipo: "prueba", fondo: "mar", pnj: "sirena", titulo: "El canto de las sirenas",
-      texto: ["Cuando la tormenta amaina, una canción cruza el agua. Sobre una roca, una sirena canta vuestros nombres.",
-        "Quien la escucha demasiado tiempo se olvida de remar, de comer y de volver a casa."],
+    c3_esqueletos: {
+      cap: 2, tipo: "combate", fondo: "cripta", titulo: "La guardia de los reyes", enemigo: "esqueleto",
+      texto: ["Los sarcófagos se abren con un chirrido. De ellos salen caballeros esqueleto con espadas oxidadas.",
+        "Juraron proteger a sus reyes para siempre, y se lo tomaron al pie de la letra."],
+      victoria: { t: "Los huesos caen al suelo y esta vez no se levantan. Un clérigo diría que por fin descansan.", fx: { xp: 6, oro: 10 } },
+      sig: "c3_tesoro"
+    },
+    c3_tesoro: {
+      cap: 2, tipo: "prueba", fondo: "cripta", pnj: "fantasma", titulo: "El tesoro del rey",
+      texto: ["En la cámara funeraria descansa un rey con su corona, su oro y un anillo de plata en el dedo. Una inscripción avisa: «Quien robe a los muertos, cargará con ellos».",
+        "Nadie os está mirando. Nadie vivo, al menos."],
       opciones: [
-        { txt: "Taparse los oídos con cera y seguir remando", stat: "tem", cd: 12, inmuneElfo: true,
-          ok: { t: "El barco pasa de largo. La sirena se queda cantándole a una gaviota.", fx: { xp: 3 } },
-          ko: { t: "Alguien se quita la cera para oír «solo un poco» y el barco roza las rocas.", fx: { almaTodos: -2 } } },
-        { txt: "Responderle con un canto todavía mejor", stat: "elo", cd: 14,
-          ok: { t: "La sirena se calla, ofendida, y os lanza una perla para que os vayáis.", fx: { xp: 5, dracmas: 20 } },
-          ko: { t: "La sirena se ríe y canta más fuerte. Os zumban los oídos durante horas.", fx: { alma: -3 } } },
-        { txt: "Atarse al mástil, como Odiseo, y escucharla entera", stat: "ani", cd: 13,
-          ok: { t: "Aguantáis la canción entera sin soltaros. Ahora sabéis dónde está la Atlántida.", fx: { xp: 5, olivo: 1 } },
-          ko: { t: "Las cuerdas aguantan, pero la cabeza no tanto.", fx: { alma: -2 } } }
+        { txt: "Llevarse todo el oro de la tumba", stat: null,
+          ok: { t: "Os llenáis las bolsas de oro. Esa noche, el frío de la tumba se os mete en los huesos y ya no se va.", fx: { oro: 40, maxTodos: -2, moral: -1 } } },
+        { txt: "Dejar una ofrenda y seguir adelante", stat: "tem", cd: 13,
+          ok: { t: "Dejáis unas monedas en el altar. Una luz cálida os acompaña durante el resto de la cripta.", fx: { xp: 6, moral: 1 } },
+          ko: { t: "Os cuesta apartar la vista del oro. Cuando por fin os vais, algo de codicia se viene con vosotros.", fx: { alma: -2, xp: 2 } } },
+        { txt: "Estudiar el anillo de plata", stat: "raz", cd: 14,
+          ok: { t: "Es un anillo de invisibilidad. El fantasma del rey os lo cede con un gesto: una vez por combate podréis desaparecer.", fx: { anillo: true, xp: 2 } },
+          ko: { t: "Al tocarlo, el anillo os hiela la mano y el rey se revuelve en su tumba. Mejor no insistir.", fx: { alma: -2 } } }
       ],
-      sig: "c4_templo"
+      sig: "c3_mimico"
     },
-    c4_templo: {
-      cap: 3, tipo: "enigma", fondo: "atlantida", titulo: "La puerta de oricalco",
-      texto: ["La Atlántida es una ciudad de anillos de agua y de tierra alrededor de un templo cubierto de oricalco.",
-        "En la puerta hay una inscripción: «Soy lo que no cambia aunque todo cambie. Las cosas me imitan, pero nadie me ha visto con los ojos. ¿Qué soy?»"],
-      respuestas: ["El tiempo", "El reflejo en el agua", "Una Idea, una Forma", "El oricalco"],
+    c3_mimico: {
+      cap: 2, tipo: "combate", fondo: "cripta", titulo: "Un cofre demasiado bonito", enemigo: "mimico",
+      texto: ["En una sala lateral hay un cofre dorado, solo, iluminado por un rayo de luz. Ningún aventurero con experiencia lo tocaría.",
+        "Alguien lo toca. El cofre abre una boca llena de dientes."],
+      victoria: { t: "El mímico se queda quieto con la lengua fuera. Dentro de su estómago hay monedas de verdad y una poción.", fx: { xp: 6, oro: 15, pocion: 1 } },
+      sig: "c3_rey"
+    },
+    c3_rey: {
+      cap: 2, tipo: "enigma", fondo: "cripta", pnj: "fantasma", titulo: "El fantasma del rey",
+      texto: ["El fantasma de un rey os cierra el paso a la última cámara. «Malakar, mi consejero, me traicionó y se convirtió en liche. Si queréis enfrentaros a él, demostrad que tenéis seso.»",
+        "«Cuanto más le quitas, más grande se hace. ¿Qué es?»"],
+      respuestas: ["Una deuda", "Un agujero", "Una sombra", "La fama"],
+      correcta: 1,
+      ok: { t: "«Un agujero», asiente el fantasma. «Como el que dejó Malakar en mi reino.» Y os bendice antes de desvanecerse.", fx: { xp: 6, bendicion: 1, almaTodos: 3 } },
+      ko: { t: "«Un agujero», dice el fantasma, decepcionado. «Id, pero id con cuidado.»", fx: { xp: 2 } },
+      sig: "c3_liche"
+    },
+    c3_liche: {
+      cap: 2, tipo: "combate", fondo: "cripta", titulo: "Malakar, el liche", enemigo: "liche",
+      texto: ["En el trono del rey se sienta Malakar, un esqueleto con corona y túnica podrida. Sus ojos brillan con un fuego verde.",
+        "«Ignárax me prometió la mitad del reino», susurra. «No vais a estropearlo.»"],
+      victoria: { t: "Malakar se deshace en polvo. Entre las cenizas brilla su filacteria, y la rompéis para que no vuelva nunca.", fx: { xp: 10, oro: 25, superior: 1 } },
+      sig: "c4_forja"
+    },
+
+    c4_forja: {
+      cap: 3, inicio: true, tipo: "tienda", fondo: "forja", pnj: "herrero", tienda: "forja", titulo: "La forja de Durgan",
+      texto: ["Las minas de Barak-Thur llevan cien años vacías desde que Ignárax echó a los enanos. Solo queda uno: Durgan Barbahierro, que se negó a abandonar su forja.",
+        "«Si vais a por el dragón, no vais con esos juguetes», gruñe."],
+      sig: "c4_vagoneta"
+    },
+    c4_vagoneta: {
+      cap: 3, tipo: "prueba", fondo: "mina", titulo: "La vagoneta desbocada",
+      texto: ["Para cruzar las minas montáis en una vieja vagoneta. A mitad de la bajada, los frenos se rompen.",
+        "Al fondo del túnel, las vías se acaban en un precipicio."],
+      opciones: [
+        { txt: "Frenar a pulso con una palanca", stat: "ani", cd: 13,
+          ok: { t: "La vagoneta se detiene a un palmo del abismo.", fx: { xp: 3 } },
+          ko: { t: "La palanca se parte y salís despedidos contra la pared.", fx: { almaTodos: -2 } } },
+        { txt: "Cambiar las agujas en el último momento", stat: "raz", cd: 13,
+          ok: { t: "Acertáis con la palanca y la vagoneta entra en un túnel lleno de cristales.", fx: { xp: 4, oro: 10 } },
+          ko: { t: "La palanca equivocada os lleva por un túnel todavía más empinado.", fx: { almaTodos: -2 } } },
+        { txt: "Saltar a tiempo y agarrarse a una viga", stat: "tem", cd: 12,
+          ok: { t: "Saltáis todos a la vez y la vagoneta se pierde en el abismo sin vosotros.", fx: { xp: 3 } },
+          ko: { t: "Saltáis, pero no todos a tiempo.", fx: { alma: -3 } } }
+      ],
+      sig: "c4_cubo"
+    },
+    c4_cubo: {
+      cap: 3, tipo: "combate", fondo: "mina", titulo: "Algo en el túnel", enemigo: "cubo",
+      texto: ["El túnel está demasiado limpio. Ni una piedra, ni una telaraña, ni un hueso.",
+        "Entonces veis por qué: un cubo transparente avanza hacia vosotros con las armas de sus últimas víctimas flotando dentro."],
+      victoria: { t: "El cubo se derrite en un charco pegajoso. Entre los restos hay monedas y armas de otros aventureros.", fx: { xp: 7, oro: 20 } },
+      sig: "c4_golem"
+    },
+    c4_golem: {
+      cap: 3, tipo: "combate", fondo: "forja", titulo: "El guardián de la forja", enemigo: "golem",
+      texto: ["En la gran sala de la forja, un gólem de hierro despierta con un rugido de vapor. Los enanos lo construyeron para proteger la mina.",
+        "Ahora obedece a quien tiene la llave de la forja, y la llave la tiene Ignárax."],
+      victoria: { t: "El gólem cae con un estruendo que se oye en toda la montaña. Desde lejos, Durgan levanta su martillo en señal de respeto.", fx: { xp: 9, oro: 25, pocion: 2 } },
+      sig: "c4_descanso"
+    },
+    c4_descanso: {
+      cap: 3, tipo: "relato", fondo: "mina", pnj: "herrero", titulo: "Un descanso en la mina",
+      texto: ["Acampáis en una galería segura. Durgan os trae pan, cerveza enana y una advertencia: «El dragón duerme sobre su oro. Si os oye llegar, no volveréis a dormir nunca».",
+        "Mañana subiréis al Pico Cenizo."],
+      fx: { curarTodo: true, xp: 3 }, boton: "Subir al Pico Cenizo", sig: "c5_ascenso"
+    },
+
+    c5_ascenso: {
+      cap: 4, inicio: true, tipo: "prueba", fondo: "pico", titulo: "El Pico Cenizo",
+      texto: ["El camino a la guarida sube entre ríos de lava y nubes de ceniza. El aire quema los pulmones.",
+        "Arriba, en la boca de una cueva, brilla el reflejo de una montaña de oro."],
+      opciones: [
+        { txt: "Escalar la pared de roca", stat: "ani", cd: 13,
+          ok: { t: "Subís por la pared más directa y llegáis antes de que caiga la noche.", fx: { xp: 5 } },
+          ko: { t: "Una roca se suelta y os arrastra ladera abajo.", fx: { almaTodos: -2 } } },
+        { txt: "Esquivar las nubes de gas", stat: "tem", cd: 13,
+          ok: { t: "Contenéis la respiración en el momento justo y pasáis sin un rasguño.", fx: { xp: 5, almaTodos: 2 } },
+          ko: { t: "Respiráis el gas y os pasáis la subida tosiendo.", fx: { almaTodos: -2 } } },
+        { txt: "Buscar el viejo paso de los enanos", stat: "raz", cd: 14,
+          ok: { t: "Encontráis las escaleras secretas de los enanos, talladas en la roca, y un pergamino olvidado.", fx: { xp: 5, bendicion: 1 } },
+          ko: { t: "El paso está derrumbado y perdéis medio día.", fx: { almaTodos: -2 } } }
+      ],
+      sig: "c5_mercader"
+    },
+    c5_mercader: {
+      cap: 4, tipo: "tienda", fondo: "pico", pnj: "planar", tienda: "planar", titulo: "El Mercader de los Planos",
+      texto: ["A la entrada de la guarida alguien ha montado un puesto. Un tiefling con turbante os saluda como si os estuviera esperando.",
+        "«Nadie va a ver a un dragón sin pasar antes por mi tienda», dice, y abre una bolsa que por dentro es mucho más grande que por fuera."],
+      sig: "c5_acertijo"
+    },
+    c5_acertijo: {
+      cap: 4, tipo: "enigma", fondo: "guarida", pnj: "dragon", titulo: "El acertijo de Ignárax",
+      texto: ["Ignárax abre un ojo del tamaño de un escudo. «Hace siglos que nadie me entretiene», dice. «Responded a mi acertijo y os dejaré atacar primero.»",
+        "«¿Qué es más poderoso que los dioses y más malvado que los demonios? Los pobres lo tienen, los ricos lo necesitan y, si lo comes, mueres.»"],
+      respuestas: ["El oro", "El fuego", "Nada", "El tiempo"],
       correcta: 2,
-      ok: { t: "La puerta gira en silencio. Dentro hay ofrendas: néctar y una rama de olivo dorada.", fx: { xp: 6, nectar: 1, olivo: 1 } },
-      ko: { t: "La puerta escupe agua hirviendo antes de abrirse a regañadientes. La respuesta era «una Idea».", fx: { almaTodos: -2, xp: 2 } },
-      sig: "c4_talos"
+      ok: { t: "«Nada», gruñe Ignárax, impresionado a su pesar. «Nada os salvará, entonces.» Pero le habéis ganado la mano y empezáis con ventaja.", fx: { xp: 8, bendicion: 1 } },
+      ko: { t: "«Nada», ríe Ignárax. «Y nada es lo que quedará de vosotros.» Y os escupe una bocanada de fuego para empezar.", fx: { almaTodos: -3 } },
+      sig: "c5_dragon"
     },
-    c4_talos: {
-      cap: 3, tipo: "combate", fondo: "atlantida", titulo: "Talos, el autómata", enemigo: "talos",
-      texto: ["Ante el palacio vigila un gigante de bronce. Cada paso suyo hace temblar el muelle.",
-        "Medea lo derrotó una vez quitándole el clavo del tobillo. Vosotros no sois Medea, pero algo se os ocurrirá."],
-      victoria: { t: "Alguien arranca el clavo del tobillo. El icor dorado se escapa y Talos se queda quieto para siempre, como una estatua más.", fx: { xp: 8, dracmas: 20 } },
-      sig: "c4_palacio"
+    c5_dragon: {
+      cap: 4, tipo: "combate", fondo: "guarida", titulo: "Ignárax, el dragón rojo", enemigo: "dragon",
+      texto: ["El dragón se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva y sus escamas brillan como brasas.",
+        "Es ahora o nunca."],
+      victoria: { t: "Ignárax cae sobre su tesoro con un rugido que hace temblar el Pico Cenizo. El dragón rojo ha muerto y Villabruma está a salvo.", fx: { xp: 12, curarTodo: true } },
+      sig: "c5_final"
     },
-    c4_palacio: {
-      cap: 3, tipo: "relato", fondo: "palacio", titulo: "El palacio de oricalco",
-      texto: ["Dentro todo es oricalco: las columnas, los muros, hasta las bañeras. En el centro, una estatua de Poseidón en un carro tirado por caballos alados.",
-        "Os escondéis tras una columna para recuperar el aliento. Al fondo se oyen los pasos de un rey."],
-      fx: { almaTodos: 6, xp: 2 }, boton: "Enfrentarse al rey", sig: "c4_atlas"
-    },
-    c4_atlas: {
-      cap: 3, tipo: "combate", fondo: "palacio", titulo: "Atlas, rey de la Atlántida", enemigo: "atlas",
-      texto: ["El primer rey de la isla, hijo de Poseidón, se alza en su trono con un tridente de oricalco.",
-        "Su pueblo dejó de ser virtuoso y se llenó de hybris. Ahora quiere conquistar Atenas."],
-      victoria: { t: "Con la caída de Atlas la isla tiembla y empieza a hundirse en el mar, como contaba el mito. Escapáis por los pelos.", fx: { xp: 10, nectar: 2, dracmas: 25 } },
-      sig: "c5_linea"
-    },
-
-    c5_linea: {
-      cap: 4, inicio: true, tipo: "prueba", fondo: "ideas", titulo: "La línea dividida",
-      texto: ["Un rayo de luz os arranca de la cubierta. Subís por los cuatro tramos del conocimiento: imágenes, cosas, números y, por fin, Ideas.",
-        "Cada tramo os pide algo distinto."],
+    c5_final: {
+      cap: 4, tipo: "final", fondo: "guarida", titulo: "El tesoro del dragón",
+      texto: ["Ante vosotros brilla el tesoro de Ignárax: oro de mil reinos, coronas, gemas y armas legendarias. Hay suficiente para comprar un castillo cada uno.",
+        "Pero Villabruma está medio quemada y los enanos de Barak-Thur llevan cien años sin hogar."],
       opciones: [
-        { txt: "Resolver una demostración geométrica", stat: "raz", cd: 14,
-          ok: { t: "El teorema cierra como una puerta bien hecha. Subís un tramo entero de golpe.", fx: { xp: 5 } },
-          ko: { t: "Un error en el tercer paso os hace caer de nuevo al mundo de las opiniones.", fx: { almaTodos: -2 } } },
-        { txt: "Vaciar la mente de deseos", stat: "tem", cd: 13,
-          ok: { t: "Sin hambre ni miedo, flotáis hacia arriba.", fx: { xp: 5, almaTodos: 2 } },
-          ko: { t: "Os acordáis del vino de Agatón y perdéis la concentración.", fx: { almaTodos: -2 } } },
-        { txt: "Dialogar con las Formas", stat: "elo", cd: 14,
-          ok: { t: "La Idea de lo Igual y la Idea de lo Bello os responden y os indican el camino.", fx: { xp: 5 } },
-          ko: { t: "Las Formas no responden a la retórica barata.", fx: { almaTodos: -2 } } }
-      ],
-      sig: "c5_bazar"
-    },
-    c5_bazar: {
-      cap: 4, tipo: "tienda", fondo: "ideas", pnj: "hermes", tienda: "bazar", titulo: "El bazar de Hermes",
-      texto: ["Entre los números y las Formas, alguien ha montado un puesto. Es Hermes, que viaja entre los planos con sus sandalias aladas.",
-        "«Aquí arriba todo es perfecto», dice, «incluso los precios»."],
-      sig: "c5_esfinge"
-    },
-    c5_esfinge: {
-      cap: 4, tipo: "enigma", fondo: "ideas", pnj: "esfinge", titulo: "La Esfinge",
-      texto: ["Antes de la cima, una esfinge os cierra el paso. «Responded y pasaréis. Fallad y veréis lo que pasa», dice sin moverse.",
-        "«¿Qué ser camina a cuatro patas al amanecer, a dos al mediodía y a tres al atardecer?»"],
-      respuestas: ["La propia Esfinge", "El ser humano", "El sol", "Un sátiro con bastón"],
-      correcta: 1,
-      ok: { t: "La Esfinge sonríe por primera vez en mil años y se aparta. «Edipo también acertó. Mirad cómo le fue.»", fx: { xp: 8 } },
-      ko: { t: "«Incorrecto», dice la Esfinge. Y se levanta.", fx: {} },
-      sigOk: "c5_doxa", sigKo: "c5_esfinge_combate"
-    },
-    c5_esfinge_combate: {
-      cap: 4, tipo: "combate", fondo: "ideas", titulo: "La Esfinge despierta", enemigo: "esfinge",
-      texto: ["La Esfinge despliega las alas. Su mirada pesa como la piedra."],
-      victoria: { t: "La Esfinge cae y, antes de desvanecerse, susurra: «El ser humano. Era el ser humano».", fx: { xp: 8, dracmas: 20 } },
-      sig: "c5_doxa"
-    },
-    c5_doxa: {
-      cap: 4, tipo: "combate", fondo: "ideas", titulo: "Doxa, la Gran Opinión", enemigo: "doxa",
-      texto: ["Una nube enorme hecha de rumores, prejuicios y verdades a medias. Cambia de forma cada vez que la miráis.",
-        "Las espadas apenas la rozan. Solo la razón la disuelve."],
-      victoria: { t: "La última opinión se disuelve en el aire. Detrás de la niebla aparece una luz que no se parece a nada.", fx: { xp: 12, curarTodo: true } },
-      sig: "c5_bien"
-    },
-    c5_bien: {
-      cap: 4, tipo: "final", fondo: "ideas", titulo: "La Idea del Bien",
-      texto: ["Ante vosotros brilla algo que no es un objeto, sino la luz que hace visibles todas las cosas. Por un instante lo entendéis todo.",
-        "Entonces os acordáis de la caverna, y de los prisioneros que siguen allí encadenados, mirando sombras."],
-      opciones: [
-        { txt: "Bajar a la caverna a liberar a los demás", final: "rey" },
-        { txt: "Quedarse para siempre contemplando el Bien", final: "contemplacion" }
+        { txt: "Repartir el tesoro con Villabruma y los enanos", final: "heroes" },
+        { txt: "Quedároslo todo", final: "codicia" }
       ]
     }
   };
 
   const FINALES = {
-    rey: {
-      titulo: "Los filósofos-reyes",
-      texto: ["Bajáis de nuevo a la oscuridad. Los prisioneros se ríen: tenéis los ojos torpes en la penumbra y habláis de un sol que nadie ha visto.",
-        "Pero insistís, pregunta tras pregunta, como hacía Sócrates. Uno a uno, los grilletes caen."]
+    heroes: {
+      titulo: "Héroes de Villabruma",
+      texto: ["Volvéis a Villabruma con carros llenos de oro. Reconstruís las casas quemadas y los enanos regresan a sus minas.",
+        "Desde entonces, en el Grifo Tuerto hay una mesa reservada para vosotros y una canción que los bardos no se cansan de tocar."]
     },
-    contemplacion: {
-      titulo: "La contemplación eterna",
-      texto: ["Os quedáis en la luz. No hay hambre, ni miedo, ni opinión. Sois felices como lo son las cosas perfectas.",
-        "Abajo, en la caverna, las sombras siguen bailando sobre la roca. Platón diría que el sabio está obligado a volver, pero eso ya es otra partida."]
+    codicia: {
+      titulo: "La maldición del oro",
+      texto: ["Os quedáis con todo. Compráis castillos, títulos y ejércitos de criados.",
+        "Pero el oro de un dragón siempre atrae a otro dragón. Dicen que algo nuevo ha empezado a crecer en el Pico Cenizo, y que ya huele vuestro tesoro."]
     }
   };
   /* Epílogo de cada héroe según su alineamiento moral. */
   const EPILOGOS = {
-    B: "dedicó el resto de su vida a sacar prisioneros de cavernas.",
-    N: "volvió a su oficio, más sabio y con mejores historias que contar.",
-    M: "abrió una escuela de retórica carísima y se hizo rico vendiendo sombras."
+    B: "fundó un orfanato en Villabruma y todavía visita el Grifo Tuerto los viernes.",
+    N: "siguió buscando aventuras y acabó en otra taberna, escuchando otro rumor.",
+    M: "se hizo con el control del gremio de ladrones de la capital."
   };
 
-  /* El códice: lore del mundo (siempre visible), lugares (al llegar) y bestiario (al encontrar). */
+  /* El compendio: lore del mundo (siempre visible), lugares (al llegar) y bestiario (al encontrar). */
   const LORE = {
     mundo: [
-      { titulo: "Los tres planos", texto: [
-        "En la Hélade se cruzan tres planos. Abajo está el Plano de las Sombras, donde queda la caverna: el reflejo de un reflejo. En medio, el Plano Material, donde viven los mortales con sus ciudades y sus guerras.",
-        "Arriba está el Plano de las Formas, donde existe lo que de verdad es: lo Bello, lo Justo, lo Igual. El Demiurgo modeló el mundo mirando esas Formas, como un artesano que copia un modelo. Por eso las cosas se parecen a lo perfecto, pero nunca llegan a serlo.",
-        "Por encima de todo brilla la Idea del Bien, que hace visibles las demás, como el sol hace visibles las cosas."] },
+      { titulo: "Los Reinos de Valdren", texto: [
+        "Valdren es una tierra de reinos pequeños separados por bosques, montañas y ruinas de imperios antiguos. Los caminos son peligrosos, las tabernas están llenas de rumores y siempre hay alguien dispuesto a pagar a un grupo de aventureros.",
+        "Hace mil años, los dragones gobernaban Valdren. Los últimos fueron derrotados o se escondieron a dormir sobre su oro. Ignárax es uno de ellos, y acaba de despertar."] },
+      { titulo: "Los planos", texto: [
+        "Más allá del Plano Material existen otros mundos: el Reino Feérico, de donde vienen los elfos y las dríadas; el Reino de las Sombras, adonde van los muertos que no descansan; los Nueve Infiernos, de donde proceden los tieflings, y los planos elementales del fuego, el agua, el aire y la tierra.",
+        "Unos pocos mercaderes viajan entre todos ellos y aceptan cualquier moneda, incluidas algunas que es mejor no preguntar."] },
+      { titulo: "Los dioses", texto: [
+        "Solara, la Dama del Alba, protege a los sanadores y detesta a los no muertos. Valdur es el dios de la guerra justa y de los juramentos. Myrrh, la Tejedora de Conjuros, vela por la magia arcana y la música. Orsun, el Cazador Salvaje, guía a exploradores y bárbaros. Lysa, la de los Mil Caminos, sonríe a viajeros, mercaderes y ladrones.",
+        "Los brujos, en cambio, rezan a seres que no aparecen en ningún templo."] },
       { titulo: "Los alineamientos", texto: [
-        "Platón dividía el alma en tres partes: la razón, que guía; el ánimo, que empuja, y el deseo, que tira. Un alma ordenada es como una ciudad bien gobernada.",
-        "Los aventureros de la Hélade se describen con dos ejes. Legal o caótico dice si su alma sigue un orden o va a donde la lleve el momento. Bueno o malvado dice para quién trabaja ese orden. Las decisiones que toméis en la aventura pueden cambiarlo."] },
-      { titulo: "Los dioses patronos", texto: [
-        "Atenea protege a los filósofos y Ares a los guardianes. Hermes, dios de los mercaderes y los ladrones, sonríe a los sofistas. Apolo y las Musas inspiran a rapsodas y oráculos, Artemisa guía a las cazadoras y Hécate, señora de las encrucijadas, escucha los pactos de los hechiceros.",
-        "Heracles es el modelo de todos los atletas. Tique, la Fortuna, decide los dados de todos los demás."] },
+        "Cada aventurero se describe con dos ejes. Legal o caótico indica si respeta las normas, los juramentos y las jerarquías o si sigue su propio criterio. Bueno o malvado indica para quién trabaja: para los demás o solo para sí mismo.",
+        "Las decisiones que toméis durante la aventura pueden cambiarlo."] },
       { titulo: "Tiradas, CA y desafío", texto: [
         "Toda acción arriesgada se resuelve con un d20 más el atributo que corresponda. Si iguala o supera la Clase de Dificultad (CD), sale bien. Un 20 natural es un crítico y un 1 natural, una pifia.",
-        "Para golpear a alguien hay que igualar su Clase de Armadura (CA). El Valor de Desafío (VD) del bestiario indica lo peligroso que es un monstruo para un grupo de cuatro héroes de nivel 1.",
-        "Razón equivale a la Inteligencia y la Sabiduría; Ánimo, a la Fuerza y la Constitución; Elocuencia, al Carisma, y Templanza, a la Destreza y el autocontrol."] }
+        "Para golpear hay que igualar la Clase de Armadura (CA) del enemigo. Los Puntos de Golpe (PG) son la vida, y los Puntos de Experiencia (PX) os hacen subir de nivel. El Valor de Desafío (VD) del bestiario indica lo peligroso que es cada monstruo.",
+        "Esta es una versión abreviada de las reglas: la Fuerza también cuenta como Constitución y la Sabiduría como Destreza para la iniciativa."] }
     ],
     lugares: {
-      0: { titulo: "La Caverna", texto: ["Un demiplano de sombras bajo la Hélade. Sus prisioneros nacen encadenados mirando una pared, y creen que las sombras que ven son lo único que existe. Platón la describe en el libro VII de la República."] },
-      1: { titulo: "Atenas", texto: ["La ciudad de Atenea, con su Ágora, su Stoa y su puerto del Pireo. Aquí se discute de todo: de leyes, de dioses y del precio del aceite. Aquí condenaron a Sócrates por hacer demasiadas preguntas."] },
-      2: { titulo: "El Banquete", texto: ["La casa del poeta Agatón la noche de su victoria. Los invitados acordaron no emborracharse y pronunciar discursos en honor de Eros. Lo de no emborracharse duró poco."] },
-      3: { titulo: "Atlántida", texto: ["Una isla más allá de las Columnas de Heracles, mayor que Libia y Asia juntas, según cuenta Critias en el Timeo. Sus reyes descendían de Poseidón. Cuando se llenaron de hybris, la isla se hundió en un solo día y una noche."] },
-      4: { titulo: "El Mundo de las Ideas", texto: ["El Plano de las Formas. Allí flotan los cinco sólidos perfectos con los que el Demiurgo construyó los elementos: el tetraedro del fuego, el cubo de la tierra, el octaedro del aire, el icosaedro del agua y el dodecaedro del cosmos."] }
+      0: { titulo: "Villabruma", texto: ["Un pueblo de leñadores y comerciantes a orillas del Bosque Susurrante. Su taberna, el Grifo Tuerto, es famosa por su cerveza negra y por mandar aventureros a morir a sitios interesantes."] },
+      1: { titulo: "El Bosque Susurrante", texto: ["Un bosque antiguo donde el Reino Feérico queda muy cerca. Los árboles hablan, las setas brillan y los caminos cambian de sitio cuando nadie los mira."] },
+      2: { titulo: "La Cripta de los Reyes", texto: ["El panteón de la vieja dinastía de Valdren. Su último rey fue traicionado por Malakar, su consejero, que buscó la inmortalidad y la encontró convertido en liche."] },
+      3: { titulo: "Las Minas de Barak-Thur", texto: ["La mayor ciudad enana de Valdren, excavada bajo el Pico Cenizo. Ignárax la arrasó hace cien años y los enanos todavía sueñan con volver."] },
+      4: { titulo: "La Guarida de Ignárax", texto: ["Una caverna en la cima del Pico Cenizo, rodeada de lava. Dentro, Ignárax duerme sobre el oro de cien reinos y los huesos de quienes intentaron llevárselo."] }
     }
   };
 

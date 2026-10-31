@@ -1,4 +1,4 @@
-/* Diálogos y Dados · héroes en pixel art.
+/* Dados y Mazmorras · héroes en pixel art.
    componer(aspecto) devuelve una Rejilla de 36×36 mirando a la derecha.
    aspecto = { raza, clase, piel, pelo, tela, peinado, barba, objeto, extras, espejo, sinContorno } */
 const HEROES = (() => {
@@ -14,10 +14,11 @@ const HEROES = (() => {
     semiorco: { cuerpo: "fornido", pieles: ["verde", "gris", "oliva"], pelos: ["negro", "castano", "canoso"] },
     tiefling: { cuerpo: "normal", pieles: ["roja", "violeta", "azul"], pelos: ["negro", "violeta", "canoso", "cobrizo"] },
     draconido: { cuerpo: "fornido", pieles: ["bronce", "roja", "esmeralda", "plata", "azul"], pelos: [], sinPelo: true },
+    gnomo: { cuerpo: "bajo", pieles: ["clara", "oliva", "morena", "oscura"], pelos: ["rubio", "canoso", "cobrizo", "violeta", "castano"] },
     satiro: { cuerpo: "normal", pieles: ["oliva", "clara", "morena", "oscura"], pelos: ["castano", "negro", "cobrizo", "rubio", "canoso"] }
   };
   /* Tela por defecto de cada clase. */
-  const TELA_CLASE = { filosofo: "azul", guardian: "granate", sofista: "violeta", rapsoda: "terracota", atleta: "blanco", oraculo: "azul", cazadora: "oliva", hechicero: "violeta" };
+  const TELA_CLASE = { guerrero: "granate", barbaro: "terracota", picaro: "negro", explorador: "oliva", mago: "azul", brujo: "violeta", clerigo: "blanco", bardo: "ocre" };
   const PEINADOS = ["corto", "largo", "recogido", "rizado", "rapado"];
   const TELAS = ["terracota", "azul", "oliva", "violeta", "ocre", "blanco", "granate", "negro"];
   const OJOS = "#1b1210";
@@ -77,9 +78,14 @@ const HEROES = (() => {
     g.set(x + 5, y + 2, piel[1], piel);
     g.set(x + 3, y + 3, piel[1], piel).set(x + 4, y + 3, piel[1], piel);
     if (raza === "semiorco") { g.set(x + 3, y + 2, R.hueso[4], R.hueso); g.set(x + 5, y + 3, R.hueso[4], R.hueso); }
+    if (raza === "gnomo") { g.set(x + 6, y + 1, piel[3], piel).set(x + 6, y + 2, piel[2], piel).set(x + 7, y + 2, piel[2], piel).set(x + 5, y + 2, piel[1], piel); }
   }
   function oreja(g, t, piel, raza) {
     if (raza === "draconido") return;
+    if (raza === "gnomo") {
+      new Capa().linea(t.cabX - 2, t.cabY + 1, t.cabX - 4, t.cabY - 1, 2).on(t.cabX - 3, t.cabY + 2).pintar(g, piel, { relieve: 1, separar: 2 });
+      return;
+    }
     if (raza === "elfo") {
       new Capa().linea(t.cabX - 2, t.cabY + 1, t.cabX - 6, t.cabY - 3, 2).on(t.cabX - 3, t.cabY + 2).pintar(g, piel, { relieve: 1, separar: 2 });
       g.set(t.cabX - 3, t.cabY, piel[1], piel);
@@ -113,7 +119,7 @@ const HEROES = (() => {
       c.ell(t.cabX - 5, t.cabY + 1, 2, 2.2);
       for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) if (x >= t.cabX - 1 && y >= t.ojoY - 1) c.off(x, y);
     }
-    if (raza === "elfo" || raza === "satiro") c.off(t.cabX - 3, t.cabY);
+    if (raza === "elfo" || raza === "satiro" || raza === "gnomo") c.off(t.cabX - 3, t.cabY);
     c.pintar(g, ram, { relieve: 2.5 });
     if (peinado !== "rizado") {
       for (let x = t.cabX - 4; x <= t.cabX + 3; x += 2) { const y = t.cabY - 4; if (g.rampa(x, y) === ram) g.set(x, y, ram[3], ram); }
@@ -145,7 +151,7 @@ const HEROES = (() => {
       new Capa().rect(mx - 1, my + 1, 2, 2).pintar(g, piel, { relieve: 1, max: 2 });
     }
   }
-  function piernas(g, t, piel, raza, pelo, calzado) {
+  function piernas(g, t, piel, raza, pelo, calzado, ramPierna, ramBota) {
     const pie = R.madera;
     if (raza === "satiro") {
       new Capa().ell(t.cx - 0.5, t.pierTop + 1.5, 4.2, 2.6).pintar(g, pelo, { relieve: 2 });
@@ -159,7 +165,11 @@ const HEROES = (() => {
     const c = new Capa();
     c.linea(t.cx - 2, t.pierTop, t.cx - 3, t.suelo - 2, 2);
     c.linea(t.cx + 2, t.pierTop, t.cx + 3, t.suelo - 2, 2);
-    c.pintar(g, piel, { relieve: 1.5 });
+    c.pintar(g, ramPierna || piel, { relieve: 1.5 });
+    if (ramBota) {
+      new Capa().rect(t.cx - 4, t.suelo - 3, 3, 2).rect(t.cx + 2, t.suelo - 3, 3, 2).rect(t.cx - 5, t.suelo - 1, 3, 2).rect(t.cx + 2, t.suelo - 1, 4, 2).pintar(g, ramBota, { relieve: 1 });
+      return;
+    }
     const grande = raza === "mediano";
     const p = new Capa().rect(t.cx - 5, t.suelo - 1, grande ? 4 : 3, 2).rect(t.cx + 2, t.suelo - 1, grande ? 5 : 4, 2);
     p.pintar(g, grande ? piel : piel, { relieve: 1 });
@@ -182,184 +192,200 @@ const HEROES = (() => {
   /* ---------- Ropa, tocados y objetos de cada clase ---------- */
   const falda = (t, largo, vuelo) => new Capa().poly([[t.torL, t.torBot - 1], [t.torR + 1, t.torBot - 1], [t.torR + 1 + vuelo, t.pierTop + largo], [t.torL - vuelo, t.pierTop + largo]]);
   const torso = t => new Capa().rect(t.torL, t.torTop, t.torR - t.torL + 1, t.torBot - t.torTop + 1).off(t.torL, t.torTop).off(t.torR, t.torTop);
+  const cinturon = (g, t, ram = R.madera, hebilla = R.bronce) => {
+    for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 2, ram[1], ram);
+    g.set(t.cx + 1, t.torBot - 2, hebilla[3], hebilla);
+  };
+  /* Anillas de la cota de malla: oscurece un píxel de cada dos. */
+  function malla(g, ram, x0, y0, x1, y1) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
+      if (g.rampa(x, y) === ram && (x + y) % 2 === 0 && g.get(x, y) === ram[2]) g.set(x, y, ram[1], ram);
+  }
+  function capucha(t) {
+    const c = new Capa().ell(t.cabX - 0.8, t.cabY - 0.4, t.cabRx + 1.3, t.cabRy + 1.2);
+    c.poly([[t.cabX - 6, t.cabY], [t.cabX - 1, t.cabY + 4], [t.torL, t.torTop + 2], [t.cabX - 8, t.torTop + 1]]);
+    for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) if (x >= t.cabX && y >= t.ojoY - 2 && y <= t.ojoY + 4) c.off(x, y);
+    return c;
+  }
 
   function espalda(g, t, clase, tela) {
-    if (clase === "cazadora") {
+    if (clase === "explorador") {
+      new Capa().poly([[t.torL + 1, t.torTop], [t.torL + 3, t.torTop], [t.torL - 1, t.pierTop + 5], [t.torL - 5, t.pierTop + 4]]).pintar(g, tela, { relieve: 2, max: 2 });
       new Capa().linea(t.torL + 1, t.torTop - 2, t.torL - 1, t.torBot - 2, 3).pintar(g, R.madera, { relieve: 1.5 });
       [[t.torL + 2, t.torTop - 4], [t.torL, t.torTop - 4], [t.torL + 1, t.torTop - 5]].forEach(([x, y], i) => {
         g.set(x, y, i === 2 ? R.tela.granate[3] : R.hueso[4], R.hueso).set(x, y + 1, R.hueso[2], R.hueso);
       });
     }
-    if (clase === "rapsoda") new Capa().poly([[t.torL + 1, t.torTop], [t.torL + 3, t.torTop], [t.torL - 1, t.pierTop + 5], [t.torL - 5, t.pierTop + 4]]).pintar(g, tela, { relieve: 2, max: 2 });
-    if (clase === "sofista") new Capa().poly([[t.torL + 1, t.torTop], [t.torL + 4, t.torTop], [t.torL + 1, t.torBot + 1], [t.torL - 3, t.torBot]]).pintar(g, tela, { relieve: 2, max: 2 });
+    if (clase === "bardo" || clase === "picaro") new Capa().poly([[t.torL + 1, t.torTop], [t.torL + 4, t.torTop], [t.torL + 1, t.torBot + 2], [t.torL - 4, t.torBot + 1]]).pintar(g, tela, { relieve: 2, max: 2 });
+    if (clase === "barbaro") new Capa().poly([[t.torL, t.torTop], [t.torL + 3, t.torTop], [t.torL, t.torBot], [t.torL - 3, t.torBot - 1]]).pintar(g, R.pelo.castano, { relieve: 2, max: 2 });
   }
 
   function vestir(g, t, clase, tela, piel) {
     const T = torso(t);
     switch (clase) {
-      case "filosofo": {
-        T.unir(falda(t, t.suelo - t.pierTop - 2, 2)).pintar(g, tela, { relieve: 3 });
-        new Capa().linea(t.torR, t.torTop + 1, t.torL, t.torBot + 2, 1).recortar(T).pintar(g, tela, { plano: 1 });
-        new Capa().linea(t.torR - 1, t.torTop + 3, t.torL + 2, t.pierTop + 5, 1).pintar(g, tela, { plano: 1 });
-        g.set(t.cx + 1, t.torTop, R.hueso[3], R.hueso).set(t.cx + 2, t.torTop, R.hueso[3], R.hueso);
+      case "guerrero": {
+        falda(t, 3, 1).pintar(g, R.hierro, { relieve: 2 });
+        T.pintar(g, R.hierro, { relieve: 3, separar: true });
+        new Capa().rect(t.cx - 1, t.torTop + 1, 4, t.pierTop - t.torTop + 3).recortar(T.copia().unir(falda(t, 3, 1))).pintar(g, tela, { relieve: 1.5 });
+        new Capa().ell(t.torL + 1, t.torTop + 1, 2.3, 1.8).ell(t.torR - 1, t.torTop + 1, 2.3, 1.8).pintar(g, R.hierro, { relieve: 2, separar: true });
+        cinturon(g, t);
         break;
       }
-      case "guardian": {
-        falda(t, 3, 1).pintar(g, tela, { relieve: 2 });
-        for (let x = t.torL - 1; x <= t.torR + 1; x += 2) for (let y = t.torBot; y <= t.pierTop + 3; y++) if (g.rampa(x, y) === tela) g.set(x, y, tela[1], tela);
-        T.pintar(g, R.bronce, { relieve: 3, separar: true });
-        for (let y = t.torTop + 3; y < t.torBot - 1; y++) g.set(t.cx + 1, y, R.bronce[1], R.bronce);
-        g.set(t.cx - 1, t.torTop + 4, R.bronce[1], R.bronce).set(t.cx + 3, t.torTop + 4, R.bronce[1], R.bronce);
-        for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 1, R.bronce[1], R.bronce);
-        break;
-      }
-      case "sofista": {
-        T.unir(falda(t, 4, 1)).pintar(g, tela, { relieve: 3 });
-        for (let x = t.torL - 1; x <= t.torR + 2; x++) if (g.rampa(x, t.pierTop + 4) === tela) g.set(x, t.pierTop + 4, R.bronce[3], R.bronce);
-        for (let x = t.cx - 1; x <= t.cx + 2; x++) g.set(x, t.torTop, R.bronce[3], R.bronce);
-        g.set(t.cx + 2, t.torTop + 1, R.bronce[4], R.bronce);
-        break;
-      }
-      case "rapsoda": {
-        T.unir(falda(t, 4, 1)).pintar(g, tela, { relieve: 3 });
-        for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 3, R.madera[2], R.madera);
-        g.set(t.cx + 2, t.torBot - 3, R.bronce[4], R.bronce);
-        break;
-      }
-      case "atleta": {
+      case "barbaro": {
         T.pintar(g, piel, { relieve: 3 });
         g.set(t.cx - 1, t.torTop + 3, piel[1], piel).set(t.cx, t.torTop + 3, piel[1], piel).set(t.cx + 2, t.torTop + 3, piel[1], piel).set(t.cx + 3, t.torTop + 3, piel[1], piel);
         for (let y = t.torTop + 5; y < t.torBot - 2; y += 2) g.set(t.cx + 1, y, piel[1], piel);
-        new Capa().poly([[t.torL, t.torBot - 2], [t.torR + 1, t.torBot - 2], [t.torR + 1, t.pierTop + 1], [t.cx + 1, t.pierTop + 3], [t.torL, t.pierTop + 1]]).pintar(g, tela, { relieve: 2, separar: true });
+        new Capa().poly([[t.torL, t.torBot - 2], [t.torR + 1, t.torBot - 2], [t.torR + 2, t.pierTop + 3], [t.cx + 1, t.pierTop + 1], [t.torL - 1, t.pierTop + 3]]).pintar(g, tela, { relieve: 2, separar: true });
+        cinturon(g, t, R.madera, R.hierro);
+        const pelliza = new Capa().ell(t.cx - 0.5, t.torTop + 0.5, (t.torR - t.torL) / 2 + 2, 2.4);
+        pelliza.pintar(g, R.pelo.castano, { relieve: 2, separar: true });
+        for (let y = t.torTop - 2; y <= t.torTop + 3; y++) for (let x = t.torL - 2; x <= t.torR + 2; x++)
+          if (g.rampa(x, y) === R.pelo.castano && (x * 5 + y * 3) % 4 === 0) g.set(x, y, R.pelo.castano[(x + y) % 2 ? 1 : 3], R.pelo.castano);
         break;
       }
-      case "oraculo": {
-        T.unir(falda(t, t.suelo - t.pierTop - 2, 2)).pintar(g, R.tela.blanco, { relieve: 3 });
-        new Capa().linea(t.torR - 1, t.torTop, t.torR - 2, t.suelo - 3, 2).recortar(T.copia().unir(falda(t, t.suelo - t.pierTop - 2, 2))).pintar(g, tela, { relieve: 1 });
-        for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 3, R.bronce[3], R.bronce);
-        g.set(t.cx + 1, t.torTop + 3, R.bronce[4], R.bronce).set(t.cx + 1, t.torTop + 2, R.bronce[3], R.bronce);
-        break;
-      }
-      case "cazadora": {
+      case "picaro": {
         T.unir(falda(t, 2, 1)).pintar(g, tela, { relieve: 3 });
         new Capa().linea(t.torL + 1, t.torTop, t.torR, t.torBot - 3, 1).recortar(T).pintar(g, R.madera, { plano: 2 });
-        for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 2, R.madera[1], R.madera);
+        cinturon(g, t, R.madera, R.hierro);
+        g.set(t.torL + 1, t.torBot - 1, R.hierro[3], R.hierro).set(t.torL + 1, t.torBot, R.hierro[2], R.hierro);
         break;
       }
-      case "hechicero": {
+      case "explorador": {
+        T.unir(falda(t, 2, 1)).pintar(g, tela, { relieve: 3 });
+        new Capa().linea(t.torL + 1, t.torTop, t.torR, t.torBot - 3, 1).recortar(T).pintar(g, R.madera, { plano: 2 });
+        cinturon(g, t);
+        break;
+      }
+      case "mago": {
+        T.unir(falda(t, t.suelo - t.pierTop - 2, 2)).pintar(g, tela, { relieve: 3 });
+        [[t.cx - 2, t.torTop + 4], [t.cx + 3, t.torTop + 7], [t.cx + 2, t.pierTop + 2], [t.cx - 2, t.pierTop + 5]].forEach(([x, y]) => g.set(x, y, R.bronce[4], R.bronce));
+        for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 2, R.bronce[2], R.bronce);
+        break;
+      }
+      case "brujo": {
         T.unir(falda(t, t.suelo - t.pierTop - 2, 3)).pintar(g, tela, { relieve: 3 });
         for (let y = t.torTop + 2; y < t.suelo - 2; y += 3) g.set(t.cx + 1, y, tela[1], tela);
         for (let x = t.torL; x <= t.torR; x++) g.set(x, t.torBot - 3, R.tela.negro[2], R.tela.negro);
         g.set(t.cx + 2, t.torBot - 2, R.bronce[3], R.bronce).set(t.cx + 2, t.torBot - 1, R.bronce[2], R.bronce);
         break;
       }
+      case "clerigo": {
+        falda(t, 3, 1).pintar(g, R.hierro, { relieve: 2 });
+        T.pintar(g, R.hierro, { relieve: 3, separar: true });
+        malla(g, R.hierro, t.torL, t.torTop, t.torR + 2, t.pierTop + 3);
+        new Capa().rect(t.cx - 2, t.torTop + 1, 6, t.torBot - t.torTop).poly([[t.cx - 3, t.torBot - 1], [t.cx + 4, t.torBot - 1], [t.cx + 5, t.pierTop + 4], [t.cx - 4, t.pierTop + 4]]).pintar(g, tela, { relieve: 2, separar: true });
+        const sx = t.cx + 1, sy = t.torTop + 4;
+        g.set(sx, sy, R.bronce[4], R.bronce).set(sx - 1, sy, R.bronce[3], R.bronce).set(sx + 1, sy, R.bronce[3], R.bronce).set(sx, sy - 1, R.bronce[3], R.bronce).set(sx, sy + 1, R.bronce[3], R.bronce);
+        cinturon(g, t);
+        break;
+      }
+      case "bardo": {
+        T.unir(falda(t, 2, 1)).pintar(g, tela, { relieve: 3 });
+        for (let y = t.torTop + 2; y < t.torBot - 2; y += 2) g.set(t.cx - 1, y, R.hueso[3], R.hueso);
+        for (let y = t.torTop + 2; y <= t.torBot - 3; y += 2) g.set(t.cx + 2, y, R.bronce[4], R.bronce);
+        cinturon(g, t);
+        break;
+      }
       default:
         T.unir(falda(t, 3, 1)).pintar(g, tela, { relieve: 3 });
     }
   }
-  /* Grebas de bronce del guardián, encima de las piernas. */
-  function grebas(g, t) {
-    new Capa().rect(t.cx - 4, t.pierTop + 3, 2, t.suelo - t.pierTop - 4).rect(t.cx + 2, t.pierTop + 3, 2, t.suelo - t.pierTop - 4).pintar(g, R.bronce, { relieve: 1 });
-  }
 
-  function tocado(g, t, clase, tela, raza, peinado) {
-    const enCorona = (ram, joya) => {
-      const c = new Capa();
-      for (let x = t.cabX - 5; x <= t.cabX + 3; x++) c.on(x, t.cabY - 4 + (x < t.cabX - 3 ? 1 : 0) + (x > t.cabX + 1 ? 1 : 0));
-      c.pintar(g, ram, { relieve: 1, min: 2 });
-      for (let x = t.cabX - 4; x <= t.cabX + 2; x += 2) g.set(x, t.cabY - 5 + (x > t.cabX + 1 ? 1 : 0), ram[3], ram);
-      if (joya) g.set(t.cabX + 3, t.cabY - 3, joya[4], joya);
-    };
+  function tocado(g, t, clase, tela) {
     switch (clase) {
-      case "guardian": {
-        const casco = new Capa().ell(t.cabX - 0.2, t.cabY - 0.8, t.cabRx + 0.9, t.cabRy + 0.4);
-        casco.quitarRect(t.cabX, t.cabY - 1, 5, 3);
-        casco.off(t.cabX + 3, t.cabY + 4); casco.off(t.cabX + 4, t.cabY + 4);
-        casco.quitarRect(0, t.cabY + 5, 36, 36);
-        casco.pintar(g, R.bronce, { relieve: 3 });
-        for (let y = t.cabY - 1; y <= t.cabY + 2; y++) g.set(t.cabX + 3, y, R.bronce[2], R.bronce);
-        new Capa().curva(t.cabX + 3, t.cabY - 6, t.cabX - 3, t.cabY - 11, t.cabX - 9, t.cabY - 1, 3.2, 2.2).pintar(g, R.tela.granate, { relieve: 1.5, separar: true });
+      case "guerrero": {
+        const yelmo = new Capa().ell(t.cabX - 0.2, t.cabY - 0.8, t.cabRx + 0.9, t.cabRy + 0.4);
+        yelmo.quitarRect(t.cabX, t.ojoY - 1, 6, 5);
+        yelmo.quitarRect(0, t.cabY + 4, 36, 36);
+        yelmo.pintar(g, R.hierro, { relieve: 3 });
+        for (let y = t.ojoY - 1; y <= t.ojoY + 1; y++) g.set(t.cabX + 3, y, R.hierro[2], R.hierro);
+        for (let x = t.cabX - 5; x <= t.cabX + 5; x++) if (g.rampa(x, t.ojoY - 2) === R.hierro) g.set(x, t.ojoY - 2, R.hierro[1], R.hierro);
+        new Capa().curva(t.cabX, t.cabY - 6, t.cabX - 4, t.cabY - 10, t.cabX - 8, t.cabY - 6, 2.4, 1.4).pintar(g, tela, { relieve: 1.5, separar: true });
         break;
       }
-      case "hechicero": {
-        const capucha = new Capa().ell(t.cabX - 0.8, t.cabY - 0.4, t.cabRx + 1.3, t.cabRy + 1.2);
-        capucha.poly([[t.cabX - 6, t.cabY], [t.cabX - 1, t.cabY + 4], [t.torL, t.torTop + 2], [t.cabX - 8, t.torTop + 1]]);
-        for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) if (x >= t.cabX && y >= t.cabY - 2 && y <= t.cabY + 4) capucha.off(x, y);
-        capucha.pintar(g, tela, { relieve: 2.5, separar: true });
+      case "brujo": capucha(t).pintar(g, tela, { relieve: 2.5, separar: true }); break;
+      case "explorador": capucha(t).pintar(g, tela, { relieve: 2.5, separar: true }); break;
+      case "picaro": {
+        capucha(t).pintar(g, tela, { relieve: 2.5, separar: true });
+        new Capa().rect(t.cabX - 1, t.ojoY + 2, 7, 3).pintar(g, tela, { relieve: 1, max: 2, separar: true });
         break;
       }
-      case "oraculo": {
-        const velo = new Capa().ell(t.cabX - 1, t.cabY - 1.2, t.cabRx + 0.6, t.cabRy);
-        for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) if (x >= t.cabX - 2 && y >= t.cabY - 3) velo.off(x, y);
-        velo.poly([[t.cabX - 6, t.cabY - 2], [t.cabX - 3, t.cabY - 2], [t.cabX - 3, t.torTop + 3], [t.cabX - 8, t.torTop + 4]]);
-        velo.pintar(g, tela, { relieve: 2, separar: true });
-        enCorona(R.bronce, R.fuego);
+      case "clerigo": {
+        capucha(t).pintar(g, R.hierro, { relieve: 2.5, separar: true });
+        malla(g, R.hierro, t.cabX - 8, t.cabY - 7, t.cabX + 6, t.torTop + 2);
         break;
       }
-      case "rapsoda":
-      case "atleta":
-        enCorona(R.hoja);
+      case "mago": {
+        const y = t.cabY - 3.6;
+        new Capa().ell(t.cabX - 0.5, y, t.cabRx + 2.4, 1.4).pintar(g, tela, { relieve: 1.5, separar: true });
+        new Capa().poly([[t.cabX - 4.5, y - 0.5], [t.cabX + 3.5, y - 0.5], [t.cabX, y - 6], [t.cabX - 3, y - 9], [t.cabX - 6, y - 9.5], [t.cabX - 3, y - 6]]).pintar(g, tela, { relieve: 2, separar: true });
+        for (let x = t.cabX - 4; x <= t.cabX + 3; x++) if (g.rampa(x, Math.round(y - 1)) === tela) g.set(x, Math.round(y - 1), R.bronce[3], R.bronce);
+        g.set(t.cabX - 1, Math.round(y - 4), R.bronce[4], R.bronce);
         break;
-      case "sofista":
-        for (let x = t.cabX - 4; x <= t.cabX + 3; x++) g.set(x, t.cabY - 3 + (x > t.cabX + 1 ? 1 : 0), R.bronce[3], R.bronce);
+      }
+      case "bardo": {
+        new Capa().ell(t.cabX - 0.5, t.cabY - 4.2, t.cabRx + 0.6, 2.1).pintar(g, tela, { relieve: 1.5, separar: true });
+        new Capa().curva(t.cabX - 2, t.cabY - 5, t.cabX - 6, t.cabY - 10, t.cabX - 10, t.cabY - 8, 1.6, 1).pintar(g, R.hueso, { relieve: 1, min: 2, separar: true });
+        g.set(t.cabX - 9, t.cabY - 8, R.tela.granate[3], R.tela.granate);
         break;
-      case "cazadora":
-        g.set(t.cabX + 2, t.cabY - 3, R.plata[4], R.plata).set(t.cabX + 1, t.cabY - 4, R.plata[3], R.plata).set(t.cabX + 3, t.cabY - 4, R.plata[3], R.plata);
-        break;
+      }
     }
   }
 
   function objeto(g, t, clase, tela) {
     const [mx, my] = t.mano;
     switch (clase) {
-      case "filosofo": {
-        new Capa().rect(mx - 2, my - 1, 6, 3).pintar(g, R.hueso, { relieve: 1.5 });
-        g.set(mx + 3, my - 1, R.hueso[1], R.hueso).set(mx + 3, my, R.hueso[2], R.hueso).set(mx + 3, my + 1, R.hueso[1], R.hueso);
-        g.set(mx + 1, my, R.madera[1], R.madera).set(mx + 2, my, R.madera[1], R.madera);
+      case "guerrero": {
+        const cx = t.torR + 1, cy = t.torTop + 5;
+        new Capa().poly([[cx - 5, cy - 5], [cx + 5, cy - 5], [cx + 5, cy + 1], [cx, cy + 7], [cx - 5, cy + 1]]).pintar(g, R.hierro, { relieve: 2, separar: true });
+        new Capa().poly([[cx - 4, cy - 4], [cx + 4, cy - 4], [cx + 4, cy + 0.5], [cx, cy + 5.5], [cx - 4, cy + 0.5]]).pintar(g, tela, { relieve: 3 });
+        for (let j = -3; j <= 3; j++) g.set(cx, cy + j, R.hueso[4], R.hueso);
+        for (let i = -2; i <= 2; i++) g.set(cx + i, cy - 1, R.hueso[4], R.hueso);
+        new Capa().rect(mx, my - 12, 1, 11).pintar(g, R.hierro, { plano: 3 });
+        g.set(mx, my - 13, R.hierro[4], R.hierro).set(mx, my - 9, R.hierro[4], R.hierro);
+        new Capa().rect(mx - 2, my - 1, 5, 1).pintar(g, R.bronce, { plano: 3 });
+        g.set(mx, my + 1, R.madera[2], R.madera).set(mx, my + 2, R.bronce[3], R.bronce);
         break;
       }
-      case "guardian": {
-        new Capa().rect(mx, 3, 1, t.suelo - 3).pintar(g, R.madera, { plano: 2 });
-        new Capa().poly([[mx, -0.5], [mx + 1.6, 3.5], [mx - 1.6, 3.5]]).pintar(g, R.bronce, { relieve: 1, min: 2 });
-        const cx = t.torR + 1, cy = t.torTop + 6;
-        new Capa().ell(cx, cy, 5.6, 6.2).pintar(g, R.bronce, { relieve: 2, separar: true });
-        new Capa().ell(cx, cy, 4.4, 5).pintar(g, tela, { relieve: 4 });
-        [[0, -2], [-1, -1], [1, -1], [-1, 0], [1, 0], [-2, 1], [2, 1], [-2, 2], [2, 2]].forEach(([a, b]) => g.set(cx + a, cy + b, R.hueso[4], R.hueso));
+      case "barbaro": {
+        new Capa().linea(mx - 1, my + 5, mx + 2, my - 11, 1).pintar(g, R.madera, { plano: 2 });
+        new Capa().poly([[mx + 1, my - 13], [mx + 6, my - 15], [mx + 7.5, my - 10], [mx + 6, my - 6], [mx + 2, my - 8]]).pintar(g, R.hierro, { relieve: 2, separar: true });
+        g.set(mx + 7, my - 12, R.hierro[4], R.hierro).set(mx + 7, my - 10, R.hierro[4], R.hierro);
         break;
       }
-      case "sofista": {
-        new Capa().ell(mx + 1, my + 2.5, 2, 2.2).on(mx + 1, my).pintar(g, R.tela.ocre, { relieve: 2 });
-        g.set(mx + 1, my + 1, R.madera[1], R.madera).set(mx + 2, my + 2, R.bronce[4], R.bronce);
+      case "picaro": {
+        new Capa().rect(mx + 1, my - 1, 4, 1).pintar(g, R.hierro, { plano: 3 });
+        g.set(mx + 5, my - 1, R.hierro[4], R.hierro).set(mx + 1, my - 2, R.bronce[3], R.bronce).set(mx + 1, my, R.bronce[3], R.bronce);
         break;
       }
-      case "rapsoda": {
-        const marco = new Capa().curva(mx - 1, my + 1, mx - 3, my - 3, mx - 1, my - 6, 2, 1.5).curva(mx + 3, my + 1, mx + 5, my - 3, mx + 3, my - 6, 2, 1.5);
-        marco.linea(mx - 1, my - 6, mx + 3, my - 6, 1);
-        marco.pintar(g, R.bronce, { relieve: 1, min: 2 });
-        for (let y = my - 5; y <= my; y++) { g.set(mx, y, R.hueso[4]); g.set(mx + 2, y, R.hueso[4]); }
-        new Capa().ell(mx + 1, my + 2, 2.6, 1.6).pintar(g, R.madera, { relieve: 1.5, separar: true });
-        break;
-      }
-      case "atleta": {
-        new Capa().rect(mx - 1, my - 1, 3, 3).pintar(g, R.hueso, { relieve: 1 });
-        break;
-      }
-      case "oraculo": {
-        new Capa().rect(mx, 6, 1, t.suelo - 6).pintar(g, R.madera, { plano: 2 });
-        new Capa().ell(mx, 4, 2.3, 2.3).pintar(g, R.bronce, { relieve: 2, min: 2 });
-        [[0, -4], [0, 8], [-4, 4], [4, 4], [-3, 1], [3, 1]].forEach(([a, b]) => g.set(mx + a, b, R.bronce[4], R.bronce));
-        g.set(mx, 4, R.fuego[4], R.fuego);
-        break;
-      }
-      case "cazadora": {
+      case "explorador": {
         new Capa().curva(mx + 1, t.torTop - 4, mx + 6, my, mx + 1, t.torBot + 4, 1.6, 1.6).pintar(g, R.madera, { relieve: 1, min: 2 });
         for (let y = t.torTop - 3; y <= t.torBot + 3; y++) if (!g.get(mx + 1, y) || g.rampa(mx + 1, y) !== R.madera) g.set(mx + 1, y, R.hueso[3], R.hueso);
         break;
       }
-      case "hechicero": {
+      case "mago": {
+        new Capa().rect(mx, 6, 1, t.suelo - 6).pintar(g, R.madera, { plano: 2 });
+        new Capa().ell(mx, 4, 2.2, 2.2).pintar(g, R.mar, { relieve: 1.5, min: 2 });
+        g.set(mx - 1, 3, R.hueso[4], R.hueso);
+        break;
+      }
+      case "brujo": {
         new Capa().rect(mx, my - 4, 1, 6).pintar(g, R.madera, { plano: 2 });
         new Capa().ell(mx, my - 6.5, 1.8, 2.6).on(mx, my - 9.5).pintar(g, R.magia, { relieve: 1.5, min: 2 });
         g.set(mx, my - 6, R.magia[4], R.magia).set(mx, my - 5, R.magia[4], R.magia);
+        break;
+      }
+      case "clerigo": {
+        new Capa().rect(mx, my - 6, 1, 8).pintar(g, R.madera, { plano: 2 });
+        new Capa().ell(mx, my - 7.5, 1.8, 1.8).pintar(g, R.hierro, { relieve: 1.5, min: 2 });
+        g.set(mx - 2, my - 7, R.hierro[3], R.hierro).set(mx + 2, my - 8, R.hierro[3], R.hierro).set(mx, my - 10, R.hierro[3], R.hierro);
+        break;
+      }
+      case "bardo": {
+        new Capa().linea(mx + 2, my, mx + 7, my - 6, 1).pintar(g, R.madera, { plano: 1 });
+        new Capa().rect(mx + 7, my - 8, 2, 2).pintar(g, R.madera, { plano: 1 });
+        new Capa().ell(mx + 1, my + 2, 3, 2.4).pintar(g, R.madera, { relieve: 2, separar: true });
+        g.set(mx + 1, my + 2, R.madera[0], R.madera).set(mx + 3, my, R.hueso[3], R.hueso).set(mx + 5, my - 3, R.hueso[3], R.hueso);
         break;
       }
     }
@@ -409,40 +435,43 @@ const HEROES = (() => {
   function componer(a = {}) {
     const raza = RAZAS[a.raza] ? a.raza : "humano";
     const vis = RAZAS[raza];
-    const clase = a.clase || "filosofo";
+    const clase = a.clase || "guerrero";
     const t = plantilla(a.cuerpo || vis.cuerpo);
     const piel = R.piel[a.piel] || R.piel[vis.pieles[0]];
     const ramPelo = R.pelo[a.pelo] || R.pelo[vis.pelos[0] || "negro"];
     const tela = R.tela[a.tela] || R.tela[TELA_CLASE[clase]] || R.tela.terracota;
     const peinado = vis.sinPelo ? "rapado" : (a.peinado || "corto");
     const g = new Rejilla(36, 36);
-    const tapaPelo = clase === "guardian" || clase === "hechicero";
+    const tapaPelo = ["guerrero", "brujo", "picaro", "explorador", "clerigo"].includes(clase);
 
     cola(g, t, piel, raza);
     espalda(g, t, clase, tela);
-    const manga = ["filosofo", "oraculo", "hechicero"].includes(clase) ? (clase === "oraculo" ? R.tela.blanco : tela) : null;
+    const manga = ["mago", "brujo"].includes(clase) ? tela : ["guerrero", "clerigo"].includes(clase) ? R.hierro : ["picaro", "explorador", "bardo"].includes(clase) ? tela : null;
     brazo(g, t, piel, manga, false);
-    const largas = ["filosofo", "oraculo", "hechicero"].includes(clase);
-    if (!largas || raza === "satiro") piernas(g, t, piel, raza, ramPelo, clase === "cazadora" ? "alto" : null);
+    const largas = ["mago", "brujo"].includes(clase);
+    const descalzo = raza === "mediano" && !["guerrero", "clerigo"].includes(clase);
+    const PIERNAS = { guerrero: [R.hierro, R.hierro], clerigo: [R.hierro, R.madera], picaro: [R.tela.negro, R.madera], explorador: [R.madera, R.madera], bardo: [R.tela.negro, R.madera], barbaro: [null, R.pelo.castano] };
+    const [ramPierna, ramBota] = PIERNAS[clase] || [null, null];
+    if (!largas || raza === "satiro") piernas(g, t, piel, raza, ramPelo, null, ramPierna, descalzo ? null : ramBota);
     else {
       const pies = new Capa().rect(t.cx - 5, t.suelo - 1, 3, 2).rect(t.cx + 2, t.suelo - 1, 4, 2);
       pies.pintar(g, raza === "draconido" ? piel : R.madera, { relieve: 1 });
     }
-    if (clase === "guardian" && raza !== "satiro") grebas(g, t);
     vestir(g, t, clase, tela, piel);
+    if (clase === "clerigo" || clase === "guerrero") malla(g, R.hierro, t.cx - 5, t.pierTop, t.cx + 5, t.suelo - 3);
     if (raza === "draconido") cabezaDraconido(g, t, piel);
     else cabeza(g, t, piel);
     if (!tapaPelo) pelo(g, t, ramPelo, peinado, raza);
     if (raza !== "draconido") oreja(g, t, piel, raza);
-    if ((a.barba || vis.barba) && raza !== "draconido" && clase !== "guardian") barba(g, t, ramPelo, !!vis.barba);
-    tocado(g, t, clase, tela, raza, peinado);
-    if (clase !== "guardian") cuernos(g, t, raza);
-    else if (raza === "tiefling") cuernos(g, t, raza);
-    if (raza !== "draconido") cara(g, t, piel, raza, clase === "hechicero");
+    if ((a.barba || vis.barba) && raza !== "draconido" && clase !== "picaro") barba(g, t, ramPelo, !!vis.barba);
+    tocado(g, t, clase, tela);
+    if (!["guerrero", "mago", "bardo"].includes(clase) || raza === "tiefling") cuernos(g, t, raza);
+    if (raza !== "draconido") cara(g, t, piel, raza, ["brujo", "picaro", "explorador"].includes(clase));
+    if (clase === "picaro" && raza !== "draconido") new Capa().rect(t.cabX - 1, t.ojoY + 2, 7, 3).pintar(g, tela, { relieve: 1, max: 2, separar: true });
+    if (clase === "barbaro" && raza !== "draconido") g.set(t.cabX + 1, t.ojoY + 2, R.sangre[3], R.sangre).set(t.cabX + 4, t.ojoY + 2, R.sangre[3], R.sangre);
     if (a.objeto && OBJETOS_EXTRA[a.objeto]) OBJETOS_EXTRA[a.objeto](g, t);
     else if (a.objeto !== "ninguno") objeto(g, t, clase, tela);
     brazo(g, t, piel, manga, true);
-    if (clase === "atleta") new Capa().rect(t.mano[0] - 1, t.mano[1] - 1, 2, 2).pintar(g, R.hueso, { relieve: 1, separar: true });
     if (a.extras) a.extras.forEach(fn => fn(g, t, { piel, pelo: ramPelo, tela }));
     if (!a.sinContorno) g.contorno();
     return a.espejo ? g.espejo() : g;

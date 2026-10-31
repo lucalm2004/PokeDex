@@ -4,7 +4,7 @@
 <body><div id="raiz"></div>
 <script src="../src/pixel.js"></script><script src="../src/heroes.js"></script>
 <script>
-const razas=Object.keys(HEROES.RAZAS), clases=["filosofo","guardian","sofista","rapsoda","atleta","oraculo","cazadora","hechicero"];
+const razas=Object.keys(HEROES.RAZAS).filter(r=>r!=="satiro"), clases=["guerrero","barbaro","picaro","explorador","mago","brujo","clerigo","bardo"];
 const esc=+(new URLSearchParams(location.search).get('e')||4);
 const raiz=document.getElementById('raiz');
 const cab=document.createElement('div');cab.className='fila';cab.innerHTML='<span class="et"></span>'+razas.map(r=>`<span style="width:${36*esc}px">${r}</span>`).join('');raiz.appendChild(cab);

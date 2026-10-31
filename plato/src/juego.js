@@ -1,4 +1,4 @@
-/* Diálogos y Dados · el juego: estado, reglas, combate por iniciativa, tiendas, creación de personajes,
+/* Dados y Mazmorras · el juego: estado, reglas, combate por iniciativa, tiendas, creación de personajes,
    pantallas y mesas en línea (db guarda la partida, room dice quién está conectado, user de quién es cada héroe). */
 (() => {
 "use strict";
@@ -6,8 +6,8 @@ const D = DATOS;
 const { STATS, ABREV, CAPITULOS, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, ORDEN_ALIN, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ESCENAS, FINALES, EPILOGOS, LORE } = D;
 const RP = PX.RAMPAS;
 
-const CLAVE = "dialogos-y-dados-v2";
-const CLAVE_MESA = "dialogos-y-dados-mesa-v2";
+const CLAVE = "dados-y-mazmorras-v1";
+const CLAVE_MESA = "dados-y-mazmorras-mesa-v1";
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const d = n => 1 + Math.floor(Math.random() * n);
@@ -16,7 +16,7 @@ const fmt = n => (n >= 0 ? "+" : "−") + Math.abs(n);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const azarDe = a => a[Math.floor(Math.random() * a.length)];
 const reducido = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-const CONSUMIBLES = ["nectar", "ambrosia", "olivo", "fuego", "leteo"];
+const CONSUMIBLES = ["pocion", "superior", "bendicion", "fuego", "sueno"];
 
 let S = null;
 let ocupado = false, confirmando = false, modal = null, submenu = null;
@@ -34,9 +34,9 @@ function heroeAlAzar(i = 0) {
   };
 }
 const EJEMPLO = [
-  { nombre: "Aristocles", raza: "humano", clase: "filosofo", alin: "LB", look: { piel: "oliva", pelo: "castano", tela: "azul", peinado: "corto", barba: true } },
-  { nombre: "Hiparquia", raza: "elfo", clase: "cazadora", alin: "CB", look: { piel: "clara", pelo: "rubio", tela: "oliva", peinado: "recogido", barba: false } },
-  { nombre: "Jenofonte", raza: "enano", clase: "guardian", alin: "LN", look: { piel: "morena", pelo: "cobrizo", tela: "granate", peinado: "corto", barba: true } }
+  { nombre: "Aldric", raza: "humano", clase: "guerrero", alin: "LB", look: { piel: "oliva", pelo: "castano", tela: "granate", peinado: "corto", barba: true } },
+  { nombre: "Lyra", raza: "elfo", clase: "mago", alin: "CB", look: { piel: "clara", pelo: "rubio", tela: "azul", peinado: "largo", barba: false } },
+  { nombre: "Borin", raza: "enano", clase: "clerigo", alin: "LN", look: { piel: "morena", pelo: "cobrizo", tela: "blanco", peinado: "corto", barba: true } }
 ];
 const borrador = {
   modo: window.claude && window.claude.use ? "online" : "local",
@@ -45,14 +45,14 @@ const borrador = {
 };
 
 function nuevoHeroe(def) {
-  const raza = RAZAS[def.raza] ? def.raza : "humano", clase = CLASES[def.clase] ? def.clase : "filosofo";
+  const raza = RAZAS[def.raza] ? def.raza : "humano", clase = CLASES[def.clase] ? def.clase : "guerrero";
   const c = CLASES[clase], r = RAZAS[raza];
   const base = {};
   for (const k of Object.keys(STATS)) base[k] = c.stats[k] + (r.mods[k] || 0);
   const almaBase = c.alma + r.alma;
   return {
     nombre: String(def.nombre || "").trim().slice(0, 24) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
-    look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, dracmas: 15,
+    look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, oro: 15,
     equipo: { arma: null, armadura: null, talisman: null }, usos: 1, est: { aturdido: 0, cegado: 0, petrificado: 0 }, fl: {}
   };
 }
@@ -62,7 +62,7 @@ function stat(p, k) { const t = obj(p.equipo.talisman); return p.base[k] + (t &&
 function maxAlma(p) { const a = obj(p.equipo.armadura); return p.almaBase + (a && a.alma ? a.alma : 0); }
 function ca(p) {
   const a = obj(p.equipo.armadura), t = obj(p.equipo.talisman);
-  return 10 + stat(p, "ani") + (a && a.ca ? a.ca : 0) + (t && t.ca ? t.ca : 0) + (p.clase === "guardian" ? 2 : 0);
+  return 10 + stat(p, "ani") + (a && a.ca ? a.ca : 0) + (t && t.ca ? t.ca : 0) + (p.clase === "guerrero" ? 2 : 0);
 }
 function iniMod(p) { const t = obj(p.equipo.talisman); return stat(p, "tem") + (t && t.ini ? t.ini : 0); }
 function critMin(p) { const t = obj(p.equipo.talisman); return t && t.critico ? t.critico : 20; }
@@ -87,7 +87,7 @@ function guardar() {
   try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {}
 }
 function cargar() {
-  try { const t = localStorage.getItem(CLAVE); const g = t ? JSON.parse(t) : null; return g && g.v === 2 && !g.online ? g : null; } catch (e) { return null; }
+  try { const t = localStorage.getItem(CLAVE); const g = t ? JSON.parse(t) : null; return g && g.v === 3 && !g.online ? g : null; } catch (e) { return null; }
 }
 function borrar() { try { localStorage.removeItem(CLAVE); } catch (e) {} }
 function puedoActuar() { return !S || !S.online || (!!S.players[S.turno] && S.players[S.turno].uid === red.yo); }
@@ -110,7 +110,7 @@ async function conectar() {
   red.listo = true;
   if (red.db && red.yo) {
     red.db.collection("mesas").orderBy("creada", "desc").limit(20).onSnapshot(snap => {
-      red.mesas = snap.docs.map(x => x.data()).filter(m => m.v === 2 && m.estado !== "fin" && Date.now() - (m.creada || 0) < 2 * 864e5);
+      red.mesas = snap.docs.map(x => x.data()).filter(m => m.v === 3 && m.estado !== "fin" && Date.now() - (m.creada || 0) < 2 * 864e5);
       if (!S && !mesa) actualizarListaMesas();
     }, () => { red.mesas = []; });
     let recordada = null;
@@ -125,7 +125,7 @@ async function crearMesa() {
   let c = "";
   for (let i = 0; i < 4; i++) c += letras[Math.floor(Math.random() * letras.length)];
   try {
-    await red.db.doc(`mesas/${c}`).set({ v: 2, codigo: c, anfitrion: red.yo, estado: "sala", creada: Date.now(), actualizada: Date.now(), juego: null, jugadores: 0, capitulo: 0 });
+    await red.db.doc(`mesas/${c}`).set({ v: 3, codigo: c, anfitrion: red.yo, estado: "sala", creada: Date.now(), actualizada: Date.now(), juego: null, jugadores: 0, capitulo: 0 });
     entrarMesa(c);
   } catch (e) { avisarError(e); }
 }
@@ -262,7 +262,7 @@ const idx = p => S.players.indexOf(p);
 function ganarXp(n) {
   const out = [];
   if (!n) return out;
-  out.push(`${fmt(n)} Sabiduría`);
+  out.push(`${fmt(n)} PX`);
   S.players.forEach(p => {
     p.xp = Math.max(0, p.xp + n + (n > 0 && p.raza === "humano" ? 1 : 0));
     while (p.nivel < NIVELES.length && p.xp >= NIVELES[p.nivel]) subirNivel(p, out);
@@ -273,7 +273,7 @@ function subirNivel(p, out) {
   p.nivel++; p.almaBase += 2; p.alma = Math.min(maxAlma(p), p.alma + 2);
   const bajo = Object.keys(STATS).reduce((a, k) => (p.base[k] < p.base[a] ? k : a), "raz");
   if (p.base[bajo] < 5) p.base[bajo]++;
-  let t = `${p.nombre} sube a nivel ${p.nivel}: +2 Alma máxima y +1 ${STATS[bajo]}`;
+  let t = `${p.nombre} sube a nivel ${p.nivel}: +2 PG máximos y +1 ${STATS[bajo]}`;
   if (p.nivel === 3) t += `. Ya puede usar ${CLASES[p.clase].hab} dos veces por combate`;
   log(t, "nivel"); out.push(t);
 }
@@ -281,16 +281,16 @@ function subirNivel(p, out) {
 function aplicarFx(f = {}, actor) {
   const out = [];
   const vida = (p, n) => { p.alma = Math.max(1, Math.min(maxAlma(p), p.alma + n)); };
-  if (f.alma && actor) { vida(actor, f.alma); out.push(`${fmt(f.alma)} Alma para ${actor.nombre}`); }
-  if (f.almaTodos) { S.players.forEach(p => vida(p, f.almaTodos)); out.push(`${fmt(f.almaTodos)} Alma para el grupo`); }
+  if (f.alma && actor) { vida(actor, f.alma); out.push(`${fmt(f.alma)} PG para ${actor.nombre}`); }
+  if (f.almaTodos) { S.players.forEach(p => vida(p, f.almaTodos)); out.push(`${fmt(f.almaTodos)} PG para el grupo`); }
   if (f.maxTodos) {
     S.players.forEach(p => { p.almaBase = Math.max(4, p.almaBase + f.maxTodos); p.alma = Math.min(p.alma, maxAlma(p)); });
-    out.push(`${fmt(f.maxTodos)} Alma máxima para todos`);
+    out.push(`${fmt(f.maxTodos)} PG máximos para todos`);
   }
-  if (f.curarTodo) { S.players.forEach(p => { p.alma = maxAlma(p); }); out.push("Alma restaurada por completo"); }
-  ["nectar", "olivo"].forEach(k => { if (f[k]) { S.zurron[k] = Math.max(0, S.zurron[k] + f[k]); out.push(`${fmt(f[k])} ${OBJETOS[k].nombre}`); } });
-  if (f.dracmas) { S.players.forEach(p => { p.dracmas = Math.max(0, p.dracmas + f.dracmas); }); out.push(`${fmt(f.dracmas)} dracmas cada uno`); }
-  if (f.anillo) { S.anillo = true; out.push("Anillo de Giges"); }
+  if (f.curarTodo) { S.players.forEach(p => { p.alma = maxAlma(p); }); out.push("PG restaurados por completo"); }
+  ["pocion", "bendicion", "superior"].forEach(k => { if (f[k]) { S.zurron[k] = Math.max(0, S.zurron[k] + f[k]); out.push(`${fmt(f[k])} ${OBJETOS[k].nombre}`); } });
+  if (f.oro) { S.players.forEach(p => { p.oro = Math.max(0, p.oro + f.oro); }); out.push(`${fmt(f.oro)} po cada uno`); }
+  if (f.anillo) { S.anillo = true; out.push("Anillo de invisibilidad"); }
   if (f.moral && actor) {
     const antes = actor.alin;
     actor.alin = D.moverMoral(actor.alin, f.moral);
@@ -332,12 +332,12 @@ function tiradaD20(p) {
   return { r, nota };
 }
 function usarOlivo() {
-  if (S.olivoActivo && S.zurron.olivo > 0) { S.zurron.olivo--; S.olivoActivo = false; return 2; }
+  if (S.olivoActivo && S.zurron.bendicion > 0) { S.zurron.bendicion--; S.olivoActivo = false; return 2; }
   return 0;
 }
 function cegueraDe(p) { if (p.est && p.est.cegado > 0) { p.est.cegado = 0; return -4; } return 0; }
 function lineaTirada(quien, accion, r, mod, bono, pen, total, contra, crit) {
-  let t = `${quien} ${accion}: ${r} ${fmt(mod)}${bono ? " +2 olivo" : ""}${pen ? " −4 ceguera" : ""} = ${total} contra ${contra}`;
+  let t = `${quien} ${accion}: ${r} ${fmt(mod)}${bono ? " +2 bendición" : ""}${pen ? " −4 ceguera" : ""} = ${total} contra ${contra}`;
   if (crit) t += " · ¡crítico!";
   else if (r === 1) t += " · ¡pifia!";
   return t;
@@ -346,16 +346,16 @@ function lineaTirada(quien, accion, r, mod, bono, pen, total, contra, crit) {
 /* ---------- Escenas ---------- */
 function nuevaPartida(filas, codigo) {
   S = {
-    v: 2, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
+    v: 3, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
     players: filas.map(nuevoHeroe),
-    zurron: { nectar: 1, ambrosia: 0, olivo: 0, fuego: 0, leteo: 0 }, olivoActivo: false, anillo: false,
+    zurron: { pocion: 1, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
     escena: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
     derrota: false, final: null, guardadoCap: null, log: [], vistos: { bestias: [], lugares: [] }
   };
   log(`Comienza la partida: ${S.players.map(p => `${p.nombre} (${nombreRazaClase(p)})`).join(", ")}.`);
   if (S.players.length === 1) { const p = S.players[0]; p.almaBase += 4; p.alma += 4; log(`${p.nombre} viaja sin compañía: +4 Alma máxima.`, "nivel"); }
   submenu = null; modal = null;
-  entrarEscena("c1_sombras");
+  entrarEscena("c1_taberna");
 }
 
 function entrarEscena(id) {
@@ -377,7 +377,7 @@ function elegirOpcion(i) {
   const sig = op.sig || sc.sig;
   if (!op.stat) return resolver(op.ok, op.ok, true, null, sig, false);
   if (op.inmuneElfo && p.raza === "elfo") return resolver(op.ok, op.ko, true, `${p.nombre} es elfo: el canto de la sirena no le afecta (ascendencia feérica).`, sig, false);
-  const mod = stat(p, op.stat) + (op.stat === "raz" && p.clase === "filosofo" ? 2 : 0);
+  const mod = stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0);
   const bono = usarOlivo();
   const { r, nota } = tiradaD20(p);
   tirarDado(r, 20, () => {
@@ -390,7 +390,7 @@ function elegirOpcion(i) {
   });
 }
 function respuestaTachada(sc) {
-  if (!S.players.some(p => p.clase === "filosofo")) return -1;
+  if (!S.players.some(p => p.raza === "gnomo")) return -1;
   for (let k = 1; k < sc.respuestas.length; k++) { const i = (sc.correcta + k * 2) % sc.respuestas.length; if (i !== sc.correcta) return i; }
   return -1;
 }
@@ -431,7 +431,7 @@ function reencarnar() {
   g.log = S.log; g.guardadoCap = S.guardadoCap; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
   S = g;
   S.players.forEach(p => { p.alma = maxAlma(p); });
-  log("Como en el mito de Er, vuestras almas eligen una nueva vida y volvéis al inicio del capítulo.", "esc");
+  log("Solara os devuelve a la vida y volvéis al inicio del capítulo.", "esc");
   entrarEscena(S.escena);
 }
 
@@ -445,20 +445,20 @@ function abrirTienda(sc) {
 function precio(p, id) {
   const t = TIENDAS[S.tienda.clave];
   const base = (t.precios && t.precios[id]) || OBJETOS[id].precio;
-  return p.clase === "sofista" ? Math.ceil(base * 0.75) : base;
+  return p.clase === "picaro" ? Math.ceil(base * 0.75) : base;
 }
 function comprar(id) {
   if (ocupado || !S.tienda) return;
   const p = S.players[S.turno], o = OBJETOS[id], pr = precio(p, id);
-  if (p.dracmas < pr) return;
+  if (p.oro < pr) return;
   if (o.tipo !== "consumible" && o.tipo !== "servicio" && p.equipo[o.tipo] === id) return;
-  p.dracmas -= pr;
-  let t = `${p.nombre} compra ${o.nombre} por ${pr} dracmas`;
+  p.oro -= pr;
+  let t = `${p.nombre} compra ${o.nombre} por ${pr} po`;
   if (o.tipo === "consumible") S.zurron[id]++;
-  else if (o.tipo === "servicio") { S.players.forEach((x, i) => { x.alma = maxAlma(x); fx({ tipo: "cura", objetivo: "h" + i }); }); t += ". Todo el grupo duerme a pierna suelta y recupera el Alma"; }
+  else if (o.tipo === "servicio") { S.players.forEach((x, i) => { x.alma = maxAlma(x); fx({ tipo: "cura", objetivo: "h" + i }); }); t += ". Todo el grupo duerme a pierna suelta y recupera sus PG"; }
   else {
     const viejo = p.equipo[o.tipo];
-    if (viejo) { const vuelta = Math.floor(OBJETOS[viejo].precio / 2); p.dracmas += vuelta; t += ` y vende su ${OBJETOS[viejo].nombre} por ${vuelta}`; }
+    if (viejo) { const vuelta = Math.floor(OBJETOS[viejo].precio / 2); p.oro += vuelta; t += ` y vende su ${OBJETOS[viejo].nombre} por ${vuelta}`; }
     p.equipo[o.tipo] = id;
     p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
     fx({ tipo: "magia", objetivo: "h" + S.turno, rampa: RP.bronce });
@@ -483,9 +483,8 @@ function usarFuera(id, i) {
   const p = S.players[i];
   if (!p || p.alma >= maxAlma(p)) return;
   S.zurron[id]--;
-  const base = id === "nectar" ? 8 : maxAlma(p);
-  const real = curar(p, p.raza === "satiro" ? base * 2 : base);
-  log(`${p.nombre} toma ${OBJETOS[id].nombre.toLowerCase()} y recupera ${real} de Alma.`, "ok");
+  const real = curar(p, id === "pocion" ? 8 : maxAlma(p));
+  log(`${p.nombre} se bebe una ${OBJETOS[id].nombre.toLowerCase()} y recupera ${real} PG.`, "ok");
   fx({ tipo: "cura", objetivo: "h" + i }); fx({ tipo: "numero", objetivo: "h" + i, texto: "+" + real, color: RP.hoja[4] });
   guardar(); render();
 }
@@ -497,7 +496,7 @@ function iniciarCombate(sc) {
   const hp = Math.round(e.alma * (0.45 + 0.28 * n));
   const c = S.combate = {
     enemigo: sc.enemigo, hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0) + (n >= 6 ? 1 : 0), blando: n === 1, ronda: 1, orden: [], pos: 0,
-    aturdido: false, escudo: false, maldito: false, anilloUsado: false, partido: false,
+    aturdido: false, escudo: false, maldito: false, anilloUsado: false, partido: false, quemado: false,
     resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false
   };
   if (!S.vistos.bestias.includes(sc.enemigo)) S.vistos.bestias.push(sc.enemigo);
@@ -510,7 +509,7 @@ function iniciarCombate(sc) {
   S.players.forEach((p, i) => {
     if (p.raza !== "draconido" || p.alma <= 0) return;
     fx({ tipo: "ataque", actor: "h" + i });
-    log(`${p.nombre} exhala su aliento de dragón → ${danarRival(tirar(1, 6), "magica", false, 1, RP.fuego)}`, "ok");
+    log(`${p.nombre} exhala su aliento de dragón → ${danarRival(tirar(1, 6), "arcana", false, 1, RP.fuego)}`, "ok");
   });
   if (c.hp <= 0) return victoria();
   prepararTurno();
@@ -524,8 +523,7 @@ function prepararTurno() {
     if (a.t === "e") return turnoEnemigo();
     const p = S.players[a.i];
     if (p.alma <= 0) { avanzar(); continue; }
-    if (p.est.petrificado > 0) { p.est.petrificado--; log(`${p.nombre} sigue siendo de piedra y pierde el turno.`, "ko"); avanzar(); continue; }
-    if (p.est.aturdido > 0) { p.est.aturdido--; log(`${p.nombre} está aturdido y pierde el turno.`, "ko"); avanzar(); continue; }
+    if (p.est.aturdido > 0) { p.est.aturdido--; log(`${p.nombre} no puede moverse y pierde el turno.`, "ko"); avanzar(); continue; }
     S.turno = a.i; submenu = null;
     guardar(); render();
     return;
@@ -538,11 +536,12 @@ function danarRival(base, clase, crit, extra = 1, rampa) {
   let mult = 1, nota = "";
   if (c.resiste === clase) { mult = 0.5; nota = " (lo resiste)"; }
   if (c.debil === clase) { mult = 2; nota = " (¡punto débil!)"; }
-  if (extra > 1 && extra > mult) { mult = extra; nota = " (¡doble contra las sombras!)"; }
+  if (extra > 1 && extra > mult) { mult = extra; nota = " (¡doble contra los no muertos!)"; }
   dmg = mult < 1 ? Math.max(1, Math.floor(dmg * mult)) : Math.round(dmg * mult);
   c.hp = Math.max(0, c.hp - dmg);
+  if (clase === "arcana") c.quemado = true;
   fx({ tipo: "golpe", objetivo: "e" });
-  if (clase === "magica") fx({ tipo: "magia", objetivo: "e", rampa });
+  if (clase !== "fisica") fx({ tipo: "magia", objetivo: "e", rampa: rampa || (clase === "sagrada" ? RP.bronce : RP.magia) });
   fx({ tipo: "numero", objetivo: "e", texto: "-" + dmg, color: crit ? RP.bronce[4] : mult > 1 ? RP.fuego[3] : "#fff7ea", grande: crit || mult > 1 });
   return `${dmg} de daño${nota}`;
 }
@@ -553,12 +552,12 @@ function danarHeroe(i, dmg, directo) {
   fx({ tipo: "golpe", objetivo: "h" + i });
   fx({ tipo: "numero", objetivo: "h" + i, texto: "-" + dmg, color: RP.sangre[4] });
   let t = `${dmg} de daño`;
-  if (p.alma === 0 && p.raza === "semiorco" && !p.fl.aguante) { p.fl.aguante = true; p.alma = 1; t += `. ${p.nombre} se niega a caer y aguanta con 1 de Alma`; }
+  if (p.alma === 0 && p.raza === "semiorco" && !p.fl.aguante) { p.fl.aguante = true; p.alma = 1; t += `. ${p.nombre} se niega a caer y aguanta con 1 PG`; }
   else if (p.alma === 0) t += `. ¡${p.nombre} cae!`;
   if (directo && p.raza === "tiefling" && c) {
     c.hp = Math.max(0, c.hp - 2);
     fx({ tipo: "numero", objetivo: "e", texto: "-2", color: RP.fuego[3], fila: 1 });
-    t += `. Su legado infernal le devuelve 2 de fuego`;
+    t += `. Su reprensión infernal le devuelve 2 de fuego`;
   }
   return t;
 }
@@ -569,21 +568,21 @@ function accion(tipo, arg) {
   const arma = obj(p.equipo.arma) || {};
   const fin = () => { submenu = null; if (c.hp <= 0) return victoria(); avanzar(); prepararTurno(); };
 
-  if (tipo === "golpear" || tipo === "refutar") {
-    const clase = tipo === "golpear" ? "fisica" : "dialectica";
-    const st = tipo === "golpear" ? "ani" : stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
-    const mod = stat(p, st) + (arma.golpe || 0) + (clase === "fisica" && p.clase === "cazadora" ? 2 : 0);
+  if (tipo === "atacar" || tipo === "conjuro") {
+    const clase = tipo === "atacar" ? "fisica" : "arcana";
+    const st = tipo === "atacar" ? "ani" : stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
+    const mod = stat(p, st) + (arma.golpe || 0) + (clase === "fisica" && p.clase === "explorador" ? 2 : 0);
     const bono = usarOlivo(), pen = cegueraDe(p);
     const { r, nota } = tiradaD20(p);
     tirarDado(r, 20, () => {
       const total = r + mod + bono + pen;
       const crit = r >= critMin(p);
       const ok = crit || (r !== 1 && total >= e.ca);
-      let linea = lineaTirada(p.nombre, tipo === "golpear" ? "golpea" : "refuta", r, mod, bono, pen, total, `CA ${e.ca}`, crit) + nota;
+      let linea = lineaTirada(p.nombre, tipo === "atacar" ? "ataca" : "lanza un conjuro", r, mod, bono, pen, total, `CA ${e.ca}`, crit) + nota;
       fx({ tipo: "ataque", actor: yo });
       if (ok) {
-        const base = tirar(crit ? 2 : 1, 8, stat(p, st)) + (clase === "fisica" ? arma.fis || 0 : arma.dial || 0);
-        linea += ` → ${danarRival(base, clase, crit)}`;
+        const extra = clase === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" ? 2 : 0);
+        linea += ` → ${danarRival(tirar(crit ? 2 : 1, 8, stat(p, st)) + extra, clase, crit)}`;
         log(linea, "ok"); mostrarTirada(linea, true);
       } else {
         linea += " → falla";
@@ -594,16 +593,16 @@ function accion(tipo, arg) {
     });
     return;
   }
-  if (tipo === "meditar") {
+  if (tipo === "curar") {
     const bono = usarOlivo(), pen = cegueraDe(p);
     const { r, nota } = tiradaD20(p);
     tirarDado(r, 20, () => {
       const o = masHerido(), mod = stat(p, "tem");
       const ok = r >= critMin(p) || (r !== 1 && r + mod + bono + pen >= 10);
       let cura = ok ? Math.max(1, d(6) + mod) + (arma.cura || 0) : 1;
-      if (p.clase === "oraculo") cura *= 2;
+      if (p.clase === "clerigo") cura *= 2;
       const real = curar(o, cura), oi = idx(o);
-      const t = `${p.nombre} medita (TEM ${r} ${fmt(mod)}${bono ? " +2" : ""}${pen ? " −4" : ""} contra CD 10)${nota} y ${o === p ? "recupera" : "devuelve a " + o.nombre} ${real} de Alma`;
+      const t = `${p.nombre} cura heridas (SAB ${r} ${fmt(mod)}${bono ? " +2" : ""}${pen ? " −4" : ""} contra CD 10)${nota} y ${o === p ? "recupera" : "le devuelve a " + o.nombre} ${real} PG`;
       fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
       log(t, ok ? "ok" : "ko"); mostrarTirada(t, ok);
       fin();
@@ -611,22 +610,22 @@ function accion(tipo, arg) {
     return;
   }
   if (tipo === "objeto") {
-    if (!S.zurron[arg] || arg === "olivo") return;
+    if (!S.zurron[arg] || arg === "bendicion") return;
     S.zurron[arg]--;
-    if (arg === "nectar" || arg === "ambrosia") {
-      const o = masHerido(), oi = idx(o), base = arg === "nectar" ? 8 : maxAlma(o);
-      const real = curar(o, o.raza === "satiro" ? base * 2 : base);
+    if (arg === "pocion" || arg === "superior") {
+      const o = masHerido(), oi = idx(o);
+      const real = curar(o, arg === "pocion" ? 8 : maxAlma(o));
       fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
-      log(`${p.nombre} da ${OBJETOS[arg].nombre.toLowerCase()} a ${o.nombre}: +${real} Alma.`, "ok");
+      log(`${p.nombre} le da una ${OBJETOS[arg].nombre.toLowerCase()} a ${o.nombre}: +${real} PG.`, "ok");
     }
-    if (arg === "fuego") { fx({ tipo: "ataque", actor: yo }); log(`${p.nombre} lanza fuego griego → ${danarRival(tirar(3, 6), "magica", false, 1, RP.fuego)}`, "ok"); }
-    if (arg === "leteo") { c.aturdido = true; log(`${p.nombre} le hace beber agua del Leteo a ${e.nombre}, que olvida lo que iba a hacer.`, "ok"); }
+    if (arg === "fuego") { fx({ tipo: "ataque", actor: yo }); log(`${p.nombre} lanza fuego de alquimista → ${danarRival(tirar(3, 6), "arcana", false, 1, RP.fuego)}`, "ok"); }
+    if (arg === "sueno") { c.aturdido = true; log(`${p.nombre} le sopla polvo de sueño a ${e.nombre}, que se queda dormido un turno.`, "ok"); }
     return fin();
   }
   if (tipo === "anillo") {
     if (!S.anillo || c.anilloUsado) return;
     c.anilloUsado = true; c.aturdido = true;
-    log(`${p.nombre} gira el Anillo de Giges y desaparece. ${e.nombre} no sabe a quién atacar.`, "ok");
+    log(`${p.nombre} se pone el anillo de invisibilidad y desaparece. ${e.nombre} no sabe a quién atacar.`, "ok");
     return fin();
   }
   if (tipo === "habilidad") {
@@ -634,31 +633,31 @@ function accion(tipo, arg) {
     p.usos--;
     fx({ tipo: "ataque", actor: yo });
     switch (p.clase) {
-      case "filosofo": log(`${p.nombre} usa la ${cl.hab}: «Solo sé que no sé nada... ¿y tú?» → ${danarRival(tirar(2, 6, stat(p, "raz")), "dialectica", false)}`, "ok"); break;
-      case "atleta": log(`${p.nombre} se lanza al ${cl.hab} → ${danarRival(tirar(2, 8, stat(p, "ani")), "fisica", false)}`, "ok"); break;
-      case "oraculo": log(`${p.nombre} invoca la ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "tem")), "magica", false, e.sombra ? 2 : 1, RP.bronce)}`, "ok"); break;
-      case "cazadora": {
+      case "mago": log(`${p.nombre} lanza una ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "raz")) + 2, "arcana", false, 1, RP.fuego)}`, "ok"); break;
+      case "barbaro": log(`${p.nombre} entra en ${cl.hab.toLowerCase()} → ${danarRival(tirar(2, 8, stat(p, "ani")), "fisica", false)}`, "ok"); break;
+      case "clerigo": log(`${p.nombre} invoca la ${cl.hab} de Solara → ${danarRival(tirar(2, 6, stat(p, "tem")), "sagrada", false, e.nomuerto ? 2 : 1, RP.bronce)}`, "ok"); break;
+      case "explorador": {
         const a1 = danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false);
         const a2 = c.hp > 0 ? danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false) : "nada más, ya no hace falta";
         log(`${p.nombre} suelta una ${cl.hab}: ${a1} y ${a2}`, "ok");
         break;
       }
-      case "guardian": c.escudo = true; log(`${p.nombre} alza el ${cl.hab}. El próximo turno del enemigo no hará daño.`, "ok"); break;
-      case "sofista": c.aturdido = true; log(`${p.nombre} plantea la ${cl.hab}: Aquiles nunca alcanzará a la tortuga. ${e.nombre} se queda pensando.`, "ok"); break;
-      case "rapsoda": {
+      case "guerrero": c.escudo = true; log(`${p.nombre} levanta un ${cl.hab}. El próximo turno del enemigo no hará daño.`, "ok"); break;
+      case "picaro": c.aturdido = true; log(`${p.nombre} lanza una ${cl.hab}. ${e.nombre} os pierde de vista.`, "ok"); break;
+      case "bardo": {
         const n = Math.max(1, tirar(1, 6, stat(p, "elo")) + (arma.cura || 0));
         S.players.forEach((x, i) => { curar(x, n); fx({ tipo: "cura", objetivo: "h" + i }); });
-        log(`${p.nombre} entona el ${cl.hab}: todo el grupo recupera ${n} de Alma.`, "ok");
+        log(`${p.nombre} toca una ${cl.hab}: todo el grupo recupera ${n} PG.`, "ok");
         break;
       }
-      case "hechicero": c.maldito = true; fx({ tipo: "magia", objetivo: "e" }); log(`${p.nombre} lanza la ${cl.hab}. ${e.nombre} queda maldito: cada golpe le hará 2 de daño más.`, "ok"); break;
+      case "brujo": c.maldito = true; fx({ tipo: "magia", objetivo: "e" }); log(`${p.nombre} lanza un ${cl.hab}. ${e.nombre} queda maldito: cada golpe le hará 2 de daño más.`, "ok"); break;
     }
     return fin();
   }
 }
 
-function heroeAlAzarVivo(sinElfos) {
-  const lista = vivos().filter(i => !(sinElfos && S.players[i].raza === "elfo"));
+function heroeAlAzarVivo() {
+  const lista = vivos();
   return lista.length ? lista[Math.floor(Math.random() * lista.length)] : -1;
 }
 function turnoEnemigo() {
@@ -667,29 +666,35 @@ function turnoEnemigo() {
   ocupado = true; document.body.classList.add("ocupado");
   render();
   setTimeout(() => {
-    if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; }
+    if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; c.quemado = false; }
     else {
       const cada = n => c.ronda % n === 0;
-      if (e.rasgo === "reafirmarse" && cada(2)) { c.hp = Math.min(c.hpMax, c.hp + 5); log(`${e.nombre} grita todavía más fuerte y recupera 5 de Alma.`, "ko"); fx({ tipo: "cura", objetivo: "e" }); }
-      if (e.rasgo === "cambiar" && cada(2)) { const r0 = c.resiste; c.resiste = c.debil; c.debil = r0; log(`${e.nombre} cambia de forma: ahora resiste ${TIPOS_DANO[c.resiste]} y le duelen los ${TIPOS_DANO[c.debil]}.`, "ko"); fx({ tipo: "magia", objetivo: "e", rampa: RP.sombra }); }
-      if (e.rasgo === "partirse" && !c.partido && c.hp <= c.hpMax / 2) { c.partido = true; log(`${e.nombre} se enfurece: sus dos mitades atacan por separado.`, "ko"); }
-      if (c.escudo) { log(`${e.nombre} ataca, pero el Escudo de la Polis lo detiene todo.`, "ok"); c.escudo = false; }
+      if (e.regenera) {
+        if (c.quemado) log(`${e.nombre} no puede regenerarse: el fuego le ha cauterizado las heridas.`, "ok");
+        else if (c.hp < c.hpMax) { const cu = Math.min(e.regenera, c.hpMax - c.hp); c.hp += cu; log(`${e.nombre} se regenera y recupera ${cu} PG.`, "ko"); fx({ tipo: "cura", objetivo: "e" }); }
+        c.quemado = false;
+      }
+      if (e.cura && cada(e.cura.cada) && c.hp < c.hpMax) {
+        const cu = Math.min(e.cura.n, c.hpMax - c.hp); c.hp += cu;
+        log(`${e.cura.txt} (+${cu} PG).`, "ko"); fx({ tipo: "cura", objetivo: "e" });
+      }
+      if (e.furia && !c.partido && c.hp <= c.hpMax / 2) { c.partido = true; log(`${e.nombre} entra en furia: ahora ataca una vez más por ronda.`, "ko"); }
+      if (c.escudo) { log(`${e.nombre} ataca, pero el muro de escudos lo detiene todo.`, "ok"); c.escudo = false; }
       else {
         const n = c.ataques + (c.partido ? 1 : 0);
         fx({ tipo: "ataque", actor: "e" });
         for (let k = 0; k < n; k++) {
-          const ti = heroeAlAzarVivo(false);
+          const ti = heroeAlAzarVivo();
           if (ti < 0) break;
           const t = S.players[ti];
-          if (t.clase === "atleta" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${e.nombre} ataca a ${t.nombre}, que lo esquiva sin mirar (reflejos olímpicos).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); continue; }
+          if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${e.nombre} ataca a ${t.nombre}, que lo esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); continue; }
           const r = d(20), def = ca(t);
           const ok = r === 20 || (r !== 1 && r + e.atk >= def);
           mostrarTirada.ultimo = r;
           if (ok) {
             const dmg = Math.max(1, tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2]) - (c.blando ? 2 : 0));
             let txt = `${e.nombre} ataca a ${t.nombre}: ${r} ${fmt(e.atk)} contra CA ${def} → ${danarHeroe(ti, dmg, true)}`;
-            if (e.rasgo === "drenar") { const cu = Math.max(1, Math.floor(dmg / 2)); c.hp = Math.min(c.hpMax, c.hp + cu); txt += `. Se cura ${cu}`; }
-            if (e.rasgo === "robar" && t.dracmas > 0) { const rob = Math.min(5, t.dracmas); t.dracmas -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Le roba ${rob} dracmas`; }
+            if (e.roba && t.oro > 0) { const rob = Math.min(e.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Le roba ${rob} po`; }
             log(txt, "ko"); mostrarTirada(txt, false);
           } else {
             const txt = `${e.nombre} ataca a ${t.nombre}: ${r} ${fmt(e.atk)} contra CA ${def} → falla`;
@@ -697,18 +702,16 @@ function turnoEnemigo() {
             log(txt, "ok"); mostrarTirada(txt, true);
           }
         }
-        if ((e.rasgo === "vapor" || e.rasgo === "sismo") && cada(3)) {
-          const dado = e.rasgo === "vapor" ? 4 : 6;
-          const partes = vivos().map(i => `${S.players[i].nombre} ${danarHeroe(i, d(dado), false).split(".")[0]}`);
-          log(`${e.rasgo === "vapor" ? `${e.nombre} suelta un chorro de vapor hirviente` : `${e.nombre} golpea el suelo y todo tiembla`}: ${partes.join(", ")}.`, "ko");
+        if (e.area && cada(e.area.cada)) {
+          const partes = vivos().map(i => { fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego }); return `${S.players[i].nombre} ${danarHeroe(i, d(e.area.dado), false).split(".")[0]}`; });
+          log(`${e.area.txt}: ${partes.join(", ")}.`, "ko");
         }
-        if ((e.rasgo === "cegar" || e.rasgo === "petrificar") && cada(2)) {
-          const ti = heroeAlAzarVivo(false);
+        if (e.estado && cada(e.estado.cada)) {
+          const ti = heroeAlAzarVivo();
           if (ti >= 0) {
             const t = S.players[ti];
-            if (t.raza === "elfo") log(`${e.nombre} intenta ${e.rasgo === "cegar" ? "cegar" : "petrificar"} a ${t.nombre}, pero su ascendencia feérica le protege.`, "ok");
-            else if (e.rasgo === "cegar") { t.est.cegado = 1; log(`${e.nombre} proyecta una sombra en los ojos de ${t.nombre}: −4 a su próxima tirada.`, "ko"); }
-            else { t.est.petrificado = 1; log(`La mirada de ${e.nombre} convierte a ${t.nombre} en piedra durante un turno.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
+            if (t.raza === "elfo") log(`${e.nombre} intenta atrapar a ${t.nombre}, pero su linaje feérico le protege.`, "ok");
+            else { t.est.aturdido = 1; log(`${e.estado.txt.replace("{x}", t.nombre)}.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
           }
         }
       }
@@ -725,16 +728,16 @@ function victoria() {
   fx({ tipo: "muerte", objetivo: "e" });
   const extra = [];
   let robado = 0;
-  S.players.forEach((p, i) => { if (c.robado[i]) { p.dracmas += c.robado[i]; robado += c.robado[i]; } });
-  if (robado) extra.push(`Recuperáis ${robado} dracmas robadas`);
+  S.players.forEach((p, i) => { if (c.robado[i]) { p.oro += c.robado[i]; robado += c.robado[i]; } });
+  if (robado) extra.push(`Recuperáis ${robado} po robadas`);
   S.players.forEach(p => { if (p.alma <= 0) p.alma = 1; p.est = { aturdido: 0, cegado: 0, petrificado: 0 }; });
-  if (S.players.some(p => p.clase === "rapsoda")) { S.players.forEach(p => curar(p, 3)); extra.push("Épica del rapsoda: +3 Alma para el grupo"); }
-  S.players.forEach(p => { if (p.clase === "hechicero") { curar(p, 4); extra.push(`Pacto con Hécate: +4 Alma para ${p.nombre}`); } });
+  if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => curar(p, 3)); extra.push("Inspiración bárdica: +3 PG para el grupo"); }
+  S.players.forEach(p => { if (p.clase === "brujo") { curar(p, 4); extra.push(`Pacto oscuro: +4 PG para ${p.nombre}`); } });
   S.combate = null;
   const efectos = aplicarFx(sc.victoria.fx).concat(extra);
   S.fase = "resultado";
   S.resultado = { ok: true, tipo: "victoria", enemigo: c.enemigo, linea: null, texto: sc.victoria.t, efectos, siguiente: sc.sig };
-  log(`¡${e.nombre} ha sido derrotado!`, "ok");
+  log(`¡Victoria contra ${e.nombre}!`, "ok");
   guardar(); render();
 }
 function derrota() {
@@ -769,7 +772,7 @@ function renderTaberna() {
   }
   escTaberna.ajustar();
   const heroes = online && mesa ? heroesSentados() : grupoEditor().heroes;
-  escTaberna.mostrar({ fondo: "taberna", heroes: heroes.slice(0, 6).map(h => ({ look: Object.assign({ raza: h.raza, clase: h.clase }, h.look) })), rival: { tipo: "pnj", clave: "cefalo" }, activo: online && mesa ? -1 : grupoEditor().sel });
+  escTaberna.mostrar({ fondo: "taberna", heroes: heroes.slice(0, 6).map(h => ({ look: Object.assign({ raza: h.raza, clase: h.clase }, h.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: online && mesa ? -1 : grupoEditor().sel });
 }
 
 function htmlLocal() {
@@ -792,10 +795,10 @@ function htmlReglas() {
       <ul>
         <li><b>Por turnos.</b> Cada escena la decide un héroe y el turno va pasando. En los enigmas, discutidlo antes de responder.</li>
         <li><b>Tiradas.</b> d20 + atributo contra una Clase de Dificultad (CD). Un 20 natural es un crítico y un 1, una pifia.</li>
-        <li><b>Combate.</b> Al empezar se tira iniciativa (d20 + Templanza). Golpear usa Ánimo y hace daño físico; Refutar usa tu mejor Razón o Elocuencia y hace daño dialéctico. Para acertar hay que igualar la Clase de Armadura (CA) del enemigo.</li>
+        <li><b>Combate.</b> Al empezar se tira iniciativa (d20 + Sabiduría). Atacar usa Fuerza y hace daño físico; Conjuro usa tu mejor Inteligencia o Carisma y hace daño arcano. Para acertar hay que igualar la Clase de Armadura (CA) del enemigo.</li>
         <li><b>Habilidades.</b> Cada clase tiene una habilidad activa (una vez por combate, dos desde el nivel 3) y una pasiva. Cada raza tiene otra pasiva.</li>
-        <li><b>Tiendas.</b> En el Ágora, en el Banquete, en el Pireo y en el Mundo de las Ideas cada héroe compra con sus propias dracmas.</li>
-        <li><b>Alma</b> es la vida. Si cae todo el grupo, podéis reencarnar al inicio del capítulo, como en el mito de Er.</li>
+        <li><b>Tiendas.</b> En Villabruma, en el bosque, en la forja de los enanos y a las puertas de la guarida, cada héroe compra con su propio oro (po).</li>
+        <li><b>PG y PX.</b> Los Puntos de Golpe son la vida y los Puntos de Experiencia os suben de nivel. Si cae todo el grupo, Solara os resucita al inicio del capítulo.</li>
       </ul>
     </details>`;
 }
@@ -838,9 +841,9 @@ function htmlEditor(g) {
       <div class="ed-nombre">
         <label class="etiqueta" for="ed-nombre">Nombre</label>
         <div class="fila-nombre"><input id="ed-nombre" maxlength="24" value="${esc(h.nombre)}" autocomplete="off"><button type="button" class="boton sec mini" data-acc="nombre-azar">Al azar</button></div>
-        <p class="ed-linea">${rz.nombre} · ${cl.nombre} <span class="etiqueta">(${cl.dnd})</span> · ${ALINEAMIENTOS[h.alin]}</p>
+        <p class="ed-linea">${rz.nombre} · ${cl.nombre} <span class="etiqueta">(${cl.rol})</span> · ${ALINEAMIENTOS[h.alin]}</p>
         <div class="ed-stats">${statsHtml}</div>
-        <p class="ed-cifras">Alma ${p.almaBase} · CA ${caP} · Patrón: ${cl.patron}</p>
+        <p class="ed-cifras">PG ${p.almaBase} · CA ${caP} · Patrón: ${cl.patron}</p>
       </div>
     </div>
     <div class="ed-bloque">
@@ -1004,7 +1007,7 @@ function renderHerramientas() {
   const salir = S.online
     ? (confirmando ? `<span class="confirmar"><span>La partida sigue para los demás.</span><button type="button" class="boton mini" data-acc="salir">Salir</button><button type="button" class="boton sec mini" data-acc="cancelar">Quedarme</button></span>` : `<button type="button" class="boton sec mini" data-acc="confirmar">Salir</button>`)
     : (confirmando ? `<span class="confirmar"><span>Se perderá la partida.</span><button type="button" class="boton mini" data-acc="reiniciar">Empezar de nuevo</button><button type="button" class="boton sec mini" data-acc="cancelar">Seguir</button></span>` : `<button type="button" class="boton sec mini" data-acc="confirmar">Nueva</button>`);
-  h.innerHTML = `${chip}<button type="button" class="boton sec mini" data-modal="zurron">Zurrón</button><button type="button" class="boton sec mini" data-modal="codice">Códice</button>${salir}`;
+  h.innerHTML = `${chip}<button type="button" class="boton sec mini" data-modal="zurron">Mochila</button><button type="button" class="boton sec mini" data-modal="codice">Compendio</button>${salir}`;
 }
 function tipoRival(clave) { return typeof PNJ !== "undefined" && PNJ[clave] ? "pnj" : "enemigo"; }
 function sincronizarEscenario() {
@@ -1012,10 +1015,10 @@ function sincronizarEscenario() {
   let rival = null;
   if (S.combate) {
     const k = S.combate.enemigo;
-    rival = { tipo: "enemigo", clave: k, hp: S.combate.hp, max: S.combate.hpMax, maldito: S.combate.maldito, aturdido: S.combate.aturdido, flota: k === "harpia" || k === "doxa" };
+    rival = { tipo: "enemigo", clave: k, hp: S.combate.hp, max: S.combate.hpMax, maldito: S.combate.maldito, aturdido: S.combate.aturdido, flota: k === "dragon" };
   } else if (S.resultado && S.resultado.tipo === "victoria") rival = { tipo: "enemigo", clave: S.resultado.enemigo, derrotado: true };
   else if (S.tienda) rival = { tipo: tipoRival(TIENDAS[S.tienda.clave].pnj), clave: TIENDAS[S.tienda.clave].pnj };
-  else if (sc.pnj) rival = { tipo: tipoRival(sc.pnj), clave: sc.pnj };
+  else if (sc.pnj) rival = { tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" };
   escJuego.mostrar({
     fondo: sc.fondo, rival, activo: S.final || S.derrota ? -1 : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
     heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && p.est.aturdido), cegado: !!(p.est && p.est.cegado), piedra: !!(p.est && p.est.petrificado) }))
@@ -1034,8 +1037,8 @@ function renderGrupo() {
         <span class="heroe-datos">
           <strong>${esc(p.nombre)}${S.online && p.uid === red.yo ? ' <span class="tu">tú</span>' : ""}</strong>
           <span class="etiqueta">${CLASES[p.clase].nombre} · Nv ${p.nivel}${enCombate ? ` · ${p.usos} hab.` : ""}</span>
-          <span class="barra-alma" role="img" aria-label="Alma ${p.alma} de ${max}"><i style="width:${pct}%"></i></span>
-          <span class="cifras">${p.alma}/${max} · CA ${ca(p)}<span class="dr"> · ${p.dracmas} dr</span>${estados ? ` · ${estados}` : ""}</span>
+          <span class="barra-alma" role="img" aria-label="PG ${p.alma} de ${max}"><i style="width:${pct}%"></i></span>
+          <span class="cifras">${p.alma}/${max} · CA ${ca(p)}<span class="dr"> · ${p.oro} po</span>${estados ? ` · ${estados}` : ""}</span>
         </span>
         ${on !== null ? `<span class="punto${on ? " on" : ""}" title="${on ? "Conectado" : "Sin conexión"}"></span>` : ""}
       </button>`;
@@ -1063,16 +1066,16 @@ function renderEscena() {
     return;
   }
   if (S.derrota) {
-    el.innerHTML = `${cabeceraEscena(sc)}<h3 class="sello ko">Descenso al Hades</h3>
-      ${parrafos(["Vuestras almas cruzan el río del Olvido. Pero, como cuenta el soldado Er, las almas pueden elegir una nueva vida antes de volver."])}
-      <div class="pie-escena">${esAnfitrion() ? `<button type="button" class="boton" data-acc="reencarnar">Reencarnar al inicio del capítulo</button>
-        ${S.online ? `<button type="button" class="boton sec" data-acc="volver-sala">Volver a la sala</button>` : `<button type="button" class="boton sec" data-acc="reiniciar">Empezar desde la caverna</button>`}`
-        : `<p class="espera">El anfitrión decide si reencarnáis.</p>`}</div>`;
+    el.innerHTML = `${cabeceraEscena(sc)}<h3 class="sello ko">Habéis caído</h3>
+      ${parrafos(["Todo se vuelve negro. Cuando abrís los ojos, una sacerdotisa de Solara os está curando en su templo: «Los dioses os conceden otra oportunidad»."])}
+      <div class="pie-escena">${esAnfitrion() ? `<button type="button" class="boton" data-acc="reencarnar">Volver al inicio del capítulo</button>
+        ${S.online ? `<button type="button" class="boton sec" data-acc="volver-sala">Volver a la sala</button>` : `<button type="button" class="boton sec" data-acc="reiniciar">Empezar desde la taberna</button>`}`
+        : `<p class="espera">El anfitrión decide si volvéis a intentarlo.</p>`}</div>`;
     return;
   }
   const mio = puedoActuar(), off = !mio;
   const quien = mio
-    ? `<p class="quien">Decide <b>${esc(p.nombre)}</b> · ${nombreRazaClase(p)}${S.olivoActivo && S.zurron.olivo > 0 ? " · la rama de olivo dará +2" : ""}</p>`
+    ? `<p class="quien">Decide <b>${esc(p.nombre)}</b> · ${nombreRazaClase(p)}${S.olivoActivo && S.zurron.bendicion > 0 ? " · la bendición dará +2" : ""}</p>`
     : `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b> (${nombreRazaClase(p)}). Esperando su decisión en su dispositivo…</p>`;
 
   if (S.fase === "resultado") {
@@ -1091,7 +1094,7 @@ function renderEscena() {
     el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}${quien}<ul class="menu">${sc.opciones.map((op, i) => {
       let chip = "Sin tirada";
       if (op.stat) {
-        const mod = stat(p, op.stat) + (op.stat === "raz" && p.clase === "filosofo" ? 2 : 0);
+        const mod = stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0);
         chip = op.inmuneElfo && p.raza === "elfo" ? "Inmune" : `${ABREV[op.stat]} ${fmt(mod)} · CD ${op.cd}`;
       }
       return boton(`data-op="${i}"`, op.txt, chip, "", off);
@@ -1099,11 +1102,11 @@ function renderEscena() {
   } else if (sc.tipo === "enigma") {
     const tachada = respuestaTachada(sc);
     el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
-      ${mio ? `<p class="quien">Responde <b>${esc(p.nombre)}</b>. Aquí no hay dados: discutidlo antes.${tachada >= 0 ? " Gracias al filósofo del grupo, una respuesta falsa está tachada." : ""}</p>` : quien}
+      ${mio ? `<p class="quien">Responde <b>${esc(p.nombre)}</b>. Aquí no hay dados: discutidlo antes.${tachada >= 0 ? " Gracias al gnomo del grupo, una respuesta falsa está tachada." : ""}</p>` : quien}
       <ul class="menu">${sc.respuestas.map((t, i) => boton(`data-resp="${i}"${i === tachada ? ' data-tachada="1"' : ""}`, i === tachada ? `<s>${t}</s>` : t, "", "", off || i === tachada)).join("")}</ul>`;
   } else if (sc.tipo === "relato") {
     el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
-      <ul class="efectos">${sc.fx.curarTodo ? "<li>Alma restaurada por completo</li>" : ""}${sc.fx.almaTodos ? `<li>+${sc.fx.almaTodos} Alma para el grupo</li>` : ""}<li>+${sc.fx.xp} Sabiduría</li></ul>
+      <ul class="efectos">${sc.fx.curarTodo ? "<li>PG restaurados por completo</li>" : ""}${sc.fx.almaTodos ? `<li>+${sc.fx.almaTodos} PG para el grupo</li>` : ""}${sc.fx.oro ? `<li>+${sc.fx.oro} po cada uno</li>` : ""}<li>+${sc.fx.xp} PX</li></ul>
       <div class="pie-escena">${mio ? `<button type="button" class="boton" data-acc="relato">${sc.boton}</button>` : quien}</div>`;
   } else if (sc.tipo === "final") {
     el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
@@ -1120,13 +1123,13 @@ function renderTienda(el, sc, p, mio) {
     const equipado = o.tipo !== "consumible" && o.tipo !== "servicio" && p.equipo[o.tipo] === id;
     const actual = o.tipo !== "consumible" && o.tipo !== "servicio" ? p.equipo[o.tipo] : null;
     const sub = `${o.desc}${actual && !equipado ? ` Sustituye a ${OBJETOS[actual].nombre} (te devuelven ${Math.floor(OBJETOS[actual].precio / 2)}).` : ""}${o.tipo === "consumible" ? ` Tenéis ${S.zurron[id]}.` : ""}`;
-    const tipo = o.tipo === "consumible" ? "Zurrón" : o.tipo === "servicio" ? "Servicio" : RANURAS[o.tipo];
-    return boton(`data-comprar="${id}"`, `${o.nombre} <span class="etiqueta">${tipo}</span>`, equipado ? "Equipado" : `${pr} dr`, sub, !mio || equipado || p.dracmas < pr);
+    const tipo = o.tipo === "consumible" ? "Mochila" : o.tipo === "servicio" ? "Servicio" : RANURAS[o.tipo];
+    return boton(`data-comprar="${id}"`, `${o.nombre} <span class="etiqueta">${tipo}</span>`, equipado ? "Equipado" : `${pr} po`, sub, !mio || equipado || p.oro < pr);
   }).join("");
   const resto = S.tienda.cola.slice(S.tienda.pos + 1).map(i => S.players[i].nombre);
   el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
     <p class="saludo"><b>${t.nombre}:</b> ${t.saludo}</p>
-    ${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> con sus <b>${p.dracmas} dracmas</b>${p.clase === "sofista" ? " (lengua de plata: −25 %)" : ""}.</p>` : `<p class="quien espera">Está comprando <b>${esc(p.nombre)}</b> en su dispositivo…</p>`}
+    ${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> con sus <b>${p.oro} po</b>${p.clase === "picaro" ? " (dedos largos: −25 %)" : ""}.</p>` : `<p class="quien espera">Está comprando <b>${esc(p.nombre)}</b> en su dispositivo…</p>`}
     <ul class="menu tienda">${items}</ul>
     <div class="pie-escena">${mio ? `<button type="button" class="boton" data-acc="terminar-compras">${resto.length ? `Terminar · le toca a ${esc(resto[0])}` : "Terminar las compras y seguir"}</button>` : ""}</div>`;
 }
@@ -1137,15 +1140,15 @@ function renderCombate(el, sc, p, cl, mio) {
   const e = ENEMIGOS[c.enemigo];
   const arma = obj(p.equipo.arma) || {};
   const refStat = stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
-  const modG = stat(p, "ani") + (arma.golpe || 0) + (p.clase === "cazadora" ? 2 : 0), modR = stat(p, refStat) + (arma.golpe || 0);
-  const consumibles = ["nectar", "ambrosia", "fuego", "leteo"].filter(k => S.zurron[k] > 0);
+  const modG = stat(p, "ani") + (arma.golpe || 0) + (p.clase === "explorador" ? 2 : 0), modR = stat(p, refStat) + (arma.golpe || 0);
+  const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
   const orden = c.orden.map((a, k) => {
     const nombre = a.t === "e" ? e.nombre.split(",")[0] : S.players[a.i].nombre;
     const caido = a.t === "h" && S.players[a.i].alma <= 0;
     return `<li class="${k === c.pos ? "ahora" : ""}${caido ? " caido" : ""}${a.t === "e" ? " rival" : ""}">${esc(nombre)}</li>`;
   }).join("");
   const rasgos = [
-    `<span>CA ${e.ca}</span>`, `<span>Alma ${c.hp}/${c.hpMax}</span>`,
+    `<span>CA ${e.ca}</span>`, `<span>PG ${c.hp}/${c.hpMax}</span>`,
     c.resiste ? `<span>Resiste ${TIPOS_DANO[c.resiste]}</span>` : "", c.debil ? `<span class="alerta">Débil a ${TIPOS_DANO[c.debil]}</span>` : "",
     c.maldito ? `<span class="alerta">Maldito</span>` : "", c.aturdido ? `<span class="alerta">Perderá su turno</span>` : "", c.escudo ? `<span class="alerta">Escudo de la Polis</span>` : ""
   ].join("");
@@ -1155,12 +1158,12 @@ function renderCombate(el, sc, p, cl, mio) {
     menu = `${quien(p, mio)}<ul class="menu">${consumibles.map(k => boton(`data-objeto="${k}"`, OBJETOS[k].nombre, `× ${S.zurron[k]}`, OBJETOS[k].desc, false)).join("")}${boton('data-acc="volver-menu"', "Volver", "", "", false)}</ul>`;
   } else {
     const acciones = [
-      boton('data-accion="golpear"', "Golpear", `d20 ${fmt(modG)}`, `1d8 ${fmt(stat(p, "ani"))}${arma.fis ? ` +${arma.fis}` : ""} de daño físico`, !mio),
-      boton('data-accion="refutar"', "Refutar", `d20 ${fmt(modR)}`, `1d8 ${fmt(stat(p, refStat))}${arma.dial ? ` +${arma.dial}` : ""} de daño dialéctico (${ABREV[refStat]})`, !mio),
-      boton('data-accion="meditar"', "Meditar", `TEM ${fmt(stat(p, "tem"))}`, `Cura al más herido${p.clase === "oraculo" ? " (doble)" : ""}`, !mio),
+      boton('data-accion="atacar"', "Atacar", `d20 ${fmt(modG)}`, `1d8 ${fmt(stat(p, "ani"))}${arma.fis ? ` +${arma.fis}` : ""} de daño físico`, !mio),
+      boton('data-accion="conjuro"', "Conjuro", `d20 ${fmt(modR)}`, `1d8 ${fmt(stat(p, refStat))}${(arma.arc || 0) + (p.clase === "mago" ? 2 : 0) ? ` +${(arma.arc || 0) + (p.clase === "mago" ? 2 : 0)}` : ""} de daño arcano (${ABREV[refStat]})`, !mio),
+      boton('data-accion="curar"', "Curar heridas", `SAB ${fmt(stat(p, "tem"))}`, `Cura al más herido${p.clase === "clerigo" ? " (doble)" : ""}`, !mio),
       boton('data-accion="habilidad"', cl.hab, `${p.usos} uso${p.usos === 1 ? "" : "s"}`, cl.habDesc, !mio || p.usos <= 0),
-      boton('data-acc="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, consumibles.length ? consumibles.map(k => `${OBJETOS[k].nombre} ×${S.zurron[k]}`).join(", ") : "El zurrón está vacío", !mio || !consumibles.length),
-      S.anillo ? boton('data-accion="anillo"', "Anillo de Giges", c.anilloUsado ? "usado" : "1 vez", "El enemigo pierde su turno", !mio || c.anilloUsado) : ""
+      boton('data-acc="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, consumibles.length ? consumibles.map(k => `${OBJETOS[k].nombre} ×${S.zurron[k]}`).join(", ") : "La mochila está vacía", !mio || !consumibles.length),
+      S.anillo ? boton('data-accion="anillo"', "Anillo de invisibilidad", c.anilloUsado ? "usado" : "1 vez", "El enemigo pierde su turno", !mio || c.anilloUsado) : ""
     ];
     menu = `${quien(p, mio)}<ul class="menu acciones">${acciones.join("")}</ul>`;
   }
@@ -1171,7 +1174,7 @@ function renderCombate(el, sc, p, cl, mio) {
 }
 function quien(p, mio) {
   return mio
-    ? `<p class="quien">Turno de <b>${esc(p.nombre)}</b> · ${nombreRazaClase(p)}${S.olivoActivo && S.zurron.olivo > 0 ? " · olivo +2 preparado" : ""}</p>`
+    ? `<p class="quien">Turno de <b>${esc(p.nombre)}</b> · ${nombreRazaClase(p)}${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2 preparada" : ""}</p>`
     : `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b>. Esperando su decisión en su dispositivo…</p>`;
 }
 function renderCronica() {
@@ -1180,7 +1183,7 @@ function renderCronica() {
   ol.scrollTop = ol.scrollHeight;
 }
 
-/* ---------- Ventanas: ficha, zurrón, códice y crónica ---------- */
+/* ---------- Ventanas: ficha, mochila, compendio y crónica ---------- */
 function abrirModal(m) { modal = m; renderModal(); $("#capa").hidden = false; const b = $("#modal button"); if (b) b.focus(); }
 function cerrarModal() { modal = null; $("#capa").hidden = true; }
 function renderModal() {
@@ -1204,8 +1207,8 @@ function htmlFicha(p) {
       <canvas class="retrato-grande" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
       <div>
         <h2>${esc(p.nombre)}</h2>
-        <p class="ed-linea">${rz.nombre} · ${cl.nombre} <span class="etiqueta">(${cl.dnd})</span> · ${ALINEAMIENTOS[p.alin]}</p>
-        <p class="ed-cifras">Nivel ${p.nivel} · Sabiduría ${p.xp}${sig !== null ? `/${sig}` : ""} · Alma ${p.alma}/${max} · CA ${ca(p)} · Iniciativa ${fmt(iniMod(p))} · ${p.dracmas} dracmas</p>
+        <p class="ed-linea">${rz.nombre} · ${cl.nombre} <span class="etiqueta">(${cl.rol})</span> · ${ALINEAMIENTOS[p.alin]}</p>
+        <p class="ed-cifras">Nivel ${p.nivel} · PX ${p.xp}${sig !== null ? `/${sig}` : ""} · PG ${p.alma}/${max} · CA ${ca(p)} · Iniciativa ${fmt(iniMod(p))} · ${p.oro} po</p>
         <div class="ed-stats">${Object.keys(STATS).map(k => `<div><b>${fmt(stat(p, k))}</b><span>${ABREV[k]}</span><small>${STATS[k]}</small></div>`).join("")}</div>
       </div>
     </div>
@@ -1222,14 +1225,14 @@ function htmlZurron() {
   const filas = CONSUMIBLES.map(k => {
     const n = S.zurron[k];
     let acciones = "";
-    if (mio && n > 0 && (k === "nectar" || k === "ambrosia")) acciones = S.players.map((p, i) => p.alma < maxAlma(p) ? `<button type="button" class="boton sec mini" data-usar="${k}" data-en="${i}">${esc(p.nombre)}</button>` : "").join("");
-    if (k === "olivo" && n > 0 && (puedoActuar())) acciones = `<button type="button" class="boton ${S.olivoActivo ? "" : "sec "}mini" data-acc="olivo" aria-pressed="${S.olivoActivo}">${S.olivoActivo ? "Preparada: +2" : "Usar en la próxima tirada"}</button>`;
+    if (mio && n > 0 && (k === "pocion" || k === "superior")) acciones = S.players.map((p, i) => p.alma < maxAlma(p) ? `<button type="button" class="boton sec mini" data-usar="${k}" data-en="${i}">${esc(p.nombre)}</button>` : "").join("");
+    if (k === "bendicion" && n > 0 && (puedoActuar())) acciones = `<button type="button" class="boton ${S.olivoActivo ? "" : "sec "}mini" data-acc="olivo" aria-pressed="${S.olivoActivo}">${S.olivoActivo ? "Preparada: +2" : "Usar en la próxima tirada"}</button>`;
     return `<li><div><b>${OBJETOS[k].nombre} × ${n}</b><span>${OBJETOS[k].desc}</span></div><div class="zurron-acciones">${acciones}</div></li>`;
   }).join("");
-  return `<h2>Zurrón del grupo</h2>
-    <ul class="zurron">${filas}${S.anillo ? `<li><div><b>Anillo de Giges</b><span>Una vez por combate: el enemigo pierde su turno.</span></div></li>` : ""}</ul>
+  return `<h2>Mochila del grupo</h2>
+    <ul class="zurron">${filas}${S.anillo ? `<li><div><b>Anillo de invisibilidad</b><span>Una vez por combate: el enemigo pierde su turno.</span></div></li>` : ""}</ul>
     ${S.combate ? `<p class="espera">En combate, los objetos se usan desde el menú «Objetos» en tu turno.</p>` : !puedoActuar() ? `<p class="espera">Solo puede usar objetos quien tiene el turno.</p>` : ""}
-    <h3>Bolsas</h3><ul class="bolsas">${S.players.map(p => `<li><b>${esc(p.nombre)}</b> ${p.dracmas} dracmas</li>`).join("")}</ul>`;
+    <h3>Bolsas</h3><ul class="bolsas">${S.players.map(p => `<li><b>${esc(p.nombre)}</b> ${p.oro} po</li>`).join("")}</ul>`;
 }
 function htmlCodice(pestana, bestia) {
   const pestanas = { mundo: "Mundo", lugares: "Lugares", bestiario: "Bestiario", razas: "Razas", clases: "Clases" };
@@ -1246,12 +1249,12 @@ function htmlCodice(pestana, bestia) {
     if (!visto) return `<article class="bestia"><canvas class="mini oculto" data-rival="${tipoRival(k)}:${k}"></canvas><div><h3>???</h3><p class="espera">Todavía no os habéis cruzado con esta criatura.</p></div></article>`;
     return `<article class="bestia${bestia === k ? " destacada" : ""}"><canvas class="mini" data-rival="enemigo:${k}"></canvas><div>
       <h3>${e.nombre}</h3><p class="etiqueta">${e.tipo}, ${e.alin.toLowerCase()} · VD ${e.vd}</p>
-      <p class="bloque-stats">CA ${e.ca} · Alma ${e.alma} · Ataque ${fmt(e.atk)} · ${e.ataques} ataque${e.ataques > 1 ? "s" : ""} de ${e.dano[0]}d${e.dano[1]}${e.dano[2] ? fmt(e.dano[2]) : ""}${e.resiste ? ` · Resiste ${TIPOS_DANO[e.resiste]}` : ""}${e.debil ? ` · Débil a ${TIPOS_DANO[e.debil]}` : ""}</p>
+      <p class="bloque-stats">CA ${e.ca} · PG ${e.alma} · Ataque ${fmt(e.atk)} · ${e.ataques} ataque${e.ataques > 1 ? "s" : ""} de ${e.dano[0]}d${e.dano[1]}${e.dano[2] ? fmt(e.dano[2]) : ""}${e.resiste ? ` · Resiste ${TIPOS_DANO[e.resiste]}` : ""}${e.debil ? ` · Débil a ${TIPOS_DANO[e.debil]}` : ""}</p>
       <p><b>${e.rasgoDesc}</b></p><p>${e.lore}</p></div></article>`;
   }).join("");
   if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(k => { const r = RAZAS[k]; return `<article><h3>${r.nombre}</h3><p>${r.lore}</p><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p class="etiqueta">${Object.keys(r.mods).map(s => `${ABREV[s]} ${fmt(r.mods[s])}`).join(" · ")}${r.alma ? ` · Alma +${r.alma}` : ""}</p></article>`; }).join("");
-  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(k => { const c = CLASES[k]; return `<article><h3>${c.nombre} <span class="etiqueta">(${c.dnd})</span></h3><p>${c.desc} Patrón: ${c.patron}.</p><p><b>${c.hab}:</b> ${c.habDesc}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
-  return `<h2>Códice de la Hélade</h2><div class="pestanas" role="tablist">${tabs}</div><div class="codice">${cuerpo}</div>`;
+  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(k => { const c = CLASES[k]; return `<article><h3>${c.nombre} <span class="etiqueta">(${c.rol})</span></h3><p>${c.desc} Patrón: ${c.patron}.</p><p><b>${c.hab}:</b> ${c.habDesc}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
+  return `<h2>Compendio de Valdren</h2><div class="pestanas" role="tablist">${tabs}</div><div class="codice">${cuerpo}</div>`;
 }
 
 /* ---------- Eventos ---------- */

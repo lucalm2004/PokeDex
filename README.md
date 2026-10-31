@@ -1,13 +1,13 @@
 # PokeDex
 
-## Diálogos y Dados
+## Dados y Mazmorras
 
-Juego de rol por turnos al estilo de Dungeons & Dragons, ambientado en el mundo de Platón y dibujado en pixel art (sprites de 36×36).
+Juego de rol por turnos al estilo de Dungeons & Dragons, dibujado en pixel art (sprites de 36×36): una partida de espada y brujería contra el dragón rojo Ignárax.
 
 - **Jugar:** abre `plato/index.html` en el navegador. Funciona sin servidor ni instalación.
 - **De 1 a 6 jugadores**, en un mismo dispositivo o, publicado en claude.ai, en una mesa en línea donde cada amigo controla su héroe desde su móvil.
-- **Personajes:** 8 razas (humano, elfo, enano, mediano, semiorco, tiefling, dracónido, sátiro) y 8 clases (filósofo, guardián, sofista, rapsoda, atleta, oráculo, cazadora, hechicero), cada una con su habilidad activa y su pasiva, alineamiento y aspecto personalizable.
-- **Aventura:** 5 capítulos (la Caverna, Atenas, el Banquete, la Atlántida y el Mundo de las Ideas) con combates por iniciativa, enigmas, cuatro tiendas y un códice con el lore y el bestiario.
+- **Personajes:** 8 razas (humano, elfo, enano, mediano, semiorco, tiefling, dracónido, gnomo) y 8 clases (guerrero, bárbaro, pícaro, explorador, mago, brujo, clérigo, bardo), cada una con su habilidad activa y su pasiva, alineamiento y aspecto personalizable.
+- **Aventura:** 5 capítulos (Villabruma, el Bosque Susurrante, la Cripta de los Reyes, las Minas de Barak-Thur y la Guarida de Ignárax) con combates por iniciativa, acertijos, cuatro tiendas y un compendio con el lore de Valdren y el bestiario.
 
 ### Código
 

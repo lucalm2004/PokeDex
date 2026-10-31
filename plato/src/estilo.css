@@ -1,6 +1,6 @@
 /* Layout: en partida, una sola pantalla sin scroll: escenario pixelado y fichas del grupo a la izquierda;
    escena, dado y crónica a la derecha. En móvil todo se apila y solo la escena se desplaza por dentro.
-   Estética de vasija de figuras rojas llevada al pixel art: barro sobre vidriado negro, marcos con esquinas recortadas. */
+   Estética de taberna a la luz de las antorchas llevada al pixel art: madera oscura, oro viejo y marcos con esquinas recortadas. */
 :root {
   --noche: #120b08;
   --panel: #22160f;
@@ -322,6 +322,9 @@ h1, h2, h3, h4 { text-wrap: balance; }
 @keyframes parpadeo { 50% { opacity: 0; } }
 
 /* ---------- Pantallas estrechas y bajas ---------- */
+@media (max-width: 1480px) {
+  .capitulos li:not(.actual) span { display: none; }
+}
 @media (max-width: 1080px) {
   .capitulos li span { display: none; }
 }

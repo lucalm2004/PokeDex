@@ -41,8 +41,8 @@ grupo("PNJ", PNJ);
 /* En escena a 3×: dos héroes a la izquierda frente a cada monstruo, y los PNJ en fila junto a un héroe. */
 if (q.get("escena") !== "0") {
   const heroes = [
-    HEROES.componer({ raza: "humano", clase: "guardian", pelo: "castano" }),
-    HEROES.componer({ raza: "elfo", clase: "filosofo", pelo: "rubio", peinado: "largo" })
+    HEROES.componer({ raza: "humano", clase: "guerrero", pelo: "castano" }),
+    HEROES.componer({ raza: "elfo", clase: "mago", pelo: "rubio", peinado: "largo" })
   ];
   const claves = Object.keys(MONSTRUOS).filter(k => !solo || solo.includes(k));
   if (claves.length) {

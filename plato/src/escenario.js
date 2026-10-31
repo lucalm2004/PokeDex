@@ -1,4 +1,4 @@
-/* Diálogos y Dados · escenario: fondo, héroes, rival y efectos en un lienzo de 192×108 píxeles de arte,
+/* Dados y Mazmorras · escenario: fondo, héroes, rival y efectos en un lienzo de 192×108 píxeles de arte,
    escalado a múltiplos enteros de los píxeles del dispositivo para que el pixel art quede nítido. */
 const ESCENARIO = (() => {
   "use strict";
