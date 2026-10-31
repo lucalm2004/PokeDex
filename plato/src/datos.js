@@ -6,7 +6,7 @@ const DATOS = (() => {
   /* Cuatro atributos abreviados: Fuerza cuenta también como Constitución y Sabiduría como Destreza. */
   const STATS = { raz: "Inteligencia", ani: "Fuerza", elo: "Carisma", tem: "Sabiduría" };
   const ABREV = { raz: "INT", ani: "FUE", elo: "CAR", tem: "SAB" };
-  const CAPITULOS = ["Villabruma", "El Bosque Susurrante", "La Cripta de los Reyes", "Las Minas de Barak-Thur", "La Guarida de Ignárax"];
+  const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán"];
   const ROMANOS = ["I", "II", "III", "IV", "V", "VI"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
   const NIVELES = [0, 10, 25, 45, 70, 100];
@@ -198,7 +198,7 @@ const DATOS = (() => {
     },
     trol: {
       nombre: "El trol del puente", tipo: "Gigante grande", alin: "Caótico malvado", vd: "5",
-      alma: 28, ca: 13, atk: 5, dano: [1, 8, 0], ataques: 2, ini: 1, resiste: null, debil: "arcana", regenera: 3,
+      alma: 26, ca: 12, atk: 4, dano: [1, 6, 0], ataques: 2, ini: 1, resiste: null, debil: "arcana", regenera: 3,
       rasgoDesc: "Regeneración: recupera 3 PG cada turno, salvo si ha recibido daño arcano (fuego) desde su último turno.",
       lore: "Los trols se regeneran de cualquier herida: se les puede cortar un brazo y les sale otro. Solo el fuego y el ácido les detienen."
     },
@@ -237,6 +237,38 @@ const DATOS = (() => {
       rasgoDesc: "Gas venenoso: cada 3 rondas hace 1d4 de daño a todo el grupo. Casi inmune a la magia.",
       lore: "Los enanos lo forjaron para guardar Barak-Thur. Obedece a quien tenga la llave de la forja, y la llave la tiene Ignárax."
     },
+    lobo: {
+      nombre: "Lobos huargos", tipo: "Manada de bestias grandes", alin: "Neutral malvado", vd: "1",
+      alma: 16, ca: 12, atk: 3, dano: [1, 4, 1], ataques: 2, ini: 3, resiste: null, debil: null,
+      rasgoDesc: "Manada: atacan dos veces por ronda.",
+      lore: "Lobos del tamaño de un caballo que cazan en grupo. Los goblins a veces los montan."
+    },
+    armadura: {
+      nombre: "Armadura animada", tipo: "Constructo mediano", alin: "Sin alineamiento", vd: "2",
+      alma: 24, ca: 15, atk: 4, dano: [1, 8, 1], ataques: 1, ini: 0, resiste: "fisica", debil: "arcana",
+      rasgoDesc: "Hueca: las armas rebotan en ella. La magia arcana la desarma.",
+      lore: "Una armadura sin nadie dentro, movida por un hechizo de guardia. Patrulla el castillo desde hace siglos."
+    },
+    vampiro: {
+      nombre: "Lord Varkhul, el vampiro", tipo: "No muerto mediano", alin: "Legal malvado", vd: "8", nomuerto: true,
+      alma: 38, ca: 15, atk: 5, dano: [1, 8, 1], ataques: 2, ini: 4, resiste: null, debil: "sagrada", drena: true,
+      estado: { cada: 3, txt: "Varkhul hipnotiza a {x}, que pierde su turno" },
+      rasgoDesc: "Bebe sangre: se cura la mitad del daño que hace. Cada 3 rondas hipnotiza a un héroe.",
+      lore: "Señor del castillo desde hace trescientos años. Ignárax le prometió el reino de los vivos."
+    },
+    kobold: {
+      nombre: "Banda de kobolds", tipo: "Humanoides pequeños (dracónicos)", alin: "Legal malvado", vd: "1",
+      alma: 20, ca: 12, atk: 4, dano: [1, 6, 1], ataques: 2, ini: 3, resiste: null, debil: null, roba: 5,
+      rasgoDesc: "Rateros: cada golpe roba hasta 5 po. Si los vencéis, lo recuperáis.",
+      lore: "Adoran a Ignárax como a un dios y le llevan todo lo que brilla."
+    },
+    elemental: {
+      nombre: "Elemental de fuego", tipo: "Elemental grande", alin: "Neutral", vd: "5",
+      alma: 30, ca: 13, atk: 5, dano: [1, 8, 1], ataques: 1, ini: 2, resiste: "fisica", debil: null,
+      area: { cada: 2, dado: 4, txt: "El elemental estalla en llamas" },
+      rasgoDesc: "Llamarada: cada 2 rondas quema a todo el grupo (1d4). Las armas apenas le hacen daño.",
+      lore: "Fuego vivo escapado del Plano Elemental por las grietas del volcán."
+    },
     dragon: {
       nombre: "Ignárax, el dragón rojo", tipo: "Dragón enorme", alin: "Caótico malvado", vd: "10",
       alma: 40, ca: 15, atk: 5, dano: [1, 10, 0], ataques: 2, ini: 2, resiste: "arcana", debil: null,
@@ -246,260 +278,127 @@ const DATOS = (() => {
     }
   };
 
-  /* Escenas. Tipos: prueba (tirada), enigma (acertijo en grupo), combate, relato, tienda y final.
-     fx: alma (quien decide), almaTodos, curarTodo, maxTodos, xp (todos), pocion, bendicion, superior,
-     oro (cada héroe), anillo, moral (mueve el alineamiento de quien decide: +1 hacia bueno, −1 hacia malvado). */
-  const ESCENAS = {
-    c1_taberna: {
-      cap: 0, inicio: true, tipo: "prueba", fondo: "taberna", pnj: "tabernero", titulo: "El Grifo Tuerto",
-      texto: ["Toda gran aventura empieza en una taberna, y la vuestra no iba a ser menos. El Grifo Tuerto está lleno de humo, cerveza y rumores: dicen que el dragón Ignárax ha despertado en el Pico Cenizo.",
-        "Antes de que podáis presentaros, un mercenario borracho tira vuestras jarras al suelo y se ríe en vuestra cara."],
-      opciones: [
-        { txt: "Echarle un pulso para darle una lección", stat: "ani", cd: 12,
-          ok: { t: "El mercenario acaba con el brazo en la mesa y toda la taberna os invita a una ronda.", fx: { xp: 2, oro: 5 } },
-          ko: { t: "El mercenario gana, os tira de la silla y toda la taberna se ríe.", fx: { alma: -2 } } },
-        { txt: "Calmar los ánimos con una buena historia", stat: "elo", cd: 11,
-          ok: { t: "Le contáis una historia tan buena que acaba llorando y pagando las bebidas.", fx: { xp: 3 } },
-          ko: { t: "La historia es tan aburrida que el mercenario se duerme encima de la mesa. Al menos se calla.", fx: { xp: 1 } } },
-        { txt: "Descubrir que juega con dados trucados", stat: "raz", cd: 12,
-          ok: { t: "Sus dados están cargados. Se los cambiáis por unos buenos y le ganáis la bolsa en una apuesta.", fx: { oro: 10, xp: 2 } },
-          ko: { t: "No veis el truco y perdéis la apuesta.", fx: { oro: -5 } } }
-      ],
-      sig: "c1_ratas"
-    },
-    c1_ratas: {
-      cap: 0, tipo: "combate", fondo: "sotano", titulo: "Ratas en el sótano", enemigo: "rata",
-      texto: ["Bram, el tabernero, os ofrece una habitación gratis si limpiáis su sótano. «Son solo unas ratas», dice.",
-        "No son solo unas ratas. Son ratas del tamaño de un perro."],
-      victoria: { t: "Las ratas huyen por un agujero de la pared. Bram cumple su palabra y además os da una poción que guardaba detrás de un barril.", fx: { xp: 3, pocion: 1, oro: 5 } },
-      sig: "c1_encargo"
-    },
-    c1_encargo: {
-      cap: 0, tipo: "relato", fondo: "taberna", pnj: "forastero", titulo: "El forastero encapuchado",
-      texto: ["Al volver, un forastero encapuchado os espera en vuestra mesa y despliega un mapa: «Ignárax quemará Villabruma antes de la próxima luna. El único camino a su guarida cruza el Bosque Susurrante, la Cripta de los Reyes y las minas de los enanos».",
-        "«El concejo paga quinientas monedas de oro por su cabeza. Yo os adelanto algo.» Y deja una bolsa sobre la mesa."],
-      fx: { oro: 20, xp: 2, curarTodo: true }, boton: "Aceptar el encargo", sig: "c1_mercado"
-    },
-    c1_mercado: {
-      cap: 0, tipo: "tienda", fondo: "aldea", pnj: "mercader", tienda: "villa", titulo: "El mercado de Villabruma",
-      texto: ["A la mañana siguiente, la plaza de Villabruma está llena de puestos. Brunilda, la mercader, ya se ha enterado de lo del dragón y os ha preparado «un surtido para héroes».",
-        "Cada héroe pasa por el mostrador con su propio oro."],
-      sig: "c1_emboscada"
-    },
-    c1_emboscada: {
-      cap: 0, tipo: "combate", fondo: "camino", titulo: "Emboscada en el camino", enemigo: "goblin",
-      texto: ["Al caer la tarde, un carro volcado corta el camino del bosque. Demasiado fácil.",
-        "De los arbustos salen goblins aullando y, detrás de ellos, su jefe Krug, con una cimitarra oxidada y una sonrisa podrida."],
-      victoria: { t: "Krug huye chillando hacia el bosque y deja caer su botín. Entre las monedas robadas hay un pergamino de bendición.", fx: { xp: 5, bendicion: 1, oro: 10 } },
-      sig: "c2_sendero"
-    },
+  /* La aventura se juega por actos. Cada acto es un mapa de caminos con combates, sucesos, una tienda,
+     una hoguera y un jefe al final. Los sucesos son cortos: caben en la pantalla del móvil. */
+  const ACTOS = [
+    { nombre: "El Camino del Bosque", fondos: ["camino", "bosque", "aldea"], enemigos: ["lobo", "rata", "goblin", "osolechuza"], jefe: "trol", fondoJefe: "puente", tienda: "villa",
+      intro: "Salís de Villabruma con el encargo del concejo: matar a Ignárax. El camino cruza el Bosque Susurrante.",
+      jefeTexto: "Un trol enorme vive bajo el único puente del barranco. Cobra el peaje en orejas. Solo el fuego le impide regenerarse." },
+    { nombre: "La Mazmorra", fondos: ["sotano", "cripta", "mina"], enemigos: ["esqueleto", "mimico", "cubo", "rata"], jefe: "liche", fondoJefe: "cripta", tienda: "gnomo",
+      intro: "Bajo las colinas está la Cripta de los Reyes Olvidados. Allí espera Malakar, el liche aliado del dragón.",
+      jefeTexto: "Malakar se levanta de su trono con los ojos en llamas verdes. La luz sagrada le quema; la magia arcana, casi no." },
+    { nombre: "El Castillo", fondos: ["castillo", "trono", "cripta"], enemigos: ["armadura", "esqueleto", "lobo", "mimico"], jefe: "vampiro", fondoJefe: "trono", tienda: "planar",
+      intro: "El castillo de Varkhul guarda el único paso hacia el Pico Cenizo. Su señor no ha visto el sol en trescientos años.",
+      jefeTexto: "Lord Varkhul despliega su capa en el salón del trono. Se cura con vuestra sangre y odia la luz sagrada." },
+    { nombre: "El Volcán", fondos: ["pico", "forja", "mina"], enemigos: ["kobold", "elemental", "golem"], jefe: "dragon", fondoJefe: "guarida", tienda: "forja",
+      intro: "El Pico Cenizo humea sobre las minas enanas. Arriba, Ignárax duerme sobre su oro.",
+      jefeTexto: "Ignárax se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva. Es ahora o nunca." }
+  ];
 
-    c2_sendero: {
-      cap: 1, inicio: true, tipo: "prueba", fondo: "bosque", titulo: "El Bosque Susurrante",
-      texto: ["Los árboles del Bosque Susurrante son tan altos que no dejan ver el cielo. Entre las hojas se oyen voces que repiten vuestros nombres.",
-        "El sendero se bifurca una y otra vez. Es fácil perderse aquí para siempre."],
+  /* Sucesos: tipo "prueba" (opciones con tirada o sin ella) o "enigma" (acertijo). acto: índice o null (cualquiera). */
+  const EVENTOS = [
+    { id: "mercader", acto: 0, tipo: "prueba", pnj: "mercader", titulo: "Un carro volcado",
+      texto: "Una mercader herida pide ayuda junto a su carro.",
       opciones: [
-        { txt: "Orientarse por el musgo y las estrellas", stat: "raz", cd: 12,
-          ok: { t: "El musgo crece hacia el norte. Encontráis el camino y, al lado, un corro de setas con monedas de plata.", fx: { xp: 3, oro: 5 } },
-          ko: { t: "Dais vueltas durante horas hasta volver al mismo árbol.", fx: { almaTodos: -1, xp: 1 } } },
-        { txt: "Seguir unas huellas sin hacer ruido", stat: "tem", cd: 12,
-          ok: { t: "Las huellas os llevan a un claro tranquilo donde descansáis un rato.", fx: { xp: 3, almaTodos: 2 } },
-          ko: { t: "Pisáis una rama seca, algo enorme se despierta y tenéis que correr.", fx: { alma: -2 } } },
-        { txt: "Responder a las voces y pedirles el camino", stat: "elo", cd: 13,
-          ok: { t: "Las voces son de duendecillos, que se ríen y os señalan el sendero.", fx: { xp: 4 } },
-          ko: { t: "Los duendecillos os mandan directos a una zarza.", fx: { almaTodos: -1 } } }
-      ],
-      sig: "c2_osolechuza"
-    },
-    c2_osolechuza: {
-      cap: 1, tipo: "combate", fondo: "bosque", titulo: "Un graznido en la maleza", enemigo: "osolechuza",
-      texto: ["Un graznido grave hace temblar las hojas. De entre los helechos sale un oso enorme con cabeza de lechuza.",
-        "Los oso-lechuzas no son malvados. Solo tienen mucha, mucha hambre."],
-      victoria: { t: "El oso-lechuza huye entre los árboles. En su madriguera hay restos de aventureros menos afortunados, y sus bolsas.", fx: { xp: 6, oro: 15 } },
-      sig: "c2_driada"
-    },
-    c2_driada: {
-      cap: 1, tipo: "enigma", fondo: "bosque", pnj: "driada", titulo: "El acertijo de la dríada",
-      texto: ["Una dríada sale del tronco de un roble milenario. «Nadie cruza mi bosque sin responder a mi acertijo», dice.",
-        "«Tengo ciudades, pero no casas. Tengo bosques, pero no árboles. Tengo ríos, pero no agua. ¿Qué soy?»"],
-      respuestas: ["Un sueño", "Un mapa", "Un espejo", "Una canción"],
-      correcta: 1,
-      ok: { t: "La dríada sonríe y os regala unas bayas que cierran las heridas. «Que el bosque os guarde.»", fx: { xp: 6, almaTodos: 4 } },
-      ko: { t: "«Un mapa», suspira la dríada. Las raíces os hacen tropezar durante todo el camino.", fx: { almaTodos: -2, xp: 2 } },
-      sig: "c2_carromato"
-    },
-    c2_carromato: {
-      cap: 1, tipo: "tienda", fondo: "bosque", pnj: "gnomo", tienda: "gnomo", titulo: "El carromato de Fizwick",
-      texto: ["En un claro hay un carromato envuelto en humo de colores. Un gnomo con gafas de soldador asoma la cabeza: «¡Clientes! ¡Por fin!».",
-        "Fizwick vende pociones, polvos y cosas que ni él sabe muy bien para qué sirven."],
-      sig: "c2_puente"
-    },
-    c2_puente: {
-      cap: 1, tipo: "combate", fondo: "puente", titulo: "El puente del trol", enemigo: "trol",
-      texto: ["Al salir del bosque, un viejo puente de piedra cruza un barranco. Debajo vive un trol que cobra un peaje de una oreja por cabeza.",
-        "Los trols se curan de cualquier herida. De cualquiera menos del fuego."],
-      victoria: { t: "El trol cae al barranco. Se oye un chapoteo al fondo y luego, por fin, silencio.", fx: { xp: 8, oro: 20, pocion: 1 } },
-      sig: "c3_trampas"
-    },
+        { txt: "Curarle las heridas", stat: "tem", cd: 11, ok: { t: "Os da las gracias con una bolsa de monedas.", fx: { oro: 10, xp: 3, moral: 1 } }, ko: { t: "No sabéis vendarla bien, pero agradece el intento.", fx: { xp: 1 } } },
+        { txt: "Registrar el carro mientras se distrae", stat: null, ok: { t: "Encontráis monedas y una poción. Ella os mira con rencor.", fx: { oro: 15, pocion: 1, moral: -1 } } },
+        { txt: "Seguir el camino", stat: null, ok: { t: "Otro aventurero la ayudará. O no.", fx: {} } }] },
+    { id: "santuario", acto: 0, tipo: "prueba", titulo: "Un santuario en el bosque",
+      texto: "Un altar de Solara cubierto de musgo, con ofrendas de plata.",
+      opciones: [
+        { txt: "Rezar a Solara", stat: "tem", cd: 12, ok: { t: "Una luz cálida os cierra las heridas.", fx: { almaTodos: 4, xp: 2 } }, ko: { t: "Solara no contesta hoy.", fx: { xp: 1 } } },
+        { txt: "Limpiar el altar", stat: "ani", cd: 10, ok: { t: "Debajo del musgo aparece un pergamino de bendición.", fx: { bendicion: 1, xp: 3 } }, ko: { t: "Os cortáis con las espinas.", fx: { alma: -1 } } },
+        { txt: "Llevarse las ofrendas", stat: null, ok: { t: "Plata fácil. El viento se vuelve frío a vuestro paso.", fx: { oro: 12, alma: -2, moral: -1 } } }] },
+    { id: "peaje", acto: 0, tipo: "prueba", titulo: "Peaje de bandidos",
+      texto: "Unos bandidos cierran el camino: «Cinco monedas cada uno».",
+      opciones: [
+        { txt: "Asustarlos", stat: "ani", cd: 13, ok: { t: "Huyen y se les cae la bolsa.", fx: { oro: 8, xp: 3 } }, ko: { t: "No se asustan. Os cuesta una paliza pasar.", fx: { alma: -3 } } },
+        { txt: "Engañarlos", stat: "elo", cd: 12, ok: { t: "Les convencéis de que sois recaudadores del rey. Os pagan ellos.", fx: { oro: 10, xp: 3 } }, ko: { t: "No cuela. Pagáis el doble.", fx: { oro: -10 } } },
+        { txt: "Pagar", stat: null, ok: { t: "Pagáis y pasáis.", fx: { oro: -5 } } }] },
+    { id: "driada", acto: 0, tipo: "enigma", pnj: "driada", titulo: "El acertijo de la dríada",
+      texto: "«Tengo ciudades, pero no casas; bosques, pero no árboles; ríos, pero no agua. ¿Qué soy?»",
+      respuestas: ["Un sueño", "Un mapa", "Un espejo", "Una canción"], correcta: 1,
+      ok: { t: "La dríada sonríe y os regala bayas curativas.", fx: { xp: 5, almaTodos: 4 } },
+      ko: { t: "«Un mapa», suspira. Las raíces os hacen tropezar.", fx: { almaTodos: -2, xp: 1 } } },
 
-    c3_trampas: {
-      cap: 2, inicio: true, tipo: "prueba", fondo: "cripta", titulo: "El pasillo de las trampas",
-      texto: ["La Cripta de los Reyes Olvidados huele a polvo y a siglos. El pasillo de entrada tiene unas baldosas sospechosamente limpias.",
-        "En mitad del camino hay un esqueleto atravesado por cuchillas. Es un buen consejo."],
+    { id: "trampas", acto: 1, tipo: "prueba", titulo: "Pasillo de trampas",
+      texto: "Baldosas sospechosamente limpias y un esqueleto atravesado por cuchillas.",
       opciones: [
-        { txt: "Buscar los mecanismos de las trampas", stat: "raz", cd: 12,
-          ok: { t: "Encontráis las placas de presión y las desactiváis una a una.", fx: { xp: 4 } },
-          ko: { t: "Pisáis una baldosa equivocada y salen dardos de las paredes.", fx: { almaTodos: -2 } } },
-        { txt: "Cruzar saltando de baldosa en baldosa", stat: "tem", cd: 13,
-          ok: { t: "Pasáis como bailarines entre las cuchillas.", fx: { xp: 3 } },
-          ko: { t: "Una cuchilla os alcanza al pasar.", fx: { alma: -3 } } },
-        { txt: "Romper las trampas a martillazos", stat: "ani", cd: 12,
-          ok: { t: "Las cuchillas saltan en pedazos. Sutil no ha sido, pero funciona.", fx: { xp: 2 } },
-          ko: { t: "Las trampas son más duras que vuestros brazos.", fx: { alma: -2 } } }
-      ],
-      sig: "c3_esqueletos"
-    },
-    c3_esqueletos: {
-      cap: 2, tipo: "combate", fondo: "cripta", titulo: "La guardia de los reyes", enemigo: "esqueleto",
-      texto: ["Los sarcófagos se abren con un chirrido. De ellos salen caballeros esqueleto con espadas oxidadas.",
-        "Juraron proteger a sus reyes para siempre, y se lo tomaron al pie de la letra."],
-      victoria: { t: "Los huesos caen al suelo y esta vez no se levantan. Un clérigo diría que por fin descansan.", fx: { xp: 6, oro: 10 } },
-      sig: "c3_tesoro"
-    },
-    c3_tesoro: {
-      cap: 2, tipo: "prueba", fondo: "cripta", pnj: "fantasma", titulo: "El tesoro del rey",
-      texto: ["En la cámara funeraria descansa un rey con su corona, su oro y un anillo de plata en el dedo. Una inscripción avisa: «Quien robe a los muertos, cargará con ellos».",
-        "Nadie os está mirando. Nadie vivo, al menos."],
+        { txt: "Buscar los mecanismos", stat: "raz", cd: 12, ok: { t: "Desactiváis las placas una a una.", fx: { xp: 4 } }, ko: { t: "Salen dardos de las paredes.", fx: { almaTodos: -2 } } },
+        { txt: "Cruzar saltando", stat: "tem", cd: 13, ok: { t: "Pasáis como bailarines.", fx: { xp: 3 } }, ko: { t: "Una cuchilla os alcanza.", fx: { alma: -3 } } },
+        { txt: "Romperlas a golpes", stat: "ani", cd: 12, ok: { t: "Sutil no ha sido, pero funciona.", fx: { xp: 2 } }, ko: { t: "Las trampas aguantan más que vosotros.", fx: { alma: -2 } } }] },
+    { id: "prisionero", acto: 1, tipo: "prueba", titulo: "El prisionero",
+      texto: "Un enano encadenado suplica que lo liberéis antes de que vuelvan los esqueletos.",
       opciones: [
-        { txt: "Llevarse todo el oro de la tumba", stat: null,
-          ok: { t: "Os llenáis las bolsas de oro. Esa noche, el frío de la tumba se os mete en los huesos y ya no se va.", fx: { oro: 40, maxTodos: -2, moral: -1 } } },
-        { txt: "Dejar una ofrenda y seguir adelante", stat: "tem", cd: 13,
-          ok: { t: "Dejáis unas monedas en el altar. Una luz cálida os acompaña durante el resto de la cripta.", fx: { xp: 6, moral: 1 } },
-          ko: { t: "Os cuesta apartar la vista del oro. Cuando por fin os vais, algo de codicia se viene con vosotros.", fx: { alma: -2, xp: 2 } } },
-        { txt: "Estudiar el anillo de plata", stat: "raz", cd: 14,
-          ok: { t: "Es un anillo de invisibilidad. El fantasma del rey os lo cede con un gesto: una vez por combate podréis desaparecer.", fx: { anillo: true, xp: 2 } },
-          ko: { t: "Al tocarlo, el anillo os hiela la mano y el rey se revuelve en su tumba. Mejor no insistir.", fx: { alma: -2 } } }
-      ],
-      sig: "c3_mimico"
-    },
-    c3_mimico: {
-      cap: 2, tipo: "combate", fondo: "cripta", titulo: "Un cofre demasiado bonito", enemigo: "mimico",
-      texto: ["En una sala lateral hay un cofre dorado, solo, iluminado por un rayo de luz. Ningún aventurero con experiencia lo tocaría.",
-        "Alguien lo toca. El cofre abre una boca llena de dientes."],
-      victoria: { t: "El mímico se queda quieto con la lengua fuera. Dentro de su estómago hay monedas de verdad y una poción.", fx: { xp: 6, oro: 15, pocion: 1 } },
-      sig: "c3_rey"
-    },
-    c3_rey: {
-      cap: 2, tipo: "enigma", fondo: "cripta", pnj: "fantasma", titulo: "El fantasma del rey",
-      texto: ["El fantasma de un rey os cierra el paso a la última cámara. «Malakar, mi consejero, me traicionó y se convirtió en liche. Si queréis enfrentaros a él, demostrad que tenéis seso.»",
-        "«Cuanto más le quitas, más grande se hace. ¿Qué es?»"],
-      respuestas: ["Una deuda", "Un agujero", "Una sombra", "La fama"],
-      correcta: 1,
-      ok: { t: "«Un agujero», asiente el fantasma. «Como el que dejó Malakar en mi reino.» Y os bendice antes de desvanecerse.", fx: { xp: 6, bendicion: 1, almaTodos: 3 } },
-      ko: { t: "«Un agujero», dice el fantasma, decepcionado. «Id, pero id con cuidado.»", fx: { xp: 2 } },
-      sig: "c3_liche"
-    },
-    c3_liche: {
-      cap: 2, tipo: "combate", fondo: "cripta", titulo: "Malakar, el liche", enemigo: "liche",
-      texto: ["En el trono del rey se sienta Malakar, un esqueleto con corona y túnica podrida. Sus ojos brillan con un fuego verde.",
-        "«Ignárax me prometió la mitad del reino», susurra. «No vais a estropearlo.»"],
-      victoria: { t: "Malakar se deshace en polvo. Entre las cenizas brilla su filacteria, y la rompéis para que no vuelva nunca.", fx: { xp: 10, oro: 25, superior: 1 } },
-      sig: "c4_forja"
-    },
+        { txt: "Romper las cadenas", stat: "ani", cd: 12, ok: { t: "Libre, os da la poción que escondía.", fx: { pocion: 1, xp: 3, moral: 1 } }, ko: { t: "Las cadenas no ceden y os destrozáis las manos.", fx: { alma: -2 } } },
+        { txt: "Forzar la cerradura", stat: "raz", cd: 12, ok: { t: "Clic. Os paga con su oro escondido.", fx: { oro: 12, xp: 3, moral: 1 } }, ko: { t: "Se rompe la ganzúa.", fx: { xp: 1 } } },
+        { txt: "Dejarlo allí", stat: null, ok: { t: "Sus gritos os siguen por el pasillo.", fx: { moral: -1 } } }] },
+    { id: "cofre", acto: 1, tipo: "prueba", titulo: "Un cofre con runas",
+      texto: "Un cofre cerrado, cubierto de runas que brillan al acercaros.",
+      opciones: [
+        { txt: "Abrirlo con cuidado", stat: "raz", cd: 13, ok: { t: "Las runas se apagan. Dentro hay oro.", fx: { oro: 25 } }, ko: { t: "Las runas explotan.", fx: { almaTodos: -2 } } },
+        { txt: "Romperlo a hachazos", stat: "ani", cd: 12, ok: { t: "Saltan astillas y monedas.", fx: { oro: 15 } }, ko: { t: "El cofre era más duro que el hacha.", fx: { alma: -2 } } },
+        { txt: "No tocarlo", stat: null, ok: { t: "Prudente. Quizá era un mímico.", fx: { xp: 1 } } }] },
+    { id: "rey", acto: 1, tipo: "enigma", pnj: "fantasma", titulo: "El fantasma del rey",
+      texto: "«Cuanto más le quitas, más grande se hace. ¿Qué es?»",
+      respuestas: ["Una deuda", "Un agujero", "Una sombra", "La fama"], correcta: 1,
+      ok: { t: "El fantasma os bendice antes de desvanecerse.", fx: { xp: 5, bendicion: 1, almaTodos: 3 } },
+      ko: { t: "«Un agujero», dice decepcionado.", fx: { xp: 1 } } },
 
-    c4_forja: {
-      cap: 3, inicio: true, tipo: "tienda", fondo: "forja", pnj: "herrero", tienda: "forja", titulo: "La forja de Durgan",
-      texto: ["Las minas de Barak-Thur llevan cien años vacías desde que Ignárax echó a los enanos. Solo queda uno: Durgan Barbahierro, que se negó a abandonar su forja.",
-        "«Si vais a por el dragón, no vais con esos juguetes», gruñe."],
-      sig: "c4_vagoneta"
-    },
-    c4_vagoneta: {
-      cap: 3, tipo: "prueba", fondo: "mina", titulo: "La vagoneta desbocada",
-      texto: ["Para cruzar las minas montáis en una vieja vagoneta. A mitad de la bajada, los frenos se rompen.",
-        "Al fondo del túnel, las vías se acaban en un precipicio."],
+    { id: "banquete", acto: 2, tipo: "prueba", titulo: "El banquete fantasma",
+      texto: "Una mesa servida para fantasmas. La comida huele de maravilla.",
       opciones: [
-        { txt: "Frenar a pulso con una palanca", stat: "ani", cd: 13,
-          ok: { t: "La vagoneta se detiene a un palmo del abismo.", fx: { xp: 3 } },
-          ko: { t: "La palanca se parte y salís despedidos contra la pared.", fx: { almaTodos: -2 } } },
-        { txt: "Cambiar las agujas en el último momento", stat: "raz", cd: 13,
-          ok: { t: "Acertáis con la palanca y la vagoneta entra en un túnel lleno de cristales.", fx: { xp: 4, oro: 10 } },
-          ko: { t: "La palanca equivocada os lleva por un túnel todavía más empinado.", fx: { almaTodos: -2 } } },
-        { txt: "Saltar a tiempo y agarrarse a una viga", stat: "tem", cd: 12,
-          ok: { t: "Saltáis todos a la vez y la vagoneta se pierde en el abismo sin vosotros.", fx: { xp: 3 } },
-          ko: { t: "Saltáis, pero no todos a tiempo.", fx: { alma: -3 } } }
-      ],
-      sig: "c4_cubo"
-    },
-    c4_cubo: {
-      cap: 3, tipo: "combate", fondo: "mina", titulo: "Algo en el túnel", enemigo: "cubo",
-      texto: ["El túnel está demasiado limpio. Ni una piedra, ni una telaraña, ni un hueso.",
-        "Entonces veis por qué: un cubo transparente avanza hacia vosotros con las armas de sus últimas víctimas flotando dentro."],
-      victoria: { t: "El cubo se derrite en un charco pegajoso. Entre los restos hay monedas y armas de otros aventureros.", fx: { xp: 7, oro: 20 } },
-      sig: "c4_golem"
-    },
-    c4_golem: {
-      cap: 3, tipo: "combate", fondo: "forja", titulo: "El guardián de la forja", enemigo: "golem",
-      texto: ["En la gran sala de la forja, un gólem de hierro despierta con un rugido de vapor. Los enanos lo construyeron para proteger la mina.",
-        "Ahora obedece a quien tiene la llave de la forja, y la llave la tiene Ignárax."],
-      victoria: { t: "El gólem cae con un estruendo que se oye en toda la montaña. Desde lejos, Durgan levanta su martillo en señal de respeto.", fx: { xp: 9, oro: 25, pocion: 2 } },
-      sig: "c4_descanso"
-    },
-    c4_descanso: {
-      cap: 3, tipo: "relato", fondo: "mina", pnj: "herrero", titulo: "Un descanso en la mina",
-      texto: ["Acampáis en una galería segura. Durgan os trae pan, cerveza enana y una advertencia: «El dragón duerme sobre su oro. Si os oye llegar, no volveréis a dormir nunca».",
-        "Mañana subiréis al Pico Cenizo."],
-      fx: { curarTodo: true, xp: 3 }, boton: "Subir al Pico Cenizo", sig: "c5_ascenso"
-    },
+        { txt: "Comer", stat: "tem", cd: 12, ok: { t: "Sabe a gloria y os repara.", fx: { almaTodos: 5 } }, ko: { t: "Era comida de muertos. Os sienta fatal.", fx: { almaTodos: -2 } } },
+        { txt: "Brindar por los muertos", stat: "elo", cd: 11, ok: { t: "Los fantasmas aplauden y os dejan un regalo.", fx: { bendicion: 1, xp: 4 } }, ko: { t: "Brindáis mal. Os tiran el vino encima.", fx: { alma: -1 } } },
+        { txt: "Llevarse la cubertería de plata", stat: null, ok: { t: "Plata buena. Los fantasmas no lo olvidarán.", fx: { oro: 20, moral: -1 } } }] },
+    { id: "biblioteca", acto: 2, tipo: "prueba", titulo: "La biblioteca encantada",
+      texto: "Los libros vuelan solos entre las estanterías.",
+      opciones: [
+        { txt: "Leer un grimorio", stat: "raz", cd: 13, ok: { t: "Aprendéis un conjuro antiguo.", fx: { xp: 7 } }, ko: { t: "El grimorio os muerde.", fx: { alma: -3 } } },
+        { txt: "Atrapar un libro al vuelo", stat: "ani", cd: 12, ok: { t: "Entre sus páginas hay polvo de sueño.", fx: { sueno: 1, xp: 2 } }, ko: { t: "Un tomo enorme os cae en la cabeza.", fx: { alma: -2 } } }] },
+    { id: "anillo", acto: 2, tipo: "prueba", pnj: "fantasma", titulo: "El anillo del rey muerto",
+      texto: "Un esqueleto con corona lleva un anillo de plata. «Quien robe a los muertos, cargará con ellos», reza una inscripción.",
+      opciones: [
+        { txt: "Estudiar el anillo", stat: "raz", cd: 13, ok: { t: "Es de invisibilidad: una vez por combate, el enemigo pierde su turno.", fx: { anillo: true, xp: 2 } }, ko: { t: "El anillo os hiela la mano.", fx: { alma: -2 } } },
+        { txt: "Arrancarle todo el oro", stat: null, ok: { t: "Oro a manos llenas. El frío de la tumba se os queda dentro.", fx: { oro: 35, maxTodos: -2, moral: -1 } } },
+        { txt: "Dejar una ofrenda", stat: null, ok: { t: "El rey asiente desde la oscuridad.", fx: { oro: -5, xp: 5, moral: 1 } } }] },
+    { id: "espejo", acto: 2, tipo: "enigma", titulo: "El espejo que habla",
+      texto: "Un espejo os habla con vuestra voz: «Cuanto más hay, menos se ve. ¿Qué soy?»",
+      respuestas: ["El humo", "La oscuridad", "Un secreto", "El viento"], correcta: 1,
+      ok: { t: "El espejo se aparta y revela un pasadizo con tesoro.", fx: { oro: 15, xp: 5 } },
+      ko: { t: "El espejo se ríe con vuestra risa. Da escalofríos.", fx: { almaTodos: -1 } } },
 
-    c5_ascenso: {
-      cap: 4, inicio: true, tipo: "prueba", fondo: "pico", titulo: "El Pico Cenizo",
-      texto: ["El camino a la guarida sube entre ríos de lava y nubes de ceniza. El aire quema los pulmones.",
-        "Arriba, en la boca de una cueva, brilla el reflejo de una montaña de oro."],
+    { id: "lava", acto: 3, tipo: "prueba", titulo: "Un río de lava",
+      texto: "La lava corta el camino. Hay rocas que asoman como pasaderas.",
       opciones: [
-        { txt: "Escalar la pared de roca", stat: "ani", cd: 13,
-          ok: { t: "Subís por la pared más directa y llegáis antes de que caiga la noche.", fx: { xp: 5 } },
-          ko: { t: "Una roca se suelta y os arrastra ladera abajo.", fx: { almaTodos: -2 } } },
-        { txt: "Esquivar las nubes de gas", stat: "tem", cd: 13,
-          ok: { t: "Contenéis la respiración en el momento justo y pasáis sin un rasguño.", fx: { xp: 5, almaTodos: 2 } },
-          ko: { t: "Respiráis el gas y os pasáis la subida tosiendo.", fx: { almaTodos: -2 } } },
-        { txt: "Buscar el viejo paso de los enanos", stat: "raz", cd: 14,
-          ok: { t: "Encontráis las escaleras secretas de los enanos, talladas en la roca, y un pergamino olvidado.", fx: { xp: 5, bendicion: 1 } },
-          ko: { t: "El paso está derrumbado y perdéis medio día.", fx: { almaTodos: -2 } } }
-      ],
-      sig: "c5_mercader"
-    },
-    c5_mercader: {
-      cap: 4, tipo: "tienda", fondo: "pico", pnj: "planar", tienda: "planar", titulo: "El Mercader de los Planos",
-      texto: ["A la entrada de la guarida alguien ha montado un puesto. Un tiefling con turbante os saluda como si os estuviera esperando.",
-        "«Nadie va a ver a un dragón sin pasar antes por mi tienda», dice, y abre una bolsa que por dentro es mucho más grande que por fuera."],
-      sig: "c5_acertijo"
-    },
-    c5_acertijo: {
-      cap: 4, tipo: "enigma", fondo: "guarida", pnj: "dragon", titulo: "El acertijo de Ignárax",
-      texto: ["Ignárax abre un ojo del tamaño de un escudo. «Hace siglos que nadie me entretiene», dice. «Responded a mi acertijo y os dejaré atacar primero.»",
-        "«¿Qué es más poderoso que los dioses y más malvado que los demonios? Los pobres lo tienen, los ricos lo necesitan y, si lo comes, mueres.»"],
-      respuestas: ["El oro", "El fuego", "Nada", "El tiempo"],
-      correcta: 2,
-      ok: { t: "«Nada», gruñe Ignárax, impresionado a su pesar. «Nada os salvará, entonces.» Pero le habéis ganado la mano y empezáis con ventaja.", fx: { xp: 8, bendicion: 1 } },
-      ko: { t: "«Nada», ríe Ignárax. «Y nada es lo que quedará de vosotros.» Y os escupe una bocanada de fuego para empezar.", fx: { almaTodos: -3 } },
-      sig: "c5_dragon"
-    },
-    c5_dragon: {
-      cap: 4, tipo: "combate", fondo: "guarida", titulo: "Ignárax, el dragón rojo", enemigo: "dragon",
-      texto: ["El dragón se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva y sus escamas brillan como brasas.",
-        "Es ahora o nunca."],
-      victoria: { t: "Ignárax cae sobre su tesoro con un rugido que hace temblar el Pico Cenizo. El dragón rojo ha muerto y Villabruma está a salvo.", fx: { xp: 12, curarTodo: true } },
-      sig: "c5_final"
-    },
-    c5_final: {
-      cap: 4, tipo: "final", fondo: "guarida", titulo: "El tesoro del dragón",
-      texto: ["Ante vosotros brilla el tesoro de Ignárax: oro de mil reinos, coronas, gemas y armas legendarias. Hay suficiente para comprar un castillo cada uno.",
-        "Pero Villabruma está medio quemada y los enanos de Barak-Thur llevan cien años sin hogar."],
+        { txt: "Saltar de roca en roca", stat: "tem", cd: 13, ok: { t: "Cruzáis sin quemaros ni una bota.", fx: { xp: 4 } }, ko: { t: "Una roca se hunde bajo vuestros pies.", fx: { almaTodos: -2 } } },
+        { txt: "Buscar otro paso", stat: "raz", cd: 12, ok: { t: "Encontráis un túnel enano con monedas olvidadas.", fx: { oro: 10, xp: 3 } }, ko: { t: "Dais un rodeo larguísimo bajo el calor.", fx: { almaTodos: -1 } } }] },
+    { id: "huevos", acto: 3, tipo: "prueba", titulo: "Huevos de dragón",
+      texto: "Un nido con tres huevos rojos, todavía calientes.",
       opciones: [
-        { txt: "Repartir el tesoro con Villabruma y los enanos", final: "heroes" },
-        { txt: "Quedároslo todo", final: "codicia" }
-      ]
-    }
+        { txt: "Destruirlos", stat: "ani", cd: 12, ok: { t: "Ya no habrá más Ignárax.", fx: { xp: 5 } }, ko: { t: "La cáscara arde como brasas.", fx: { alma: -3 } } },
+        { txt: "Llevárselos para venderlos", stat: null, ok: { t: "Valen una fortuna. Y algún día alguien los incubará.", fx: { oro: 35, moral: -1 } } },
+        { txt: "Dejarlos", stat: null, ok: { t: "No es asunto vuestro.", fx: { xp: 1 } } }] },
+    { id: "kobolds", acto: 3, tipo: "prueba", pnj: "planar", titulo: "Un trato extraño",
+      texto: "El Mercader de los Planos aparece de la nada: «Información sobre el dragón, a buen precio».",
+      opciones: [
+        { txt: "Pagar 15 po por la información", stat: null, ok: { t: "Os cuenta su punto débil: odia que le hagan esperar. Os da un pergamino de bendición.", fx: { oro: -15, bendicion: 2 } } },
+        { txt: "Regatear", stat: "elo", cd: 13, ok: { t: "Os lo cuenta gratis, impresionado.", fx: { bendicion: 1, xp: 4 } }, ko: { t: "Se ofende y desaparece.", fx: { xp: 1 } } }] },
+    { id: "acertijo_dragon", acto: 3, tipo: "enigma", titulo: "Una voz en el humo",
+      texto: "«¿Qué es más poderoso que los dioses y más malvado que los demonios? Los pobres lo tienen, los ricos lo necesitan y, si lo comes, mueres.»",
+      respuestas: ["El oro", "El fuego", "Nada", "El tiempo"], correcta: 2,
+      ok: { t: "La voz calla, impresionada. Sentís que vais por buen camino.", fx: { xp: 6, bendicion: 1 } },
+      ko: { t: "«Nada», ríe la voz. Una lengua de fuego os roza.", fx: { almaTodos: -2 } } }
+  ];
+
+  const HOGUERA = {
+    titulo: "Una hoguera", fondo: null,
+    texto: "Un lugar tranquilo para acampar. ¿Qué hacéis esta noche?",
+    opciones: [
+      { txt: "Dormir junto al fuego", stat: null, ok: { t: "Despertáis descansados.", fx: { curaPct: 0.6 } } },
+      { txt: "Entrenar hasta tarde", stat: null, ok: { t: "Cansados, pero más sabios.", fx: { xp: 6 } } },
+      { txt: "Contar historias", stat: "elo", cd: 10, ok: { t: "La historia os inspira a todos.", fx: { bendicion: 1, almaTodos: 2 } }, ko: { t: "Nadie se ríe. Os vais a dormir.", fx: { almaTodos: 2 } } }
+    ]
   };
 
   const FINALES = {
@@ -542,16 +441,15 @@ const DATOS = (() => {
         "Esta es una versión abreviada de las reglas: la Fuerza también cuenta como Constitución y la Sabiduría como Destreza para la iniciativa."] }
     ],
     lugares: {
-      0: { titulo: "Villabruma", texto: ["Un pueblo de leñadores y comerciantes a orillas del Bosque Susurrante. Su taberna, el Grifo Tuerto, es famosa por su cerveza negra y por mandar aventureros a morir a sitios interesantes."] },
-      1: { titulo: "El Bosque Susurrante", texto: ["Un bosque antiguo donde el Reino Feérico queda muy cerca. Los árboles hablan, las setas brillan y los caminos cambian de sitio cuando nadie los mira."] },
-      2: { titulo: "La Cripta de los Reyes", texto: ["El panteón de la vieja dinastía de Valdren. Su último rey fue traicionado por Malakar, su consejero, que buscó la inmortalidad y la encontró convertido en liche."] },
-      3: { titulo: "Las Minas de Barak-Thur", texto: ["La mayor ciudad enana de Valdren, excavada bajo el Pico Cenizo. Ignárax la arrasó hace cien años y los enanos todavía sueñan con volver."] },
-      4: { titulo: "La Guarida de Ignárax", texto: ["Una caverna en la cima del Pico Cenizo, rodeada de lava. Dentro, Ignárax duerme sobre el oro de cien reinos y los huesos de quienes intentaron llevárselo."] }
+      0: { titulo: "El Camino del Bosque", texto: ["El Bosque Susurrante, donde el Reino Feérico queda muy cerca. Los árboles hablan, las setas brillan y los goblins asaltan a los viajeros."] },
+      1: { titulo: "La Mazmorra", texto: ["La Cripta de los Reyes Olvidados. Su último rey fue traicionado por Malakar, su consejero, que buscó la inmortalidad y la encontró convertido en liche."] },
+      2: { titulo: "El Castillo", texto: ["La fortaleza de Lord Varkhul, un vampiro que no ha visto el sol en trescientos años. Guarda el único paso hacia el Pico Cenizo."] },
+      3: { titulo: "El Volcán", texto: ["El Pico Cenizo y las minas enanas de Barak-Thur. En la cima, Ignárax duerme sobre el oro de cien reinos."] }
     }
   };
 
   return {
     STATS, ABREV, CAPITULOS, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, ORDEN_ALIN,
-    ejesAlin, moverMoral, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ESCENAS, FINALES, EPILOGOS, LORE
+    ejesAlin, moverMoral, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
   };
 })();

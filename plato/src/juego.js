@@ -1,15 +1,17 @@
-/* Dados y Mazmorras · el juego: estado, reglas, combate por iniciativa, tiendas, creación de personajes,
-   pantallas y mesas en línea (db guarda la partida, room dice quién está conectado, user de quién es cada héroe). */
+/* Dados y Mazmorras · el juego: selección de personajes con cuenta atrás, mapa de caminos por actos,
+   combates por iniciativa, sucesos, tiendas y jefes. En línea, el móvil del anfitrión lleva la partida:
+   guarda el estado en db y los demás le mandan sus jugadas por la presencia de la sala (room). */
 (() => {
 "use strict";
 const D = DATOS;
-const { STATS, ABREV, CAPITULOS, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, ORDEN_ALIN, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ESCENAS, FINALES, EPILOGOS, LORE } = D;
+const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
 const RP = PX.RAMPAS;
 
-const CLAVE = "dados-y-mazmorras-v1";
-const CLAVE_MESA = "dados-y-mazmorras-mesa-v1";
+const CLAVE = "dym-partida-v4";
+const CLAVE_MESA = "dym-mesa-v4";
+const MAX_HEROES = 4;
+const SEGUNDOS = 90;
 const $ = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
 const d = n => 1 + Math.floor(Math.random() * n);
 const tirar = (c, s, b = 0) => { let t = b; for (let i = 0; i < c; i++) t += d(s); return t; };
 const fmt = n => (n >= 0 ? "+" : "−") + Math.abs(n);
@@ -17,33 +19,31 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 const azarDe = a => a[Math.floor(Math.random() * a.length)];
 const reducido = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 const CONSUMIBLES = ["pocion", "superior", "bendicion", "fuego", "sueno"];
+const leer = (k, def) => { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (e) { return def; } };
+const escribir = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+
+/* Cada pestaña tiene su propia identidad de jugador (sobrevive a recargar la página). */
+const miId = (() => {
+  try { let v = sessionStorage.getItem("dym-id"); if (!v) { v = "j" + Math.random().toString(36).slice(2, 10); sessionStorage.setItem("dym-id", v); } return v; }
+  catch (e) { return "j" + Math.random().toString(36).slice(2, 10); }
+})();
 
 let S = null;
-let ocupado = false, confirmando = false, modal = null, submenu = null;
-let pantalla = "", dadoVisto = 0, efectosVistos = 0;
-let escJuego = null, escTaberna = null;
+let vista = "inicio";
+let ocupado = false, submenu = null, modal = null, esperandoHost = false, remoto = null;
+let dadoVisto = 0, efectosVistos = 0;
+let escJuego = null, escSel = null, escInicio = null;
 
 /* ---------- Héroes ---------- */
 function heroeAlAzar(i = 0) {
   const razas = Object.keys(RAZAS), clases = Object.keys(CLASES);
-  const raza = razas[(i * 3 + Math.floor(Math.random() * 8)) % 8], clase = clases[(i * 5 + Math.floor(Math.random() * 8)) % 8];
+  const raza = razas[(i * 3 + Math.floor(Math.random() * 8)) % razas.length], clase = clases[(i * 5 + Math.floor(Math.random() * 8)) % clases.length];
   const vis = HEROES.RAZAS[raza];
   return {
-    nombre: NOMBRES[(i * 7 + Math.floor(Math.random() * NOMBRES.length)) % NOMBRES.length], raza, clase, alin: azarDe(["LB", "NB", "CB", "LN", "N", "CN"]),
+    nombre: NOMBRES[(i * 7 + Math.floor(Math.random() * NOMBRES.length)) % NOMBRES.length], raza, clase, alin: "N",
     look: { piel: azarDe(vis.pieles), pelo: vis.pelos.length ? azarDe(vis.pelos) : null, tela: HEROES.TELA_CLASE[clase], peinado: azarDe(["corto", "largo", "recogido", "rizado"]), barba: Math.random() < 0.3 }
   };
 }
-const EJEMPLO = [
-  { nombre: "Aldric", raza: "humano", clase: "guerrero", alin: "LB", look: { piel: "oliva", pelo: "castano", tela: "granate", peinado: "corto", barba: true } },
-  { nombre: "Lyra", raza: "elfo", clase: "mago", alin: "CB", look: { piel: "clara", pelo: "rubio", tela: "azul", peinado: "largo", barba: false } },
-  { nombre: "Borin", raza: "enano", clase: "clerigo", alin: "LN", look: { piel: "morena", pelo: "cobrizo", tela: "blanco", peinado: "corto", barba: true } }
-];
-const borrador = {
-  modo: window.claude && window.claude.use ? "online" : "local",
-  local: { heroes: EJEMPLO.map(h => JSON.parse(JSON.stringify(h))), sel: 0 },
-  mios: { heroes: [heroeAlAzar(Math.floor(Math.random() * 6))], sel: 0 }
-};
-
 function nuevoHeroe(def) {
   const raza = RAZAS[def.raza] ? def.raza : "humano", clase = CLASES[def.clase] ? def.clase : "guerrero";
   const c = CLASES[clase], r = RAZAS[raza];
@@ -51,9 +51,9 @@ function nuevoHeroe(def) {
   for (const k of Object.keys(STATS)) base[k] = c.stats[k] + (r.mods[k] || 0);
   const almaBase = c.alma + r.alma;
   return {
-    nombre: String(def.nombre || "").trim().slice(0, 24) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
+    nombre: String(def.nombre || "").trim().slice(0, 16) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
     look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, oro: 15,
-    equipo: { arma: null, armadura: null, talisman: null }, usos: 1, est: { aturdido: 0, cegado: 0, petrificado: 0 }, fl: {}
+    equipo: { arma: null, armadura: null, talisman: null }, usos: 1, est: { aturdido: 0, cegado: 0 }, fl: {}
   };
 }
 const lookDe = p => Object.assign({ raza: p.raza, clase: p.clase }, p.look);
@@ -68,115 +68,129 @@ function iniMod(p) { const t = obj(p.equipo.talisman); return stat(p, "tem") + (
 function critMin(p) { const t = obj(p.equipo.talisman); return t && t.critico ? t.critico : 20; }
 const usosHab = p => (p.nivel >= 3 ? 2 : 1);
 const nombreRazaClase = p => `${CLASES[p.clase].nombre} ${RAZAS[p.raza].nombre.toLowerCase()}`;
-/* Valores de una definición todavía sin crear (para el editor). */
-function vistaPrevia(def) { const p = nuevoHeroe(def); return { p, ca: ca(p) }; }
+const EJEMPLO = [
+  { nombre: "Aldric", raza: "humano", clase: "guerrero", look: { piel: "oliva", pelo: "castano", tela: "granate", peinado: "corto", barba: true } },
+  { nombre: "Lyra", raza: "elfo", clase: "mago", look: { piel: "clara", pelo: "rubio", tela: "azul", peinado: "largo" } },
+  { nombre: "Borin", raza: "enano", clase: "clerigo", look: { piel: "morena", pelo: "cobrizo", tela: "blanco", peinado: "corto", barba: true } }
+];
 
-/* ---------- Guardado y mesa en línea ---------- */
-const red = { listo: false, db: null, room: null, yo: null, mesas: [], info: null, asientos: [], enLinea: new Set(), sala: null, subs: [], ultimo: null, pendiente: null, escribiendo: false };
-let mesa = null;
+/* ---------- Estado local, en línea y turnos ---------- */
+const red = { listo: false, db: null, room: null, sala: null, mesa: null, doc: null, peers: [], subs: [], ultimo: null, pendiente: null, escribiendo: false, vistoAcc: {}, empezando: false };
+const sel = { heroes: [heroeAlAzar(0)], actual: 0, listo: false, fin: 0, online: false };
+
+const esHost = () => !!red.doc && red.doc.host === miId;
+/* ¿Puede actuar ahora este dispositivo (o el jugador remoto cuyo turno ejecuta el anfitrión)? */
+function puedoActuar() {
+  if (!S || !S.online) return true;
+  const p = S.players[S.turno];
+  return !!p && p.uid === (remoto || miId);
+}
+const turnoMio = () => !S || !S.online || (!!S.players[S.turno] && S.players[S.turno].uid === miId);
 
 function guardar() {
   if (!S) return;
   S.rev = (S.rev || 0) + 1;
   if (S.online) {
+    if (!esHost()) return;
     if (S.efectos && S.efectos.lista.length) S.efectos.seq++;
-    if (mesa) escribirMesa();
+    escribirPartida();
     if (S.efectos) S.efectos.lista = [];
     return;
   }
-  try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {}
+  escribir(CLAVE, JSON.stringify(S));
 }
-function cargar() {
-  try { const t = localStorage.getItem(CLAVE); const g = t ? JSON.parse(t) : null; return g && g.v === 3 && !g.online ? g : null; } catch (e) { return null; }
-}
-function borrar() { try { localStorage.removeItem(CLAVE); } catch (e) {} }
-function puedoActuar() { return !S || !S.online || (!!S.players[S.turno] && S.players[S.turno].uid === red.yo); }
-function esAnfitrion() { return (!!S && !S.online) || (!!red.info && red.info.anfitrion === red.yo); }
+function cargar() { try { const g = JSON.parse(leer(CLAVE, "null")); return g && g.v === 4 && !g.online ? g : null; } catch (e) { return null; } }
 
-function avisar(t) { const a = $("#aviso"); a.textContent = t || ""; a.hidden = !t; }
+function avisar(t) {
+  const a = $("#aviso");
+  a.textContent = t || ""; a.hidden = !t;
+  clearTimeout(avisar.t);
+  if (t) avisar.t = setTimeout(() => { a.hidden = true; }, 6000);
+}
 function avisarError(e) {
   const code = e && e.code;
-  if (code === "invalid_argument") avisar("No tienes permiso para jugar en esta mesa. Pide al dueño del juego que te invite por correo con permiso de edición (el enlace público solo deja mirar).");
-  else if (code === "quota_exceeded") avisar("El almacén de partidas está lleno. Borrad mesas antiguas o jugad en este dispositivo.");
-  else if (code === "revoked") avisar("Has perdido el acceso a este juego.");
-  else avisar("No se pudo guardar la jugada. Revisa la conexión e inténtalo de nuevo.");
+  if (code === "invalid_argument") avisar("Tu cuenta no puede crear partidas en este juego. Únete con el código de quien lo compartió.");
+  else if (code === "quota_exceeded") avisar("El almacén de partidas está lleno.");
+  else avisar("No se pudo guardar la jugada. Revisa la conexión.");
 }
 
 async function conectar() {
-  if (!window.claude || !window.claude.use) { red.listo = true; pantalla = ""; return render(); }
-  const [db, user, room] = await Promise.all(["db", "user", "room"].map(n => window.claude.use(n).catch(() => null)));
-  red.db = db; red.room = room;
-  red.yo = user ? await user.id().catch(() => null) : null;
-  red.listo = true;
-  if (red.db && red.yo) {
-    red.db.collection("mesas").orderBy("creada", "desc").limit(20).onSnapshot(snap => {
-      red.mesas = snap.docs.map(x => x.data()).filter(m => m.v === 3 && m.estado !== "fin" && Date.now() - (m.creada || 0) < 2 * 864e5);
-      if (!S && !mesa) actualizarListaMesas();
-    }, () => { red.mesas = []; });
-    let recordada = null;
-    try { recordada = localStorage.getItem(CLAVE_MESA); } catch (e) {}
-    if (recordada && !S) return entrarMesa(recordada, true);
-  } else if (!S) borrador.modo = "local";
-  pantalla = ""; render();
+  if (!window.claude || !window.claude.use) { red.listo = true; return render(); }
+  const [db, room] = await Promise.all(["db", "room"].map(n => window.claude.use(n).catch(() => null)));
+  red.db = db; red.room = room; red.listo = true;
+  const recordada = leer(CLAVE_MESA, null);
+  if (recordada && red.db && red.room && !S) return entrarPartida(recordada, true);
+  render();
 }
 
-async function crearMesa() {
+async function crearPartida() {
+  if (!red.db || !red.room) return avisar("Para jugar en línea hay que abrir el juego en claude.ai con tu cuenta.");
   const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   let c = "";
   for (let i = 0; i < 4; i++) c += letras[Math.floor(Math.random() * letras.length)];
   try {
-    await red.db.doc(`mesas/${c}`).set({ v: 3, codigo: c, anfitrion: red.yo, estado: "sala", creada: Date.now(), actualizada: Date.now(), juego: null, jugadores: 0, capitulo: 0 });
-    entrarMesa(c);
+    await red.db.doc(`partidas/${c}`).set({ v: 4, codigo: c, host: miId, estado: "seleccion", fin: Date.now() + SEGUNDOS * 1000, creada: Date.now(), juego: null });
+    entrarPartida(c);
   } catch (e) { avisarError(e); }
 }
 
-function entrarMesa(codigo, silencioso) {
-  salirMesa(true);
-  mesa = codigo; avisar("");
-  try { localStorage.setItem(CLAVE_MESA, codigo); } catch (e) {}
+function entrarPartida(codigo, silencioso) {
+  salirPartida(true);
+  if (!red.db || !red.room) { vista = "inicio"; render(); return avisar("Para jugar en línea hay que abrir el juego en claude.ai con tu cuenta."); }
+  red.mesa = codigo; sel.online = true; sel.listo = false;
+  sel.heroes = [sel.heroes[sel.actual] || heroeAlAzar(0)]; sel.actual = 0;
+  escribir(CLAVE_MESA, codigo);
+  vista = "seleccion"; render();
   let confirmado = false;
-  const reloj = setTimeout(() => { if (!confirmado) avisar("La mesa tarda en responder. Puede que la conexión vaya lenta."); }, 10000);
-  red.subs.push(red.db.doc(`mesas/${codigo}`).onSnapshot(snap => {
-    if (!snap.metadata.fromCache && !confirmado) { confirmado = true; clearTimeout(reloj); avisar(""); }
+  const reloj = setTimeout(() => { if (!confirmado) avisar("La partida tarda en responder. Revisa la conexión."); }, 10000);
+  red.subs.push(red.db.doc(`partidas/${codigo}`).onSnapshot(snap => {
+    if (!snap.metadata.fromCache && !confirmado) { confirmado = true; clearTimeout(reloj); }
     if (!snap.exists) {
-      if (confirmado) { salirMesa(); if (!silencioso) avisar(`No hay ninguna mesa con el código ${codigo}.`); }
+      if (confirmado) { salirPartida(); if (!silencioso) avisar(`No hay ninguna partida con el código ${codigo}.`); }
       return;
     }
-    recibirMesa(snap.data());
+    recibirPartida(snap.data());
   }, e => { clearTimeout(reloj); avisarError(e); }));
-  red.subs.push(red.db.collection(`mesas/${codigo}/asientos`).onSnapshot(s => {
-    red.asientos = s.docs.map(x => x.data()).sort((a, b) => (a.t || 0) - (b.t || 0));
-    if (!S) render();
-  }, () => {}));
-  if (red.room) {
-    red.room.join(`mesa-${codigo.toLowerCase()}`).then(r => {
-      if (mesa !== codigo) return r.leave();
-      red.sala = r;
-      r.presence({ uid: red.yo }).catch(() => {});
-      red.subs.push(r.onPeers(ch => {
-        red.enLinea = new Set(ch.peers.map(p => p.presence && p.presence.uid).filter(Boolean));
-        if (S) { renderGrupo(); renderHerramientas(); } else render();
-      }, () => {}));
-    }).catch(() => {});
-  }
-  pantalla = ""; render();
+  red.room.join(`p-${codigo.toLowerCase()}`).then(r => {
+    if (red.mesa !== codigo) return r.leave();
+    red.sala = r;
+    publicarPresencia();
+    red.subs.push(r.onPeers(ch => { red.peers = ch.peers.slice(); procesarAcciones(); if (S) renderGrupo(); else render(); }, () => {}));
+  }).catch(() => avisar("No se pudo entrar en la sala. Comprueba que tienes la sesión iniciada en claude.ai."));
 }
-
-function salirMesa(silencioso) {
-  if (mesa && red.yo && red.info && red.info.estado === "sala") red.db.doc(`mesas/${mesa}/asientos/${red.yo}`).delete().catch(() => {});
+function salirPartida(silencioso) {
   red.subs.forEach(u => u()); red.subs = [];
   if (red.sala) red.sala.leave().catch(() => {});
-  red.sala = null; red.enLinea = new Set(); red.info = null; red.asientos = []; red.ultimo = null;
+  red.sala = null; red.peers = []; red.doc = null; red.ultimo = null; red.vistoAcc = {}; red.empezando = false;
   if (S && S.online) S = null;
-  mesa = null;
-  try { localStorage.removeItem(CLAVE_MESA); } catch (e) {}
-  if (!silencioso) { pantalla = ""; render(); }
+  red.mesa = null; sel.online = false;
+  escribir(CLAVE_MESA, null);
+  if (!silencioso) { vista = "inicio"; render(); }
 }
+function publicarPresencia(extra = {}) {
+  if (!red.sala) return;
+  const h = sel.heroes[0];
+  red.sala.presence(Object.assign({ id: miId, heroe: { nombre: h.nombre, raza: h.raza, clase: h.clase, look: h.look }, listo: sel.listo }, extra)).catch(() => {});
+}
+/* Jugadores de la sala con héroe elegido (yo incluido); el anfitrión primero. */
+function jugadoresSala() {
+  const vistos = new Map();
+  vistos.set(miId, { id: miId, heroe: sel.heroes[0], listo: sel.listo, host: esHost() });
+  for (const p of red.peers) {
+    const pr = p.presence || {};
+    if (!pr.id || !pr.heroe || vistos.has(pr.id)) continue;
+    vistos.set(pr.id, { id: pr.id, heroe: pr.heroe, listo: !!pr.listo, host: !!red.doc && red.doc.host === pr.id });
+  }
+  return [...vistos.values()].sort((a, b) => b.host - a.host).slice(0, MAX_HEROES);
+}
+function hostConectado() { return esHost() || red.peers.some(p => p.presence && red.doc && p.presence.id === red.doc.host); }
 
-function recibirMesa(m) {
-  red.info = m;
-  if (m.estado === "sala" || !m.juego) {
-    if (S && S.online) { S = null; pantalla = ""; }
+function recibirPartida(m) {
+  red.doc = m;
+  if (m.estado === "seleccion" || !m.juego) {
+    sel.fin = m.fin || Date.now();
+    if (S && S.online) { S = null; red.empezando = false; sel.listo = false; }
+    vista = "seleccion";
     return render();
   }
   if (m.juego === red.ultimo) return;
@@ -184,7 +198,7 @@ function recibirMesa(m) {
   try { nuevo = JSON.parse(m.juego); } catch (e) { return; }
   const primero = !S || !S.online;
   if (!primero && (nuevo.rev || 0) <= (S.rev || 0)) return;
-  S = nuevo; red.ultimo = m.juego;
+  S = nuevo; red.ultimo = m.juego; esperandoHost = false; vista = "juego";
   const t = S.dado;
   const lista = S.efectos && S.efectos.seq > efectosVistos ? S.efectos.lista : [];
   if (S.efectos) efectosVistos = S.efectos.seq;
@@ -196,54 +210,62 @@ function recibirMesa(m) {
   if (t) { dadoVisto = t.seq; ESCENARIO.dibujarDado($("#dado"), t.n); mostrarTirada(t.texto, t.ok, false); }
   render(); reproducir();
 }
-
-function escribirMesa() {
+function escribirPartida() {
   red.pendiente = JSON.stringify(S);
   red.ultimo = red.pendiente;
   if (!red.escribiendo) vaciarCola();
 }
 async function vaciarCola() {
   red.escribiendo = true;
-  while (red.pendiente && mesa) {
-    const juego = red.pendiente, g = JSON.parse(juego);
+  while (red.pendiente && red.mesa) {
+    const juego = red.pendiente;
     red.pendiente = null;
-    const datos = { juego, estado: g.final ? "fin" : "jugando", capitulo: ESCENAS[g.escena].cap, jugadores: g.players.length, actualizada: Date.now() };
+    const datos = { juego, estado: JSON.parse(juego).final ? "fin" : "jugando", actualizada: Date.now() };
     for (let intento = 0; intento < 2; intento++) {
-      try { await red.db.doc(`mesas/${mesa}`).update(datos); break; }
+      try { await red.db.doc(`partidas/${red.mesa}`).update(datos); break; }
       catch (e) {
-        if (e.code === "unavailable" && intento === 0) { await new Promise(r => setTimeout(r, 600 + Math.random() * 800)); continue; }
+        if (e.code === "unavailable" && intento === 0) { await new Promise(r => setTimeout(r, 700)); continue; }
         avisarError(e); break;
       }
     }
   }
   red.escribiendo = false;
 }
-
-async function sentarse() {
-  const heroes = borrador.mios.heroes.map(h => ({ nombre: String(h.nombre || "").trim().slice(0, 24) || "Anónimo", raza: h.raza, clase: h.clase, alin: h.alin, look: h.look }));
-  const previo = red.asientos.find(a => a.uid === red.yo);
-  try {
-    await red.db.doc(`mesas/${mesa}/asientos/${red.yo}`).set({ uid: red.yo, heroes, t: previo ? previo.t : Date.now() });
-    avisar("");
-  } catch (e) { avisarError(e); }
+/* El anfitrión ejecuta las jugadas que los demás publican en su presencia. */
+function procesarAcciones() {
+  if (!S || !S.online || !esHost()) return;
+  for (const p of red.peers) {
+    const pr = p.presence || {};
+    if (!pr.id || pr.id === miId) continue;
+    const visto = red.vistoAcc[pr.id] || 0;
+    if (!pr.acc || pr.acc.n <= visto) continue;
+    if (ocupado) return setTimeout(procesarAcciones, 300);
+    red.vistoAcc[pr.id] = pr.acc.n;
+    /* De alguien sin historial (p. ej. tras recargar el anfitrión) solo se acepta una jugada hecha sobre el estado actual. */
+    if (!visto && pr.acc.rev !== S.rev) continue;
+    /* Solo vale si sigue siendo el turno de quien la manda (una jugada vieja se descarta). */
+    const j = S.players[S.turno];
+    if (!j || j.uid !== pr.id || pr.acc.k === "reintentar") continue;
+    remoto = j.uid;
+    try { ejecutar(pr.acc.k, pr.acc.v); } finally { remoto = null; }
+  }
 }
-function heroesSentados() {
-  const lista = [];
-  red.asientos.forEach(a => (a.heroes || []).forEach(h => lista.push(Object.assign({}, h, { uid: a.uid }))));
-  return lista;
+function enviarJugada(k, v) {
+  if (!red.sala) return avisar("Sin conexión con la sala.");
+  if (!hostConectado()) return avisar("El anfitrión no está conectado.");
+  red.sala.presence({ acc: { n: Date.now(), k, v, rev: S.rev } }).catch(() => avisar("No se pudo enviar la jugada."));
+  esperandoHost = true; render();
+  clearTimeout(enviarJugada.t);
+  enviarJugada.t = setTimeout(() => { if (esperandoHost) { esperandoHost = false; avisar("El anfitrión no responde. Comprobad que tiene el juego abierto."); render(); } }, 8000);
 }
 function comenzarEnLinea() {
-  const filas = heroesSentados();
-  if (!filas.length || !esAnfitrion()) return;
-  nuevaPartida(filas.slice(0, 6), mesa);
-}
-async function volverASala() {
-  try { await red.db.doc(`mesas/${mesa}`).update({ estado: "sala", juego: null, actualizada: Date.now() }); }
-  catch (e) { avisarError(e); }
+  if (!esHost() || red.empezando) return;
+  red.empezando = true;
+  nuevaPartida(jugadoresSala().map(j => Object.assign({}, j.heroe, { uid: j.id })), red.mesa);
 }
 
-/* ---------- Utilidades del estado ---------- */
-function log(t, cls = "") { S.log.push({ t, cls }); if (S.log.length > 150) S.log.shift(); }
+/* ---------- Utilidades de partida ---------- */
+function log(t, cls = "") { S.log.push({ t, cls }); if (S.log.length > 120) S.log.shift(); }
 function vivos() { return S.players.map((p, i) => i).filter(i => S.players[i].alma > 0); }
 function siguienteVivo(desde) {
   const n = S.players.length;
@@ -258,7 +280,6 @@ function fx(e) {
 }
 const idx = p => S.players.indexOf(p);
 
-/* ---------- Progreso ---------- */
 function ganarXp(n) {
   const out = [];
   if (!n) return out;
@@ -273,28 +294,24 @@ function subirNivel(p, out) {
   p.nivel++; p.almaBase += 2; p.alma = Math.min(maxAlma(p), p.alma + 2);
   const bajo = Object.keys(STATS).reduce((a, k) => (p.base[k] < p.base[a] ? k : a), "raz");
   if (p.base[bajo] < 5) p.base[bajo]++;
-  let t = `${p.nombre} sube a nivel ${p.nivel}: +2 PG máximos y +1 ${STATS[bajo]}`;
-  if (p.nivel === 3) t += `. Ya puede usar ${CLASES[p.clase].hab} dos veces por combate`;
+  const t = `${p.nombre} sube a nivel ${p.nivel}${p.nivel === 3 ? " (habilidad ×2)" : ""}`;
   log(t, "nivel"); out.push(t);
 }
-
 function aplicarFx(f = {}, actor) {
   const out = [];
   const vida = (p, n) => { p.alma = Math.max(1, Math.min(maxAlma(p), p.alma + n)); };
-  if (f.alma && actor) { vida(actor, f.alma); out.push(`${fmt(f.alma)} PG para ${actor.nombre}`); }
-  if (f.almaTodos) { S.players.forEach(p => vida(p, f.almaTodos)); out.push(`${fmt(f.almaTodos)} PG para el grupo`); }
-  if (f.maxTodos) {
-    S.players.forEach(p => { p.almaBase = Math.max(4, p.almaBase + f.maxTodos); p.alma = Math.min(p.alma, maxAlma(p)); });
-    out.push(`${fmt(f.maxTodos)} PG máximos para todos`);
-  }
-  if (f.curarTodo) { S.players.forEach(p => { p.alma = maxAlma(p); }); out.push("PG restaurados por completo"); }
-  ["pocion", "bendicion", "superior"].forEach(k => { if (f[k]) { S.zurron[k] = Math.max(0, S.zurron[k] + f[k]); out.push(`${fmt(f[k])} ${OBJETOS[k].nombre}`); } });
-  if (f.oro) { S.players.forEach(p => { p.oro = Math.max(0, p.oro + f.oro); }); out.push(`${fmt(f.oro)} po cada uno`); }
+  if (f.alma && actor) { vida(actor, f.alma); out.push(`${fmt(f.alma)} PG ${actor.nombre}`); }
+  if (f.almaTodos) { S.players.forEach(p => vida(p, f.almaTodos)); out.push(`${fmt(f.almaTodos)} PG al grupo`); }
+  if (f.maxTodos) { S.players.forEach(p => { p.almaBase = Math.max(4, p.almaBase + f.maxTodos); p.alma = Math.min(p.alma, maxAlma(p)); }); out.push(`${fmt(f.maxTodos)} PG máx.`); }
+  if (f.curaPct) { S.players.forEach(p => { p.alma = Math.max(1, p.alma); curar(p, Math.ceil(maxAlma(p) * f.curaPct)); }); out.push("Recuperáis PG"); }
+  if (f.curarTodo) { S.players.forEach(p => { p.alma = maxAlma(p); }); out.push("PG al máximo"); }
+  ["pocion", "bendicion", "superior", "sueno"].forEach(k => { if (f[k]) { S.zurron[k] = Math.max(0, S.zurron[k] + f[k]); out.push(`${fmt(f[k])} ${OBJETOS[k].nombre}`); } });
+  if (f.oro) { S.players.forEach(p => { p.oro = Math.max(0, p.oro + f.oro); }); out.push(`${fmt(f.oro)} po c/u`); }
   if (f.anillo) { S.anillo = true; out.push("Anillo de invisibilidad"); }
   if (f.moral && actor) {
     const antes = actor.alin;
     actor.alin = D.moverMoral(actor.alin, f.moral);
-    if (actor.alin !== antes) out.push(`${actor.nombre} ahora es ${ALINEAMIENTOS[actor.alin].toLowerCase()}`);
+    if (actor.alin !== antes) out.push(`${actor.nombre}: ${ALINEAMIENTOS[actor.alin].toLowerCase()}`);
   }
   out.push(...ganarXp(f.xp));
   return out;
@@ -305,7 +322,7 @@ function tirarDado(final, caras, cb) {
   const cv = $("#dado");
   ocupado = true; document.body.classList.add("ocupado");
   const terminar = () => {
-    if (cv) { ESCENARIO.dibujarDado(cv, final); cv.dataset.estado = caras === 20 && final === 20 ? "critico" : caras === 20 && final === 1 ? "pifia" : ""; }
+    if (cv) ESCENARIO.dibujarDado(cv, final);
     ocupado = false; document.body.classList.remove("ocupado");
     cb();
   };
@@ -324,69 +341,137 @@ function mostrarTirada(texto, ok, enPartida = true) {
     dadoVisto = seq;
   }
 }
-/* Tirada de d20 de un héroe: los medianos repiten los unos. */
 function tiradaD20(p) {
   let r = d(20), nota = "";
-  if (r === 1 && p.raza === "mediano") { const r2 = d(20); nota = ` (afortunado: repite el 1 y saca ${r2})`; r = r2; }
+  if (r === 1 && p.raza === "mediano") { const r2 = d(20); nota = ` (afortunado: ${r2})`; r = r2; }
   mostrarTirada.ultimo = r;
   return { r, nota };
 }
-function usarOlivo() {
-  if (S.olivoActivo && S.zurron.bendicion > 0) { S.zurron.bendicion--; S.olivoActivo = false; return 2; }
-  return 0;
-}
-function cegueraDe(p) { if (p.est && p.est.cegado > 0) { p.est.cegado = 0; return -4; } return 0; }
-function lineaTirada(quien, accion, r, mod, bono, pen, total, contra, crit) {
-  let t = `${quien} ${accion}: ${r} ${fmt(mod)}${bono ? " +2 bendición" : ""}${pen ? " −4 ceguera" : ""} = ${total} contra ${contra}`;
+function usarOlivo() { if (S.olivoActivo && S.zurron.bendicion > 0) { S.zurron.bendicion--; S.olivoActivo = false; return 2; } return 0; }
+function lineaTirada(quien, accion, r, mod, bono, total, contra, crit) {
+  let t = `${quien} ${accion}: ${r} ${fmt(mod)}${bono ? " +2" : ""} = ${total} vs ${contra}`;
   if (crit) t += " · ¡crítico!";
   else if (r === 1) t += " · ¡pifia!";
   return t;
 }
 
-/* ---------- Escenas ---------- */
-function nuevaPartida(filas, codigo) {
-  S = {
-    v: 3, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
-    players: filas.map(nuevoHeroe),
-    zurron: { pocion: 1, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
-    escena: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
-    derrota: false, final: null, guardadoCap: null, log: [], vistos: { bestias: [], lugares: [] }
-  };
-  log(`Comienza la partida: ${S.players.map(p => `${p.nombre} (${nombreRazaClase(p)})`).join(", ")}.`);
-  if (S.players.length === 1) { const p = S.players[0]; p.almaBase += 4; p.alma += 4; log(`${p.nombre} viaja sin compañía: +4 Alma máxima.`, "nivel"); }
-  submenu = null; modal = null;
-  entrarEscena("c1_taberna");
+/* ---------- Mapa de caminos ---------- */
+function generarMapa() {
+  const filas = [[{ tipo: "inicio", sig: [] }]];
+  for (let f = 1; f <= 5; f++) {
+    const n = f === 5 ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0);
+    const fila = [];
+    for (let i = 0; i < n; i++) fila.push({ tipo: f === 1 || Math.random() < 0.5 ? "combate" : "evento", sig: [] });
+    if (f === 3) fila[Math.floor(Math.random() * n)].tipo = "tienda";
+    if (f === 5) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
+    filas.push(fila);
+  }
+  filas.push([{ tipo: "jefe", sig: [] }]);
+  for (let f = 0; f < filas.length - 1; f++) {
+    const a = filas[f], b = filas[f + 1];
+    a.forEach((nodo, i) => {
+      const centro = a.length === 1 ? (b.length - 1) / 2 : (i * (b.length - 1)) / (a.length - 1);
+      nodo.sig = b.map((_, j) => j).filter(j => Math.abs(j - centro) <= 1);
+    });
+    b.forEach((_, j) => { if (!a.some(x => x.sig.includes(j))) a[Math.min(a.length - 1, Math.round((j * (a.length - 1)) / Math.max(1, b.length - 1)))].sig.push(j); });
+  }
+  filas[0][0].hecho = true;
+  return { filas, fila: 0, col: 0 };
+}
+const NOMBRE_NODO = { combate: "Combate", evento: "Suceso", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
+const VICTORIAS = ["Cae el último golpe. El camino queda libre.", "Recogéis el botín y seguís adelante.", "Victoria. Os curáis las heridas como podéis.", "El enemigo cae. Hay monedas entre los restos."];
+const VICTORIAS_JEFE = [
+  "El trol cae al barranco. Al otro lado del puente empieza la mazmorra.",
+  "Malakar se deshace en polvo y rompéis su filacteria. Un pasadizo sube hacia un castillo.",
+  "Lord Varkhul arde al primer rayo de sol. El paso hacia el Pico Cenizo está abierto.",
+  "Ignárax cae sobre su tesoro con un rugido que hace temblar la montaña. El dragón ha muerto."
+];
+
+function crearEscena(tipo) {
+  const A = ACTOS[S.acto];
+  if (tipo === "evento") {
+    const pool = EVENTOS.filter(e => (e.acto === S.acto || e.acto === null) && !S.vistosEv.includes(e.id));
+    if (pool.length) {
+      const ev = azarDe(pool);
+      S.vistosEv.push(ev.id);
+      return Object.assign({ fondo: azarDe(A.fondos) }, JSON.parse(JSON.stringify(ev)));
+    }
+    tipo = "combate";
+  }
+  if (tipo === "combate") {
+    const k = azarDe(A.enemigos.filter(x => x !== S.ultimoEnemigo));
+    S.ultimoEnemigo = k;
+    return { tipo: "combate", enemigo: k, fondo: azarDe(A.fondos), titulo: ENEMIGOS[k].nombre,
+      victoria: { t: azarDe(VICTORIAS), fx: { xp: 4 + S.acto * 2, oro: 8 + S.acto * 4, pocion: Math.random() < 0.35 ? 1 : 0 } } };
+  }
+  if (tipo === "tienda") return { tipo: "tienda", tienda: A.tienda, fondo: azarDe(A.fondos), pnj: TIENDAS[A.tienda].pnj, titulo: TIENDAS[A.tienda].nombre };
+  if (tipo === "hoguera") return Object.assign({ tipo: "prueba", fondo: azarDe(A.fondos) }, JSON.parse(JSON.stringify(HOGUERA)));
+  return { tipo: "combate", esJefe: true, enemigo: A.jefe, fondo: A.fondoJefe, titulo: ENEMIGOS[A.jefe].nombre, texto: A.jefeTexto,
+    victoria: { t: VICTORIAS_JEFE[S.acto], fx: { xp: 10 + S.acto * 3, oro: 25, superior: 1 } } };
 }
 
-function entrarEscena(id) {
-  const sc = ESCENAS[id];
-  S.escena = id; S.fase = "elegir"; S.resultado = null; S.combate = null; S.tienda = null;
-  S.turno = siguienteVivo(S.turno);
-  submenu = null;
-  if (sc.inicio) { S.guardadoCap = null; S.guardadoCap = JSON.stringify(S); }
-  if (!S.vistos.lugares.includes(sc.cap)) S.vistos.lugares.push(sc.cap);
-  log(`${ROMANOS[sc.cap]} · ${sc.titulo}`, "esc");
-  if (sc.tipo === "combate") return iniciarCombate(sc);
-  if (sc.tipo === "tienda") abrirTienda(sc);
+/* ---------- Flujo de partida ---------- */
+function nuevaPartida(defs, codigo) {
+  S = {
+    v: 4, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
+    players: defs.slice(0, MAX_HEROES).map(nuevoHeroe),
+    zurron: { pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
+    acto: -1, mapa: null, modo: "escena", esc: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
+    derrota: false, final: null, guardadoActo: null, log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null
+  };
+  log(`Comienza la aventura: ${S.players.map(p => `${p.nombre} (${nombreRazaClase(p)})`).join(", ")}.`);
+  if (S.players.length === 1) { const p = S.players[0]; p.almaBase += 4; p.alma += 4; }
+  submenu = null; modal = null; vista = "juego";
+  siguienteActo();
+}
+function siguienteActo() {
+  S.modo = "escena"; S.fase = "elegir"; S.resultado = null; S.combate = null; S.tienda = null;
+  if (S.acto >= ACTOS.length - 1) {
+    S.esc = { tipo: "final", fondo: "guarida", titulo: "El tesoro del dragón", texto: "Oro de mil reinos. Villabruma está medio quemada y los enanos llevan cien años sin hogar. ¿Qué hacéis con él?",
+      opciones: [{ txt: "Repartirlo con Villabruma y los enanos", final: "heroes" }, { txt: "Quedároslo todo", final: "codicia" }] };
+    guardar(); return render();
+  }
+  S.acto++;
+  S.mapa = generarMapa();
+  if (!S.vistos.lugares.includes(S.acto)) S.vistos.lugares.push(S.acto);
+  S.players.forEach(p => { if (p.alma <= 0) p.alma = 1; });
+  S.esc = { tipo: "relato", fondo: ACTOS[S.acto].fondos[0], titulo: `Acto ${ROMANOS[S.acto]}: ${ACTOS[S.acto].nombre}`, texto: ACTOS[S.acto].intro, boton: "Ver el mapa" };
+  S.guardadoActo = null; S.guardadoActo = JSON.stringify(S);
+  log(`Acto ${ROMANOS[S.acto]} · ${ACTOS[S.acto].nombre}`, "esc");
   guardar(); render();
 }
-
+function volverAlMapa() {
+  S.modo = "mapa"; S.esc = null; S.resultado = null; S.combate = null; S.tienda = null; S.fase = "elegir";
+  submenu = null;
+  guardar(); render();
+}
+function elegirNodo(j) {
+  if (ocupado || S.modo !== "mapa") return;
+  const m = S.mapa, actual = m.filas[m.fila][m.col];
+  if (!actual.sig.includes(j)) return;
+  m.fila++; m.col = j;
+  const nodo = m.filas[m.fila][j];
+  nodo.hecho = true;
+  S.esc = crearEscena(nodo.tipo);
+  S.modo = "escena"; S.fase = "elegir"; S.resultado = null;
+  log(`${S.players[S.turno].nombre} elige: ${NOMBRE_NODO[nodo.tipo]} · ${S.esc.titulo}`, "esc");
+  if (S.esc.tipo === "combate") return iniciarCombate(S.esc);
+  if (S.esc.tipo === "tienda") abrirTienda(S.esc);
+  guardar(); render();
+}
 function elegirOpcion(i) {
   if (ocupado) return;
-  const sc = ESCENAS[S.escena], op = sc.opciones[i], p = S.players[S.turno];
-  const sig = op.sig || sc.sig;
-  if (!op.stat) return resolver(op.ok, op.ok, true, null, sig, false);
-  if (op.inmuneElfo && p.raza === "elfo") return resolver(op.ok, op.ko, true, `${p.nombre} es elfo: el canto de la sirena no le afecta (ascendencia feérica).`, sig, false);
+  const sc = S.esc, op = sc.opciones[i], p = S.players[S.turno];
+  if (!op.stat) return resolver(op.ok, op.ok, true, null, false);
   const mod = stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0);
   const bono = usarOlivo();
   const { r, nota } = tiradaD20(p);
   tirarDado(r, 20, () => {
-    const total = r + mod + bono;
-    const crit = r >= critMin(p);
+    const total = r + mod + bono, crit = r >= critMin(p);
     const ok = crit || (r !== 1 && total >= op.cd);
-    const linea = lineaTirada(p.nombre, `tira ${STATS[op.stat]}`, r, mod, bono, 0, total, `CD ${op.cd}`, crit) + nota;
+    const linea = lineaTirada(p.nombre, ABREV[op.stat], r, mod, bono, total, `CD ${op.cd}`, crit) + nota;
     mostrarTirada(linea, ok);
-    resolver(op.ok, op.ko, ok, linea, sig, crit);
+    resolver(op.ok, op.ko, ok, linea, crit);
   });
 }
 function respuestaTachada(sc) {
@@ -396,43 +481,35 @@ function respuestaTachada(sc) {
 }
 function responder(i) {
   if (ocupado) return;
-  const sc = ESCENAS[S.escena], ok = i === sc.correcta;
-  resolver(sc.ok, sc.ko, ok, `${S.players[S.turno].nombre} responde: «${sc.respuestas[i]}»`, ok ? sc.sigOk || sc.sig : sc.sigKo || sc.sig, false, "enigma");
+  const sc = S.esc, ok = i === sc.correcta;
+  resolver(sc.ok, sc.ko, ok, `${S.players[S.turno].nombre}: «${sc.respuestas[i]}»`, false, "enigma");
 }
-function resolver(okRama, koRama, ok, linea, sig, critico, tipo = "prueba") {
+function resolver(okRama, koRama, ok, linea, critico, tipo = "prueba") {
   const p = S.players[S.turno], rama = ok ? okRama : koRama;
   const efectos = aplicarFx(rama.fx, p);
   if (critico) efectos.push(...ganarXp(1));
   S.fase = "resultado";
-  S.resultado = { ok, tipo, linea, texto: rama.t, efectos, siguiente: sig };
-  log(linea ? `${linea} → ${ok ? "éxito" : "fracaso"}` : `${p.nombre} decide sin tirar.`, ok ? "ok" : "ko");
-  if (ok && tipo !== "enigma") fx({ tipo: "cura", objetivo: "h" + S.turno });
+  S.resultado = { ok, tipo, linea, texto: rama.t, efectos };
+  log(linea ? `${linea} → ${ok ? "éxito" : "fracaso"}` : `${p.nombre}: ${rama.t}`, ok ? "ok" : "ko");
   guardar(); render();
 }
 function continuar() {
-  if (ocupado || !S.resultado) return;
+  if (ocupado) return;
+  const sc = S.esc;
+  if (sc && sc.tipo === "relato") return volverAlMapa();
+  if (!S.resultado) return;
   S.turno = siguienteVivo(S.turno + 1);
-  entrarEscena(S.resultado.siguiente);
+  if (sc && sc.esJefe) return siguienteActo();
+  volverAlMapa();
 }
-function continuarRelato() {
-  const sc = ESCENAS[S.escena];
-  const efectos = aplicarFx(sc.fx);
-  if (efectos.length) log(efectos.join(" · "), "ok");
-  S.turno = siguienteVivo(S.turno + 1);
-  entrarEscena(sc.sig);
-}
-function elegirFinal(clave) {
-  S.final = clave;
-  log(`Final: ${FINALES[clave].titulo}`, "esc");
-  guardar(); render();
-}
-function reencarnar() {
-  const g = JSON.parse(S.guardadoCap);
-  g.log = S.log; g.guardadoCap = S.guardadoCap; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
+function elegirFinal(clave) { S.final = clave; log(`Final: ${FINALES[clave].titulo}`, "esc"); guardar(); render(); }
+function reintentar() {
+  const g = JSON.parse(S.guardadoActo);
+  g.log = S.log; g.guardadoActo = S.guardadoActo; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
   S = g;
   S.players.forEach(p => { p.alma = maxAlma(p); });
-  log("Solara os devuelve a la vida y volvéis al inicio del capítulo.", "esc");
-  entrarEscena(S.escena);
+  log("Solara os devuelve a la vida al inicio del acto.", "esc");
+  guardar(); render();
 }
 
 /* ---------- Tiendas ---------- */
@@ -453,28 +530,25 @@ function comprar(id) {
   if (p.oro < pr) return;
   if (o.tipo !== "consumible" && o.tipo !== "servicio" && p.equipo[o.tipo] === id) return;
   p.oro -= pr;
-  let t = `${p.nombre} compra ${o.nombre} por ${pr} po`;
+  let t = `${p.nombre} compra ${o.nombre} (${pr} po)`;
   if (o.tipo === "consumible") S.zurron[id]++;
-  else if (o.tipo === "servicio") { S.players.forEach((x, i) => { x.alma = maxAlma(x); fx({ tipo: "cura", objetivo: "h" + i }); }); t += ". Todo el grupo duerme a pierna suelta y recupera sus PG"; }
+  else if (o.tipo === "servicio") S.players.forEach((x, i) => { x.alma = maxAlma(x); fx({ tipo: "cura", objetivo: "h" + i }); });
   else {
     const viejo = p.equipo[o.tipo];
-    if (viejo) { const vuelta = Math.floor(OBJETOS[viejo].precio / 2); p.oro += vuelta; t += ` y vende su ${OBJETOS[viejo].nombre} por ${vuelta}`; }
+    if (viejo) { const vuelta = Math.floor(OBJETOS[viejo].precio / 2); p.oro += vuelta; t += ` y vende ${OBJETOS[viejo].nombre} (${vuelta} po)`; }
     p.equipo[o.tipo] = id;
     p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
     fx({ tipo: "magia", objetivo: "h" + S.turno, rampa: RP.bronce });
   }
   log(t + ".", "ok");
+  avisar(t + ".");
   guardar(); render();
 }
 function terminarCompras() {
   if (ocupado || !S.tienda) return;
   const tienda = S.tienda;
   tienda.pos++;
-  if (tienda.pos >= tienda.cola.length) {
-    const sc = ESCENAS[S.escena];
-    S.turno = siguienteVivo(tienda.cola[0] + 1);
-    return entrarEscena(sc.sig);
-  }
+  if (tienda.pos >= tienda.cola.length) { S.turno = tienda.cola[0]; S.resultado = { ok: true, tipo: "tienda", efectos: [] }; return continuar(); }
   S.turno = tienda.cola[tienda.pos];
   guardar(); render();
 }
@@ -484,7 +558,7 @@ function usarFuera(id, i) {
   if (!p || p.alma >= maxAlma(p)) return;
   S.zurron[id]--;
   const real = curar(p, id === "pocion" ? 8 : maxAlma(p));
-  log(`${p.nombre} se bebe una ${OBJETOS[id].nombre.toLowerCase()} y recupera ${real} PG.`, "ok");
+  log(`${p.nombre} bebe ${OBJETOS[id].nombre.toLowerCase()}: +${real} PG.`, "ok");
   fx({ tipo: "cura", objetivo: "h" + i }); fx({ tipo: "numero", objetivo: "h" + i, texto: "+" + real, color: RP.hoja[4] });
   guardar(); render();
 }
@@ -492,15 +566,14 @@ function usarFuera(id, i) {
 /* ---------- Combate ---------- */
 function iniciarCombate(sc) {
   const e = ENEMIGOS[sc.enemigo], n = S.players.length;
-  /* Los enemigos crecen con el grupo; en solitario pegan un poco menos. */
   const hp = Math.round(e.alma * (0.45 + 0.28 * n));
   const c = S.combate = {
-    enemigo: sc.enemigo, hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0) + (n >= 6 ? 1 : 0), blando: n === 1, ronda: 1, orden: [], pos: 0,
+    enemigo: sc.enemigo, hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0), blando: n === 1, ronda: 1, orden: [], pos: 0,
     aturdido: false, escudo: false, maldito: false, anilloUsado: false, partido: false, quemado: false,
     resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false
   };
   if (!S.vistos.bestias.includes(sc.enemigo)) S.vistos.bestias.push(sc.enemigo);
-  S.players.forEach(p => { p.usos = usosHab(p); p.fl = {}; p.est = { aturdido: 0, cegado: 0, petrificado: 0 }; });
+  S.players.forEach(p => { p.usos = usosHab(p); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
   const orden = S.players.map((p, i) => ({ t: "h", i, ini: d(20) + iniMod(p) }));
   orden.push({ t: "e", ini: d(20) + e.ini });
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
@@ -509,7 +582,7 @@ function iniciarCombate(sc) {
   S.players.forEach((p, i) => {
     if (p.raza !== "draconido" || p.alma <= 0) return;
     fx({ tipo: "ataque", actor: "h" + i });
-    log(`${p.nombre} exhala su aliento de dragón → ${danarRival(tirar(1, 6), "arcana", false, 1, RP.fuego)}`, "ok");
+    log(`${p.nombre} exhala su aliento → ${danarRival(tirar(1, 6), "arcana", false, 1, RP.fuego)}`, "ok");
   });
   if (c.hp <= 0) return victoria();
   prepararTurno();
@@ -529,14 +602,13 @@ function prepararTurno() {
     return;
   }
 }
-
 function danarRival(base, clase, crit, extra = 1, rampa) {
   const c = S.combate;
   let dmg = Math.max(1, base) + (c.maldito ? 2 : 0);
   let mult = 1, nota = "";
   if (c.resiste === clase) { mult = 0.5; nota = " (lo resiste)"; }
   if (c.debil === clase) { mult = 2; nota = " (¡punto débil!)"; }
-  if (extra > 1 && extra > mult) { mult = extra; nota = " (¡doble contra los no muertos!)"; }
+  if (extra > 1 && extra > mult) { mult = extra; nota = " (¡doble contra no muertos!)"; }
   dmg = mult < 1 ? Math.max(1, Math.floor(dmg * mult)) : Math.round(dmg * mult);
   c.hp = Math.max(0, c.hp - dmg);
   if (clase === "arcana") c.quemado = true;
@@ -552,33 +624,26 @@ function danarHeroe(i, dmg, directo) {
   fx({ tipo: "golpe", objetivo: "h" + i });
   fx({ tipo: "numero", objetivo: "h" + i, texto: "-" + dmg, color: RP.sangre[4] });
   let t = `${dmg} de daño`;
-  if (p.alma === 0 && p.raza === "semiorco" && !p.fl.aguante) { p.fl.aguante = true; p.alma = 1; t += `. ${p.nombre} se niega a caer y aguanta con 1 PG`; }
+  if (p.alma === 0 && p.raza === "semiorco" && !p.fl.aguante) { p.fl.aguante = true; p.alma = 1; t += `. ${p.nombre} aguanta con 1 PG`; }
   else if (p.alma === 0) t += `. ¡${p.nombre} cae!`;
-  if (directo && p.raza === "tiefling" && c) {
-    c.hp = Math.max(0, c.hp - 2);
-    fx({ tipo: "numero", objetivo: "e", texto: "-2", color: RP.fuego[3], fila: 1 });
-    t += `. Su reprensión infernal le devuelve 2 de fuego`;
-  }
+  if (directo && p.raza === "tiefling" && c) { c.hp = Math.max(0, c.hp - 2); fx({ tipo: "numero", objetivo: "e", texto: "-2", color: RP.fuego[3], fila: 1 }); t += ". Reprensión infernal: 2 de fuego"; }
   return t;
 }
-
 function accion(tipo, arg) {
   if (ocupado || !S.combate || S.combate.enemigoActua || !puedoActuar()) return;
   const c = S.combate, e = ENEMIGOS[c.enemigo], p = S.players[S.turno], yo = "h" + S.turno, cl = CLASES[p.clase];
   const arma = obj(p.equipo.arma) || {};
   const fin = () => { submenu = null; if (c.hp <= 0) return victoria(); avanzar(); prepararTurno(); };
-
   if (tipo === "atacar" || tipo === "conjuro") {
     const clase = tipo === "atacar" ? "fisica" : "arcana";
     const st = tipo === "atacar" ? "ani" : stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
     const mod = stat(p, st) + (arma.golpe || 0) + (clase === "fisica" && p.clase === "explorador" ? 2 : 0);
-    const bono = usarOlivo(), pen = cegueraDe(p);
+    const bono = usarOlivo();
     const { r, nota } = tiradaD20(p);
     tirarDado(r, 20, () => {
-      const total = r + mod + bono + pen;
-      const crit = r >= critMin(p);
+      const total = r + mod + bono, crit = r >= critMin(p);
       const ok = crit || (r !== 1 && total >= e.ca);
-      let linea = lineaTirada(p.nombre, tipo === "atacar" ? "ataca" : "lanza un conjuro", r, mod, bono, pen, total, `CA ${e.ca}`, crit) + nota;
+      let linea = lineaTirada(p.nombre, tipo === "atacar" ? "ataca" : "conjura", r, mod, bono, total, `CA ${e.ca}`, crit) + nota;
       fx({ tipo: "ataque", actor: yo });
       if (ok) {
         const extra = clase === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" ? 2 : 0);
@@ -594,15 +659,15 @@ function accion(tipo, arg) {
     return;
   }
   if (tipo === "curar") {
-    const bono = usarOlivo(), pen = cegueraDe(p);
+    const bono = usarOlivo();
     const { r, nota } = tiradaD20(p);
     tirarDado(r, 20, () => {
       const o = masHerido(), mod = stat(p, "tem");
-      const ok = r >= critMin(p) || (r !== 1 && r + mod + bono + pen >= 10);
+      const ok = r >= critMin(p) || (r !== 1 && r + mod + bono >= 10);
       let cura = ok ? Math.max(1, d(6) + mod) + (arma.cura || 0) : 1;
       if (p.clase === "clerigo") cura *= 2;
       const real = curar(o, cura), oi = idx(o);
-      const t = `${p.nombre} cura heridas (SAB ${r} ${fmt(mod)}${bono ? " +2" : ""}${pen ? " −4" : ""} contra CD 10)${nota} y ${o === p ? "recupera" : "le devuelve a " + o.nombre} ${real} PG`;
+      const t = `${p.nombre} cura (SAB ${r} ${fmt(mod)} vs 10)${nota}: +${real} PG a ${o === p ? "sí mismo" : o.nombre}`;
       fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
       log(t, ok ? "ok" : "ko"); mostrarTirada(t, ok);
       fin();
@@ -616,16 +681,16 @@ function accion(tipo, arg) {
       const o = masHerido(), oi = idx(o);
       const real = curar(o, arg === "pocion" ? 8 : maxAlma(o));
       fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
-      log(`${p.nombre} le da una ${OBJETOS[arg].nombre.toLowerCase()} a ${o.nombre}: +${real} PG.`, "ok");
+      log(`${p.nombre} da ${OBJETOS[arg].nombre.toLowerCase()} a ${o.nombre}: +${real} PG.`, "ok");
     }
     if (arg === "fuego") { fx({ tipo: "ataque", actor: yo }); log(`${p.nombre} lanza fuego de alquimista → ${danarRival(tirar(3, 6), "arcana", false, 1, RP.fuego)}`, "ok"); }
-    if (arg === "sueno") { c.aturdido = true; log(`${p.nombre} le sopla polvo de sueño a ${e.nombre}, que se queda dormido un turno.`, "ok"); }
+    if (arg === "sueno") { c.aturdido = true; log(`${p.nombre} sopla polvo de sueño: ${e.nombre} se duerme un turno.`, "ok"); }
     return fin();
   }
   if (tipo === "anillo") {
     if (!S.anillo || c.anilloUsado) return;
     c.anilloUsado = true; c.aturdido = true;
-    log(`${p.nombre} se pone el anillo de invisibilidad y desaparece. ${e.nombre} no sabe a quién atacar.`, "ok");
+    log(`${p.nombre} se vuelve invisible. ${e.nombre} no sabe a quién atacar.`, "ok");
     return fin();
   }
   if (tipo === "habilidad") {
@@ -633,33 +698,29 @@ function accion(tipo, arg) {
     p.usos--;
     fx({ tipo: "ataque", actor: yo });
     switch (p.clase) {
-      case "mago": log(`${p.nombre} lanza una ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "raz")) + 2, "arcana", false, 1, RP.fuego)}`, "ok"); break;
-      case "barbaro": log(`${p.nombre} entra en ${cl.hab.toLowerCase()} → ${danarRival(tirar(2, 8, stat(p, "ani")), "fisica", false)}`, "ok"); break;
-      case "clerigo": log(`${p.nombre} invoca la ${cl.hab} de Solara → ${danarRival(tirar(2, 6, stat(p, "tem")), "sagrada", false, e.nomuerto ? 2 : 1, RP.bronce)}`, "ok"); break;
+      case "mago": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "raz")) + 2, "arcana", false, 1, RP.fuego)}`, "ok"); break;
+      case "barbaro": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 8, stat(p, "ani")), "fisica", false)}`, "ok"); break;
+      case "clerigo": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "tem")), "sagrada", false, e.nomuerto ? 2 : 1, RP.bronce)}`, "ok"); break;
       case "explorador": {
         const a1 = danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false);
-        const a2 = c.hp > 0 ? danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false) : "nada más, ya no hace falta";
-        log(`${p.nombre} suelta una ${cl.hab}: ${a1} y ${a2}`, "ok");
+        const a2 = c.hp > 0 ? danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false) : "ya no hace falta";
+        log(`${p.nombre}: ${cl.hab} → ${a1} y ${a2}`, "ok");
         break;
       }
-      case "guerrero": c.escudo = true; log(`${p.nombre} levanta un ${cl.hab}. El próximo turno del enemigo no hará daño.`, "ok"); break;
-      case "picaro": c.aturdido = true; log(`${p.nombre} lanza una ${cl.hab}. ${e.nombre} os pierde de vista.`, "ok"); break;
+      case "guerrero": c.escudo = true; log(`${p.nombre}: ${cl.hab}. El próximo turno enemigo no hará daño.`, "ok"); break;
+      case "picaro": c.aturdido = true; log(`${p.nombre}: ${cl.hab}. ${e.nombre} os pierde de vista.`, "ok"); break;
       case "bardo": {
         const n = Math.max(1, tirar(1, 6, stat(p, "elo")) + (arma.cura || 0));
         S.players.forEach((x, i) => { curar(x, n); fx({ tipo: "cura", objetivo: "h" + i }); });
-        log(`${p.nombre} toca una ${cl.hab}: todo el grupo recupera ${n} PG.`, "ok");
+        log(`${p.nombre}: ${cl.hab}. Todo el grupo +${n} PG.`, "ok");
         break;
       }
-      case "brujo": c.maldito = true; fx({ tipo: "magia", objetivo: "e" }); log(`${p.nombre} lanza un ${cl.hab}. ${e.nombre} queda maldito: cada golpe le hará 2 de daño más.`, "ok"); break;
+      case "brujo": c.maldito = true; fx({ tipo: "magia", objetivo: "e" }); log(`${p.nombre}: ${cl.hab}. ${e.nombre} recibirá +2 de cada golpe.`, "ok"); break;
     }
     return fin();
   }
 }
-
-function heroeAlAzarVivo() {
-  const lista = vivos();
-  return lista.length ? lista[Math.floor(Math.random() * lista.length)] : -1;
-}
+function heroeAlAzarVivo() { const l = vivos(); return l.length ? l[Math.floor(Math.random() * l.length)] : -1; }
 function turnoEnemigo() {
   const c = S.combate, e = ENEMIGOS[c.enemigo];
   c.enemigoActua = true;
@@ -670,16 +731,13 @@ function turnoEnemigo() {
     else {
       const cada = n => c.ronda % n === 0;
       if (e.regenera) {
-        if (c.quemado) log(`${e.nombre} no puede regenerarse: el fuego le ha cauterizado las heridas.`, "ok");
-        else if (c.hp < c.hpMax) { const cu = Math.min(e.regenera, c.hpMax - c.hp); c.hp += cu; log(`${e.nombre} se regenera y recupera ${cu} PG.`, "ko"); fx({ tipo: "cura", objetivo: "e" }); }
+        if (c.quemado) log(`${e.nombre} no puede regenerarse: el fuego le ha cauterizado.`, "ok");
+        else if (c.hp < c.hpMax) { const cu = Math.min(e.regenera, c.hpMax - c.hp); c.hp += cu; log(`${e.nombre} se regenera: +${cu} PG.`, "ko"); fx({ tipo: "cura", objetivo: "e" }); }
         c.quemado = false;
       }
-      if (e.cura && cada(e.cura.cada) && c.hp < c.hpMax) {
-        const cu = Math.min(e.cura.n, c.hpMax - c.hp); c.hp += cu;
-        log(`${e.cura.txt} (+${cu} PG).`, "ko"); fx({ tipo: "cura", objetivo: "e" });
-      }
-      if (e.furia && !c.partido && c.hp <= c.hpMax / 2) { c.partido = true; log(`${e.nombre} entra en furia: ahora ataca una vez más por ronda.`, "ko"); }
-      if (c.escudo) { log(`${e.nombre} ataca, pero el muro de escudos lo detiene todo.`, "ok"); c.escudo = false; }
+      if (e.cura && cada(e.cura.cada) && c.hp < c.hpMax) { const cu = Math.min(e.cura.n, c.hpMax - c.hp); c.hp += cu; log(`${e.cura.txt} (+${cu} PG).`, "ko"); fx({ tipo: "cura", objetivo: "e" }); }
+      if (e.furia && !c.partido && c.hp <= c.hpMax / 2) { c.partido = true; log(`${e.nombre} entra en furia: ataca una vez más por ronda.`, "ko"); }
+      if (c.escudo) { log(`${e.nombre} ataca, pero el muro de escudos lo para todo.`, "ok"); c.escudo = false; }
       else {
         const n = c.ataques + (c.partido ? 1 : 0);
         fx({ tipo: "ataque", actor: "e" });
@@ -687,17 +745,19 @@ function turnoEnemigo() {
           const ti = heroeAlAzarVivo();
           if (ti < 0) break;
           const t = S.players[ti];
-          if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${e.nombre} ataca a ${t.nombre}, que lo esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); continue; }
+          if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); continue; }
           const r = d(20), def = ca(t);
           const ok = r === 20 || (r !== 1 && r + e.atk >= def);
           mostrarTirada.ultimo = r;
+          if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), r);
           if (ok) {
             const dmg = Math.max(1, tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2]) - (c.blando ? 2 : 0));
-            let txt = `${e.nombre} ataca a ${t.nombre}: ${r} ${fmt(e.atk)} contra CA ${def} → ${danarHeroe(ti, dmg, true)}`;
-            if (e.roba && t.oro > 0) { const rob = Math.min(e.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Le roba ${rob} po`; }
+            let txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(e.atk)} vs CA ${def} → ${danarHeroe(ti, dmg, true)}`;
+            if (e.drena) { const cu = Math.max(1, Math.floor(dmg / 2)); c.hp = Math.min(c.hpMax, c.hp + cu); txt += `. Bebe y se cura ${cu}`; }
+            if (e.roba && t.oro > 0) { const rob = Math.min(e.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
             log(txt, "ko"); mostrarTirada(txt, false);
           } else {
-            const txt = `${e.nombre} ataca a ${t.nombre}: ${r} ${fmt(e.atk)} contra CA ${def} → falla`;
+            const txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(e.atk)} vs CA ${def} → falla`;
             fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] });
             log(txt, "ok"); mostrarTirada(txt, true);
           }
@@ -710,7 +770,7 @@ function turnoEnemigo() {
           const ti = heroeAlAzarVivo();
           if (ti >= 0) {
             const t = S.players[ti];
-            if (t.raza === "elfo") log(`${e.nombre} intenta atrapar a ${t.nombre}, pero su linaje feérico le protege.`, "ok");
+            if (t.raza === "elfo") log(`${e.nombre} no puede con ${t.nombre}: linaje feérico.`, "ok");
             else { t.est.aturdido = 1; log(`${e.estado.txt.replace("{x}", t.nombre)}.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
           }
         }
@@ -724,627 +784,498 @@ function turnoEnemigo() {
   }, reducido ? 200 : 950);
 }
 function victoria() {
-  const sc = ESCENAS[S.escena], c = S.combate, e = ENEMIGOS[c.enemigo];
+  const sc = S.esc, c = S.combate, e = ENEMIGOS[c.enemigo];
   fx({ tipo: "muerte", objetivo: "e" });
   const extra = [];
   let robado = 0;
   S.players.forEach((p, i) => { if (c.robado[i]) { p.oro += c.robado[i]; robado += c.robado[i]; } });
-  if (robado) extra.push(`Recuperáis ${robado} po robadas`);
-  S.players.forEach(p => { if (p.alma <= 0) p.alma = 1; p.est = { aturdido: 0, cegado: 0, petrificado: 0 }; });
-  if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => curar(p, 3)); extra.push("Inspiración bárdica: +3 PG para el grupo"); }
-  S.players.forEach(p => { if (p.clase === "brujo") { curar(p, 4); extra.push(`Pacto oscuro: +4 PG para ${p.nombre}`); } });
+  if (robado) extra.push(`+${robado} po recuperadas`);
+  S.players.forEach(p => { if (p.alma <= 0) p.alma = 1; p.est = { aturdido: 0, cegado: 0 }; });
+  if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => curar(p, 3)); extra.push("Inspiración +3 PG"); }
+  S.players.forEach(p => { if (p.clase === "brujo") { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   S.combate = null;
   const efectos = aplicarFx(sc.victoria.fx).concat(extra);
   S.fase = "resultado";
-  S.resultado = { ok: true, tipo: "victoria", enemigo: c.enemigo, linea: null, texto: sc.victoria.t, efectos, siguiente: sc.sig };
+  S.resultado = { ok: true, tipo: "victoria", enemigo: c.enemigo, linea: null, texto: sc.victoria.t, efectos };
   log(`¡Victoria contra ${e.nombre}!`, "ok");
   guardar(); render();
 }
-function derrota() {
-  S.derrota = true;
-  log("Todo el grupo ha caído.", "ko");
-  guardar(); render();
-}
+function derrota() { S.derrota = true; log("Todo el grupo ha caído.", "ko"); guardar(); render(); }
 
-/* ---------- Pantalla de la taberna: creación de personajes y salas ---------- */
-function grupoEditor() { return borrador.modo === "online" ? borrador.mios : borrador.local; }
-
-function renderTaberna() {
-  const online = borrador.modo === "online";
-  $("#modos").innerHTML = `
-    <button type="button" role="tab" data-modo="local" aria-selected="${!online}">Este dispositivo</button>
-    <button type="button" role="tab" data-modo="online" aria-selected="${online}">Mesa en línea</button>`;
-  const clave = online ? (mesa ? `sala-${mesa}` : `online-${red.listo}-${!!red.db}`) : "local";
-  if (clave !== pantalla) {
-    pantalla = clave;
-    $("#taberna-cuerpo").innerHTML = online ? (mesa ? htmlSala() : htmlOnline()) : htmlLocal();
+/* ---------- Iconos pixelados del mapa ---------- */
+const cacheIconos = {};
+function iconoNodo(tipo) {
+  if (cacheIconos[tipo]) return cacheIconos[tipo];
+  const g = new PX.Rejilla(14, 14), C = PX.Capa;
+  if (tipo === "combate") {
+    new C(14, 14).linea(2, 2, 10, 10, 2).linea(11, 2, 3, 10, 2).pintar(g, RP.hierro, { relieve: 1, min: 2 });
+    new C(14, 14).rect(1, 9, 4, 2).rect(9, 9, 4, 2).pintar(g, RP.bronce, { plano: 3 });
+    new C(14, 14).rect(1, 11, 2, 2).rect(11, 11, 2, 2).pintar(g, RP.madera, { plano: 2 });
+  } else if (tipo === "evento") {
+    new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.azul, { relieve: 3 });
+    const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.hueso[4]); } };
+    PX.texto(pinta, "?", 4, 2, RP.hueso[4], null, 2);
+  } else if (tipo === "tienda") {
+    new C(14, 14).ell(7, 8.5, 4.8, 4.2).pintar(g, RP.madera, { relieve: 2 });
+    new C(14, 14).rect(5, 3, 5, 2).pintar(g, RP.madera, { plano: 1 });
+    g.set(7, 8, RP.bronce[4]).set(6, 9, RP.bronce[3]).set(8, 9, RP.bronce[3]).set(7, 10, RP.bronce[3]);
+  } else if (tipo === "hoguera") {
+    new C(14, 14).linea(2, 12, 11, 10, 2).linea(2, 10, 11, 12, 2).pintar(g, RP.madera, { relieve: 1 });
+    new C(14, 14).ell(7, 6.5, 3.5, 4).on(7, 2).on(6, 3).pintar(g, RP.fuego, { relieve: 2, min: 2 });
+    g.set(7, 8, RP.fuego[4]).set(7, 7, RP.fuego[4]);
+  } else if (tipo === "jefe") {
+    new C(14, 14).ell(7, 6, 5.2, 4.8).rect(4, 9, 7, 3).pintar(g, RP.hueso, { relieve: 2 });
+    [[5, 6], [9, 6]].forEach(([x, y]) => { g.set(x, y, PX.CONTORNO).set(x, y + 1, PX.CONTORNO).set(x - 1, y, RP.sangre[3]); });
+    g.set(7, 9, PX.CONTORNO).set(5, 11, PX.CONTORNO).set(7, 11, PX.CONTORNO).set(9, 11, PX.CONTORNO);
+  } else {
+    new C(14, 14).rect(3, 2, 1, 11).pintar(g, RP.madera, { plano: 2 });
+    new C(14, 14).poly([[4, 2], [12, 4], [4, 7]]).pintar(g, RP.tela.granate, { relieve: 1, min: 2 });
   }
-  if (online && mesa) actualizarSala();
-  if (online && !mesa) actualizarListaMesas();
-  const editor = $("#editor");
-  if (editor) editor.innerHTML = htmlEditor(grupoEditor());
-  const plantel = $("#plantel");
-  if (plantel) plantel.innerHTML = htmlPlantel(grupoEditor(), online ? 3 : 6);
-  pintarRetratos();
-  if (!escTaberna) {
-    const caja = $("#caja-taberna");
-    escTaberna = ESCENARIO.crear($("#lienzo-taberna"), { observar: $("#taberna"), limites: () => [caja.clientWidth - 12, Math.min(340, Math.max(170, window.innerWidth * 0.31))] });
-  }
-  escTaberna.ajustar();
-  const heroes = online && mesa ? heroesSentados() : grupoEditor().heroes;
-  escTaberna.mostrar({ fondo: "taberna", heroes: heroes.slice(0, 6).map(h => ({ look: Object.assign({ raza: h.raza, clase: h.clase }, h.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: online && mesa ? -1 : grupoEditor().sel });
+  g.contorno();
+  return (cacheIconos[tipo] = g.aCanvas(1));
 }
-
-function htmlLocal() {
-  const guardada = cargar();
-  return `
-    <div class="creacion">
-      <aside class="plantel marco" id="plantel" aria-label="Vuestro grupo"></aside>
-      <section class="editor marco" id="editor" aria-label="Ficha del héroe"></section>
-    </div>
-    <div class="arranque">
-      ${guardada && !guardada.final ? `<button type="button" class="boton sec" data-acc="cargar">Continuar la partida guardada (${esc(CAPITULOS[ESCENAS[guardada.escena].cap])})</button>` : ""}
-      <button type="button" class="boton grande" data-acc="comenzar-local">Comenzar la aventura</button>
-    </div>
-    ${htmlReglas()}`;
-}
-function htmlReglas() {
-  return `
-    <details class="reglas marco">
-      <summary>Cómo se juega</summary>
-      <ul>
-        <li><b>Por turnos.</b> Cada escena la decide un héroe y el turno va pasando. En los enigmas, discutidlo antes de responder.</li>
-        <li><b>Tiradas.</b> d20 + atributo contra una Clase de Dificultad (CD). Un 20 natural es un crítico y un 1, una pifia.</li>
-        <li><b>Combate.</b> Al empezar se tira iniciativa (d20 + Sabiduría). Atacar usa Fuerza y hace daño físico; Conjuro usa tu mejor Inteligencia o Carisma y hace daño arcano. Para acertar hay que igualar la Clase de Armadura (CA) del enemigo.</li>
-        <li><b>Habilidades.</b> Cada clase tiene una habilidad activa (una vez por combate, dos desde el nivel 3) y una pasiva. Cada raza tiene otra pasiva.</li>
-        <li><b>Tiendas.</b> En Villabruma, en el bosque, en la forja de los enanos y a las puertas de la guarida, cada héroe compra con su propio oro (po).</li>
-        <li><b>PG y PX.</b> Los Puntos de Golpe son la vida y los Puntos de Experiencia os suben de nivel. Si cae todo el grupo, Solara os resucita al inicio del capítulo.</li>
-      </ul>
-    </details>`;
-}
-function htmlPlantel(g, max) {
-  const filas = g.heroes.map((h, i) => `
-    <li class="plantel-fila${i === g.sel ? " sel" : ""}">
-      <button type="button" class="plantel-heroe" data-sel="${i}" aria-pressed="${i === g.sel}">
-        <canvas class="mini" data-look='${esc(JSON.stringify(Object.assign({ raza: h.raza, clase: h.clase }, h.look)))}'></canvas>
-        <span><strong>${esc(h.nombre || "Sin nombre")}</strong><span class="etiqueta">${RAZAS[h.raza].nombre} · ${CLASES[h.clase].nombre}</span></span>
-      </button>
-      ${g.heroes.length > 1 ? `<button type="button" class="quitar" data-quitar="${i}" aria-label="Quitar a ${esc(h.nombre)}">×</button>` : ""}
-    </li>`).join("");
-  return `<h3>Vuestro grupo <span class="etiqueta">${g.heroes.length} de ${max}</span></h3>
-    <ol class="plantel-lista">${filas}</ol>
-    ${g.heroes.length < max ? `<button type="button" class="boton sec mini" data-acc="anadir">Añadir héroe</button>` : ""}`;
-}
-function htmlEditor(g) {
-  const h = g.heroes[g.sel];
-  if (!h) return "";
-  const vis = HEROES.RAZAS[h.raza], rz = RAZAS[h.raza], cl = CLASES[h.clase];
-  const { p, ca: caP } = vistaPrevia(h);
-  const look = Object.assign({ raza: h.raza, clase: h.clase }, h.look);
-  const opRaza = Object.keys(RAZAS).map(k => `
-    <button type="button" class="opcion-ficha" data-ed="raza" data-valor="${k}" aria-pressed="${k === h.raza}">
-      <canvas class="mini" data-look='${esc(JSON.stringify(Object.assign({}, look, { raza: k, piel: HEROES.RAZAS[k].pieles.includes(look.piel) ? look.piel : HEROES.RAZAS[k].pieles[0], pelo: HEROES.RAZAS[k].pelos.includes(look.pelo) ? look.pelo : HEROES.RAZAS[k].pelos[0] })))}'></canvas>
-      <span>${RAZAS[k].nombre}</span></button>`).join("");
-  const opClase = Object.keys(CLASES).map(k => `
-    <button type="button" class="opcion-ficha" data-ed="clase" data-valor="${k}" aria-pressed="${k === h.clase}">
-      <canvas class="mini" data-look='${esc(JSON.stringify(Object.assign({}, look, { clase: k, tela: h.look.tela === HEROES.TELA_CLASE[h.clase] ? HEROES.TELA_CLASE[k] : h.look.tela })))}'></canvas>
-      <span>${CLASES[k].nombre}</span></button>`).join("");
-  const opAlin = ORDEN_ALIN.map(k => `<button type="button" class="alin" data-ed="alin" data-valor="${k}" aria-pressed="${k === h.alin}">${ALINEAMIENTOS[k]}</button>`).join("");
-  const muestras = (campo, lista, rampas) => lista.map(k => `<button type="button" class="muestra" data-ed="look.${campo}" data-valor="${k}" aria-pressed="${h.look[campo] === k}" aria-label="${k}" style="--c1:${rampas[k][3]};--c2:${rampas[k][1]}"></button>`).join("");
-  const statsHtml = Object.keys(STATS).map(k => {
-    const mr = rz.mods[k] || 0;
-    return `<div><b>${fmt(p.base[k])}</b><span>${ABREV[k]}</span>${mr ? `<small>${fmt(mr)} raza</small>` : "<small>&nbsp;</small>"}</div>`;
-  }).join("");
-  return `
-    <div class="ed-cabecera">
-      <canvas class="retrato-grande" data-look='${esc(JSON.stringify(look))}'></canvas>
-      <div class="ed-nombre">
-        <label class="etiqueta" for="ed-nombre">Nombre</label>
-        <div class="fila-nombre"><input id="ed-nombre" maxlength="24" value="${esc(h.nombre)}" autocomplete="off"><button type="button" class="boton sec mini" data-acc="nombre-azar">Al azar</button></div>
-        <p class="ed-linea">${rz.nombre} · ${cl.nombre} <span class="etiqueta">(${cl.rol})</span> · ${ALINEAMIENTOS[h.alin]}</p>
-        <div class="ed-stats">${statsHtml}</div>
-        <p class="ed-cifras">PG ${p.almaBase} · CA ${caP} · Patrón: ${cl.patron}</p>
-      </div>
-    </div>
-    <div class="ed-bloque">
-      <h4>Raza</h4>
-      <div class="rejilla-fichas">${opRaza}</div>
-      <p class="ed-desc">${rz.lore} <b>${rz.pasiva}:</b> ${rz.pasivaDesc}</p>
-    </div>
-    <div class="ed-bloque">
-      <h4>Clase</h4>
-      <div class="rejilla-fichas">${opClase}</div>
-      <p class="ed-desc">${cl.desc}</p>
-      <dl class="habilidades">
-        <dt>Habilidad · ${cl.hab}</dt><dd>${cl.habDesc} Una vez por combate (dos desde el nivel 3).</dd>
-        <dt>Pasiva · ${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd>
-      </dl>
-    </div>
-    <div class="ed-bloque">
-      <h4>Alineamiento</h4>
-      <div class="rejilla-alin">${opAlin}</div>
-    </div>
-    <div class="ed-bloque">
-      <h4>Aspecto</h4>
-      <div class="aspecto">
-        <span class="etiqueta">Piel</span><div class="muestras">${muestras("piel", vis.pieles, RP.piel)}</div>
-        ${vis.pelos.length ? `<span class="etiqueta">Pelo</span><div class="muestras">${muestras("pelo", vis.pelos, RP.pelo)}</div>` : ""}
-        <span class="etiqueta">Ropa</span><div class="muestras">${muestras("tela", HEROES.TELAS, RP.tela)}</div>
-        ${vis.pelos.length ? `<span class="etiqueta">Peinado</span><div class="muestras">${HEROES.PEINADOS.map(k => `<button type="button" class="peinado" data-ed="look.peinado" data-valor="${k}" aria-pressed="${h.look.peinado === k}">${k}</button>`).join("")}${vis.barba ? "" : `<button type="button" class="peinado" data-ed="look.barba" data-valor="${!h.look.barba}" aria-pressed="${!!h.look.barba}">barba</button>`}</div>` : ""}
-      </div>
-    </div>`;
+function pintarIconos(raiz) {
+  raiz.querySelectorAll("canvas[data-icono]").forEach(cv => {
+    const img = iconoNodo(cv.dataset.icono), dpr = window.devicePixelRatio || 1;
+    const s = Math.max(1, Math.round(((+cv.dataset.tam || 28) * dpr) / 14));
+    cv.width = cv.height = 14 * s; cv.style.width = cv.style.height = (14 * s) / dpr + "px";
+    const c = cv.getContext("2d"); c.imageSmoothingEnabled = false;
+    c.drawImage(img, 0, 0, 14 * s, 14 * s);
+  });
 }
 function pintarRetratos(raiz = document) {
   raiz.querySelectorAll("canvas[data-look]").forEach(cv => { try { ESCENARIO.retrato(cv, JSON.parse(cv.dataset.look)); } catch (e) {} });
   raiz.querySelectorAll("canvas[data-rival]").forEach(cv => { const [t, k] = cv.dataset.rival.split(":"); ESCENARIO.retratoRival(cv, t, k); });
-}
-function editar(campo, valor) {
-  const g = grupoEditor(), h = g.heroes[g.sel];
-  if (!h) return;
-  if (campo === "raza") {
-    h.raza = valor;
-    const vis = HEROES.RAZAS[valor];
-    if (!vis.pieles.includes(h.look.piel)) h.look.piel = vis.pieles[0];
-    if (vis.pelos.length && !vis.pelos.includes(h.look.pelo)) h.look.pelo = vis.pelos[0];
-  } else if (campo === "clase") {
-    if (h.look.tela === HEROES.TELA_CLASE[h.clase]) h.look.tela = HEROES.TELA_CLASE[valor];
-    h.clase = valor;
-  } else if (campo === "alin") h.alin = valor;
-  else if (campo.startsWith("look.")) {
-    const k = campo.slice(5);
-    h.look[k] = k === "barba" ? valor === "true" : valor;
-  }
-  renderTaberna();
+  pintarIconos(raiz);
 }
 
-function htmlOnline() {
-  if (!red.listo) return `<p class="espera">Conectando con las mesas…</p>`;
-  if (!red.db || !red.yo) return `<p class="aviso-fijo marco">Las mesas en línea funcionan al abrir el juego en claude.ai con la sesión iniciada. Mientras tanto podéis jugar todos en este dispositivo.</p>`;
-  return `
-    <div class="online">
-      <div class="bloque marco">
-        <h3>Crear una mesa</h3>
-        <p>Serás el anfitrión. Tus amigos entran con el código y cada uno juega su héroe desde su móvil.</p>
-        <button type="button" class="boton" data-acc="crear">Crear mesa nueva</button>
-      </div>
-      <form class="bloque marco" id="form-unirse">
-        <h3>Entrar con un código</h3>
-        <div class="unirse">
-          <input id="codigo-mesa" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD" aria-label="Código de la mesa">
-          <button type="submit" class="boton sec">Entrar</button>
-        </div>
-      </form>
-      <div class="bloque marco">
-        <h3>Mesas abiertas</h3>
-        <div id="lista-mesas" class="mesas"></div>
-      </div>
-    </div>
-    ${htmlReglas()}`;
+/* ---------- Pantallas ---------- */
+function render() {
+  if (S) vista = "juego";
+  for (const id of ["inicio", "unirse", "seleccion", "juego"]) $("#p-" + id).hidden = vista !== id;
+  if (vista === "inicio") renderInicio();
+  if (vista === "unirse") renderUnirse();
+  if (vista === "seleccion") renderSeleccion();
+  if (vista === "juego") renderJuego();
+  if (modal) renderModal();
 }
-function actualizarListaMesas() {
-  const el = $("#lista-mesas");
-  if (!el) return;
-  if (!red.mesas.length) { el.innerHTML = `<p class="espera">No hay mesas abiertas. Crea una y comparte el código.</p>`; return; }
-  el.innerHTML = red.mesas.map(m => {
-    const min = Math.max(1, Math.round((Date.now() - (m.creada || 0)) / 60000));
-    const hace = min < 60 ? `hace ${min} min` : `hace ${Math.round(min / 60)} h`;
-    const estado = m.estado === "jugando" ? `Jugando · capítulo ${ROMANOS[m.capitulo || 0]} · ${m.jugadores} héroes` : "En la sala, esperando";
-    return `<div class="mesa-fila"><b>${esc(m.codigo)}</b><span>${estado} · creada ${hace}</span>
-      <button type="button" class="boton sec mini" data-unirse="${esc(m.codigo)}">Entrar</button></div>`;
-  }).join("");
+function renderInicio() {
+  if (!escInicio) escInicio = ESCENARIO.crear($("#lienzo-inicio"), { observar: $("#p-inicio"), limites: () => [$("#caja-inicio").clientWidth - 12, Math.max(110, window.innerHeight * 0.3)] });
+  escInicio.ajustar();
+  escInicio.mostrar({ fondo: "taberna", heroes: EJEMPLO.map(h => ({ look: lookDe(nuevoHeroe(h)) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: -1 });
+  const guardada = cargar();
+  const online = red.listo ? !!(red.db && red.room) : true;
+  $("#inicio-botones").innerHTML = `
+    ${guardada ? `<button type="button" class="boton grande" data-ui="cargar">Continuar partida</button>` : ""}
+    <button type="button" class="boton grande${guardada ? " sec" : ""}" data-ui="crear" ${online ? "" : "disabled"}>Crear partida en línea</button>
+    <button type="button" class="boton grande sec" data-ui="ir-unirse" ${online ? "" : "disabled"}>Unirse con un código</button>
+    <button type="button" class="boton grande sec" data-ui="local">Jugar en este móvil</button>
+    ${online ? "" : `<p class="nota">Para jugar en línea, abre el juego en claude.ai con tu cuenta.</p>`}`;
 }
-function htmlSala() {
-  return `
-    <div class="sala">
-      <div class="sala-info marco">
-        <p class="etiqueta">Código de la mesa</p>
-        <p class="codigo">${esc(mesa)}</p>
-        <p>Pasa este código a tus amigos. Tienen que abrir este mismo juego en claude.ai, elegir «Mesa en línea» y escribirlo.</p>
-        <div id="sala-asientos" class="asientos"></div>
-        <div id="sala-acciones" class="acciones-sala"></div>
-      </div>
-      <div class="creacion">
-        <aside class="plantel marco" id="plantel" aria-label="Tus héroes"></aside>
-        <section class="editor marco" id="editor" aria-label="Ficha del héroe"></section>
-      </div>
-    </div>`;
+function renderUnirse() {
+  const i = $("#codigo-mesa");
+  if (document.activeElement !== i) setTimeout(() => i.focus(), 50);
 }
-function actualizarSala() {
-  const lista = $("#sala-asientos"), acc = $("#sala-acciones");
-  if (!lista) return;
-  const anfitrion = red.info && red.info.anfitrion;
-  const heroes = heroesSentados();
-  lista.innerHTML = heroes.length ? heroes.map(h => {
-    const etiquetas = [`${RAZAS[h.raza] ? RAZAS[h.raza].nombre : ""} ${CLASES[h.clase] ? CLASES[h.clase].nombre.toLowerCase() : ""}`, h.uid === red.yo ? "tú" : "", h.uid === anfitrion ? "anfitrión" : ""].filter(Boolean).join(" · ");
-    const on = red.enLinea.has(h.uid) || h.uid === red.yo;
-    return `<div class="asiento"><canvas class="mini" data-look='${esc(JSON.stringify(Object.assign({ raza: h.raza, clase: h.clase }, h.look)))}'></canvas>
-      <div><strong>${esc(h.nombre)}</strong><span class="etiqueta">${esc(etiquetas)}</span></div>
-      <span class="punto${on ? " on" : ""}" title="${on ? "Conectado" : "Sin conexión"}"></span></div>`;
-  }).join("") : `<p class="espera">Todavía no se ha sentado nadie.</p>`;
-  const sentado = red.asientos.some(a => a.uid === red.yo);
-  const extra = heroes.length > 6 ? `<p class="espera">Hay ${heroes.length} héroes: solo jugarán los 6 primeros.</p>` : "";
-  acc.innerHTML = `<button type="button" class="boton" data-acc="sentarse">${sentado ? "Actualizar mis héroes" : "Sentarme a la mesa"}</button>`
-    + (esAnfitrion()
-      ? `<button type="button" class="boton grande" data-acc="comenzar-online" ${heroes.length ? "" : "disabled"}>Comenzar con ${Math.min(6, heroes.length)} héroe${heroes.length === 1 ? "" : "s"}</button>`
-      : `<p class="espera">Esperando a que el anfitrión empiece la partida.</p>`)
-    + `<button type="button" class="boton sec" data-acc="salir">Salir de la mesa</button>` + extra;
-  pintarRetratos(lista);
+
+/* Selección de personajes: 90 segundos para elegir clase, raza y aspecto. */
+let relojSel = null;
+function empezarSeleccionLocal() {
+  sel.online = false; sel.listo = false;
+  if (!sel.heroes.length) sel.heroes = [heroeAlAzar(0)];
+  sel.actual = 0;
+  sel.fin = Date.now() + SEGUNDOS * 1000;
+  vista = "seleccion"; render();
+}
+function tickSeleccion() {
+  if (vista !== "seleccion") return;
+  const quedan = Math.max(0, Math.ceil((sel.fin - Date.now()) / 1000));
+  const r = $("#sel-reloj");
+  r.textContent = `${Math.floor(quedan / 60)}:${String(quedan % 60).padStart(2, "0")}`;
+  r.classList.toggle("urgente", quedan <= 10);
+  $("#sel-barra i").style.width = `${(100 * quedan) / SEGUNDOS}%`;
+  if (quedan > 0 || !sel.fin) return;
+  if (!sel.online) return comenzarLocal();
+  if (esHost()) comenzarEnLinea();
+}
+function comenzarLocal() { sel.fin = 0; nuevaPartida(sel.heroes.map(h => JSON.parse(JSON.stringify(h)))); }
+function heroeEditado() { return sel.heroes[sel.online ? 0 : sel.actual]; }
+function renderSeleccion() {
+  if (!relojSel) relojSel = setInterval(tickSeleccion, 250);
+  const h = heroeEditado();
+  $("#sel-codigo").innerHTML = sel.online ? `Código <b>${esc(red.mesa || "")}</b>` : "En este móvil";
+  const jugadores = sel.online ? jugadoresSala() : sel.heroes.map((x, i) => ({ id: "l" + i, heroe: x, listo: false }));
+  if (!escSel) escSel = ESCENARIO.crear($("#lienzo-sel"), { observar: $("#p-seleccion"), limites: () => [$("#caja-sel").clientWidth - 12, Math.max(90, window.innerHeight * 0.23)] });
+  escSel.ajustar();
+  escSel.mostrar({ fondo: "taberna", heroes: jugadores.map(j => ({ look: Object.assign({ raza: j.heroe.raza, clase: j.heroe.clase }, j.heroe.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: sel.online ? 0 : sel.actual });
+  const nombre = $("#sel-nombre");
+  if (document.activeElement !== nombre) nombre.value = h.nombre;
+  const cl = CLASES[h.clase], rz = RAZAS[h.raza];
+  $("#sel-clase").innerHTML = `<strong>${cl.nombre}</strong> <span class="etiqueta">${cl.rol}</span>
+    <p><b>${cl.hab}:</b> ${cl.habDesc}</p><p><b>${cl.pasiva}:</b> ${cl.pasivaDesc}</p>`;
+  $("#sel-raza").innerHTML = `<strong>${rz.nombre}</strong> <span class="etiqueta">${Object.keys(rz.mods).map(s => `${ABREV[s]}${fmt(rz.mods[s])}`).join(" ")}${rz.alma ? ` PG+${rz.alma}` : ""}</span>
+    <p><b>${rz.pasiva}:</b> ${rz.pasivaDesc}</p>`;
+  const p = nuevoHeroe(h);
+  $("#sel-stats").innerHTML = Object.keys(STATS).map(k => `<span><b>${fmt(p.base[k])}</b>${ABREV[k]}</span>`).join("") + `<span><b>${p.almaBase}</b>PG</span><span><b>${ca(p)}</b>CA</span>`;
+  $("#sel-jugadores").innerHTML = jugadores.map((j, i) => `
+    <button type="button" class="chip-jugador${(!sel.online && i === sel.actual) || (sel.online && j.id === miId) ? " sel" : ""}${j.listo || j.host ? " listo" : ""}" ${sel.online ? "disabled" : `data-ui="sel-heroe" data-i="${i}"`}>
+      <canvas class="mini" data-tam="26" data-look='${esc(JSON.stringify(Object.assign({ raza: j.heroe.raza, clase: j.heroe.clase }, j.heroe.look)))}'></canvas>
+      <span>${esc(j.heroe.nombre || "?")}${j.host ? " ★" : j.listo ? " ✓" : ""}</span></button>`).join("")
+    + (!sel.online && sel.heroes.length < MAX_HEROES ? `<button type="button" class="chip-jugador mas" data-ui="sel-anadir">+ Héroe</button>` : "")
+    + (!sel.online && sel.heroes.length > 1 ? `<button type="button" class="chip-jugador mas" data-ui="sel-quitar">Quitar</button>` : "");
+  const listo = $("#sel-listo");
+  if (!sel.online) listo.textContent = "¡A la aventura!";
+  else if (esHost()) listo.textContent = `Empezar ya · ${jugadores.length} jugador${jugadores.length === 1 ? "" : "es"}`;
+  else listo.textContent = sel.listo ? "Listo ✓ · esperando al anfitrión" : "¡Estoy listo!";
+  pintarRetratos($("#p-seleccion"));
+  tickSeleccion();
+}
+function cambiarSeleccion(campo, paso) {
+  const h = heroeEditado();
+  if (campo === "clase" || campo === "raza") {
+    const lista = Object.keys(campo === "clase" ? CLASES : RAZAS);
+    const viejo = h[campo];
+    h[campo] = lista[(lista.indexOf(viejo) + paso + lista.length) % lista.length];
+    if (campo === "clase" && h.look.tela === HEROES.TELA_CLASE[viejo]) h.look.tela = HEROES.TELA_CLASE[h.clase];
+    if (campo === "raza") {
+      const vis = HEROES.RAZAS[h.raza];
+      if (!vis.pieles.includes(h.look.piel)) h.look.piel = vis.pieles[0];
+      if (vis.pelos.length && !vis.pelos.includes(h.look.pelo)) h.look.pelo = vis.pelos[0];
+    }
+  } else {
+    const vis = HEROES.RAZAS[h.raza];
+    const listas = { piel: vis.pieles, pelo: vis.pelos.length ? vis.pelos : [null], tela: HEROES.TELAS, peinado: HEROES.PEINADOS };
+    const l = listas[campo];
+    h.look[campo] = l[(l.indexOf(h.look[campo]) + 1) % l.length];
+  }
+  if (sel.online) publicarPresencia();
+  renderSeleccion();
 }
 
 /* ---------- Pantalla de juego ---------- */
-function render() {
-  const enJuego = !!S;
-  $("#taberna").hidden = enJuego; $("#juego").hidden = !enJuego;
-  document.body.classList.toggle("jugando", enJuego);
-  if (!enJuego) { renderTaberna(); return; }
-  pantalla = "juego";
-  if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $(".tablero"), limites: limitesJuego });
+function limitesJuego() {
+  const ancho = $("#p-juego").clientWidth;
+  return [ancho - 12, Math.max(96, Math.min(window.innerHeight * 0.27, (ancho * 9) / 16))];
+}
+function renderJuego() {
+  if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
+  const enMapa = S.modo === "mapa" && !S.derrota && !S.final;
+  const enTienda = !enMapa && !S.final && !S.derrota && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
+  $("#p-juego").classList.toggle("modo-mapa", enMapa);
+  $("#p-juego").classList.toggle("modo-tienda", enTienda);
   escJuego.ajustar();
   if (!$("#dado").dataset.listo) { $("#dado").dataset.listo = "1"; ESCENARIO.dibujarDado($("#dado"), 20); }
-  renderCapitulos(); renderHerramientas(); sincronizarEscenario(); renderGrupo(); renderEscena(); renderCronica();
-  if (modal) renderModal();
-}
-/* Espacio para el escenario: en móvil, una franja de ~30 % de la altura; en escritorio, lo que dejan libre
-   el grupo y la mesa de dados en la columna izquierda. */
-function limitesJuego() {
-  const tablero = $(".tablero"), izq = $(".izquierda");
-  if (window.matchMedia("(max-width: 760px)").matches) return [tablero.clientWidth - 12, Math.max(120, window.innerHeight * 0.3)];
-  const grupo = $("#grupo");
-  const bajo = window.innerHeight < 560;
-  return [izq.clientWidth - 12, izq.clientHeight - grupo.offsetHeight - (bajo ? $(".mesa").offsetHeight + 4 : 150) - (bajo ? 22 : 32)];
-}
-function renderCapitulos() {
-  const actual = ESCENAS[S.escena].cap;
-  $("#capitulos").innerHTML = CAPITULOS.map((c, i) => {
-    const cls = S.final || i < actual ? "hecho" : i === actual ? "actual" : "";
-    return `<li class="${cls}" title="${c}"><b>${ROMANOS[i]}</b><span>${c}</span></li>`;
-  }).join("");
-}
-function renderHerramientas() {
-  const h = $("#herramientas");
-  if (!S) { h.innerHTML = ""; return; }
-  const chip = S.online ? `<span class="chip-mesa">Mesa <b>${esc(mesa || S.online.codigo)}</b> · ${S.players.filter(p => p.uid === red.yo || red.enLinea.has(p.uid)).length}/${S.players.length}</span>` : "";
-  const salir = S.online
-    ? (confirmando ? `<span class="confirmar"><span>La partida sigue para los demás.</span><button type="button" class="boton mini" data-acc="salir">Salir</button><button type="button" class="boton sec mini" data-acc="cancelar">Quedarme</button></span>` : `<button type="button" class="boton sec mini" data-acc="confirmar">Salir</button>`)
-    : (confirmando ? `<span class="confirmar"><span>Se perderá la partida.</span><button type="button" class="boton mini" data-acc="reiniciar">Empezar de nuevo</button><button type="button" class="boton sec mini" data-acc="cancelar">Seguir</button></span>` : `<button type="button" class="boton sec mini" data-acc="confirmar">Nueva</button>`);
-  h.innerHTML = `${chip}<button type="button" class="boton sec mini" data-modal="zurron">Mochila</button><button type="button" class="boton sec mini" data-modal="codice">Compendio</button>${salir}`;
+  const acto = Math.max(0, S.acto);
+  $("#barra-titulo").innerHTML = `<b>${ROMANOS[acto]}</b> ${ACTOS[acto].nombre}`;
+  sincronizarEscenario();
+  renderGrupo();
+  if (enMapa) renderMapa(); else { $("#mapa").innerHTML = ""; renderEscena(); }
+  const u = S.log[S.log.length - 1];
+  if (u && !$("#dado-info").textContent.trim()) $("#dado-info").textContent = u.t;
 }
 function tipoRival(clave) { return typeof PNJ !== "undefined" && PNJ[clave] ? "pnj" : "enemigo"; }
 function sincronizarEscenario() {
-  const sc = ESCENAS[S.escena];
+  const sc = S.esc;
   let rival = null;
   if (S.combate) {
     const k = S.combate.enemigo;
-    rival = { tipo: "enemigo", clave: k, hp: S.combate.hp, max: S.combate.hpMax, maldito: S.combate.maldito, aturdido: S.combate.aturdido, flota: k === "dragon" };
+    rival = { tipo: "enemigo", clave: k, hp: S.combate.hp, max: S.combate.hpMax, maldito: S.combate.maldito, aturdido: S.combate.aturdido, flota: k === "elemental" };
   } else if (S.resultado && S.resultado.tipo === "victoria") rival = { tipo: "enemigo", clave: S.resultado.enemigo, derrotado: true };
-  else if (S.tienda) rival = { tipo: tipoRival(TIENDAS[S.tienda.clave].pnj), clave: TIENDAS[S.tienda.clave].pnj };
-  else if (sc.pnj) rival = { tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" };
+  else if (sc && sc.pnj) rival = { tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" };
+  const fondo = (sc && sc.fondo) || ACTOS[Math.max(0, S.acto)].fondos[0];
   escJuego.mostrar({
-    fondo: sc.fondo, rival, activo: S.final || S.derrota ? -1 : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
-    heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && p.est.aturdido), cegado: !!(p.est && p.est.cegado), piedra: !!(p.est && p.est.petrificado) }))
+    fondo, rival, activo: S.final || S.derrota ? -1 : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
+    heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && p.est.aturdido) }))
   });
 }
 function renderGrupo() {
-  const enCombate = !!S.combate;
+  if (!S) return;
   $("#grupo").innerHTML = S.players.map((p, i) => {
     const activo = i === S.turno && !S.final && !S.derrota && !(S.combate && S.combate.enemigoActua);
     const max = maxAlma(p), pct = Math.round((100 * p.alma) / max);
-    const on = S.online ? (p.uid === red.yo || red.enLinea.has(p.uid)) : null;
-    const estados = [p.est && p.est.cegado ? "cegado" : "", p.est && p.est.aturdido ? "aturdido" : "", p.est && p.est.petrificado ? "de piedra" : ""].filter(Boolean).join(", ");
-    return `
-      <button type="button" class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}" data-ficha="${i}" aria-label="Ficha de ${esc(p.nombre)}">
-        <canvas class="retrato" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
-        <span class="heroe-datos">
-          <strong>${esc(p.nombre)}${S.online && p.uid === red.yo ? ' <span class="tu">tú</span>' : ""}</strong>
-          <span class="etiqueta">${CLASES[p.clase].nombre} · Nv ${p.nivel}${enCombate ? ` · ${p.usos} hab.` : ""}</span>
-          <span class="barra-alma" role="img" aria-label="PG ${p.alma} de ${max}"><i style="width:${pct}%"></i></span>
-          <span class="cifras">${p.alma}/${max} · CA ${ca(p)}<span class="dr"> · ${p.oro} po</span>${estados ? ` · ${estados}` : ""}</span>
-        </span>
-        ${on !== null ? `<span class="punto${on ? " on" : ""}" title="${on ? "Conectado" : "Sin conexión"}"></span>` : ""}
-      </button>`;
+    const conectado = !S.online || p.uid === miId || red.peers.some(x => x.presence && x.presence.id === p.uid);
+    return `<button type="button" class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
+      <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
+      <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
+      <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras">${p.alma}/${max} · Nv${p.nivel}</span></span></button>`;
   }).join("");
   pintarRetratos($("#grupo"));
 }
-const parrafos = arr => `<div class="texto">${arr.map(t => `<p>${t}</p>`).join("")}</div>`;
-const cabeceraEscena = sc => `<p class="etiqueta">Capítulo ${ROMANOS[sc.cap]} · ${CAPITULOS[sc.cap]}</p><h2>${sc.titulo}</h2>`;
+const parrafo = t => `<p class="texto">${t}</p>`;
 function boton(attrs, titulo, chip, sub, off) {
-  return `<li><button type="button" class="opcion" ${attrs}${off ? " disabled" : ""}><span class="cursor" aria-hidden="true">▸</span><span class="op-txt">${titulo}${sub ? `<small>${sub}</small>` : ""}</span>${chip ? `<span class="chip">${chip}</span>` : ""}</button></li>`;
+  return `<button type="button" class="opcion" ${attrs}${off ? " disabled" : ""}><span class="op-txt">${titulo}${sub ? `<small>${sub}</small>` : ""}</span>${chip ? `<span class="chip">${chip}</span>` : ""}</button>`;
 }
-
+function quienLinea(p, verbo) {
+  if (esperandoHost) return `<p class="quien espera">Enviando tu jugada…</p>`;
+  if (turnoMio()) return verbo ? `<p class="quien">${verbo} <b>${esc(p.nombre)}</b>${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2" : ""}</p>` : "";
+  return `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b> en su móvil…</p>`;
+}
+function renderMapa() {
+  const m = S.mapa, p = S.players[S.turno];
+  const libres = m.filas[m.fila][m.col].sig;
+  const mio = turnoMio() && !esperandoHost;
+  const filas = m.filas.map((fila, f) => `<div class="fila-mapa">${fila.map((n, j) => {
+    const aqui = f === m.fila && j === m.col, libre = f === m.fila + 1 && libres.includes(j);
+    const cls = `nodo${n.hecho ? " hecho" : ""}${aqui ? " aqui" : ""}${libre ? " libre" : ""}${n.tipo === "jefe" ? " jefe" : ""}`;
+    return `<button type="button" class="${cls}" data-f="${f}" data-j="${j}" ${libre && mio ? `data-juego="nodo" data-v="${j}"` : "disabled"} aria-label="${NOMBRE_NODO[n.tipo]}">
+      <canvas data-icono="${n.tipo}" data-tam="${n.tipo === "jefe" ? 34 : 26}"></canvas></button>`;
+  }).join("")}</div>`).reverse().join("");
+  $("#mapa").innerHTML = `<svg class="lineas" aria-hidden="true"></svg>${filas}`;
+  pintarIconos($("#mapa"));
+  requestAnimationFrame(dibujarLineas);
+  $("#panel").innerHTML = `${quienLinea(p, "Elige el camino:")}
+    <p class="leyenda">${["combate", "evento", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
+  pintarIconos($("#panel"));
+}
+function dibujarLineas() {
+  const mapa = $("#mapa"), svg = mapa && mapa.querySelector(".lineas");
+  if (!svg || !S || !S.mapa) return;
+  const caja = mapa.getBoundingClientRect();
+  svg.setAttribute("viewBox", `0 0 ${caja.width} ${caja.height}`);
+  const centro = (f, j) => { const b = mapa.querySelector(`.nodo[data-f="${f}"][data-j="${j}"]`); if (!b) return null; const r = b.getBoundingClientRect(); return [r.left - caja.left + r.width / 2, r.top - caja.top + r.height / 2]; };
+  let html = "";
+  S.mapa.filas.forEach((fila, f) => fila.forEach((n, j) => n.sig.forEach(k => {
+    const a = centro(f, j), b = centro(f + 1, k);
+    if (!a || !b) return;
+    const abierta = f === S.mapa.fila && j === S.mapa.col;
+    const usada = n.hecho && S.mapa.filas[f + 1][k].hecho;
+    html += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="${usada ? "usada" : abierta ? "abierta" : ""}"/>`;
+  })));
+  svg.innerHTML = html;
+}
 function renderEscena() {
-  const sc = ESCENAS[S.escena], p = S.players[S.turno], cl = CLASES[p.clase];
-  const el = $("#escena");
-  /* En móvil se oculta el texto de ambientación cuando ya se ha leído (ver estilo.css). */
-  el.dataset.leido = (S.combate && S.combate.ronda > 1) || (S.tienda && S.tienda.pos > 0) ? "1" : "";
+  const sc = S.esc, p = S.players[S.turno];
+  const el = $("#panel");
+  const mio = turnoMio() && !esperandoHost, off = !mio;
   if (S.final) {
     const f = FINALES[S.final];
-    const epi = S.players.map(x => `<li><b>${esc(x.nombre)}</b>, ${nombreRazaClase(x).toLowerCase()} de nivel ${x.nivel} (${ALINEAMIENTOS[x.alin].toLowerCase()}), ${EPILOGOS[D.ejesAlin(x.alin)[1]]}</li>`).join("");
-    el.innerHTML = `<p class="etiqueta">Fin de la aventura</p><h2>${f.titulo}</h2>${parrafos(f.texto)}<ul class="epilogo">${epi}</ul>
-      <div class="pie-escena">${!S.online ? `<button type="button" class="boton" data-acc="reiniciar">Jugar otra vez</button>`
-        : esAnfitrion() ? `<button type="button" class="boton" data-acc="volver-sala">Volver a la sala con el grupo</button><button type="button" class="boton sec" data-acc="salir">Salir de la mesa</button>`
-        : `<p class="espera">El anfitrión puede llevaros de vuelta a la sala para otra partida.</p><button type="button" class="boton sec" data-acc="salir">Salir de la mesa</button>`}</div>`;
+    el.innerHTML = `<h2>${f.titulo}</h2>${parrafo(f.texto[0])}
+      <ul class="epilogo">${S.players.map(x => `<li><b>${esc(x.nombre)}</b> ${EPILOGOS[D.ejesAlin(x.alin)[1]]}</li>`).join("")}</ul>
+      <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-ui="otra">Otra aventura</button>` : `<p class="espera">¡Fin! El anfitrión puede empezar otra.</p>`}</div>`;
     return;
   }
   if (S.derrota) {
-    el.innerHTML = `${cabeceraEscena(sc)}<h3 class="sello ko">Habéis caído</h3>
-      ${parrafos(["Todo se vuelve negro. Cuando abrís los ojos, una sacerdotisa de Solara os está curando en su templo: «Los dioses os conceden otra oportunidad»."])}
-      <div class="pie-escena">${esAnfitrion() ? `<button type="button" class="boton" data-acc="reencarnar">Volver al inicio del capítulo</button>
-        ${S.online ? `<button type="button" class="boton sec" data-acc="volver-sala">Volver a la sala</button>` : `<button type="button" class="boton sec" data-acc="reiniciar">Empezar desde la taberna</button>`}`
-        : `<p class="espera">El anfitrión decide si volvéis a intentarlo.</p>`}</div>`;
+    el.innerHTML = `<h2 class="ko">Habéis caído</h2>${parrafo("Una sacerdotisa de Solara os encuentra y os devuelve a la vida.")}
+      <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-juego="reintentar">Volver al inicio del acto</button>` : `<p class="espera">El anfitrión decide.</p>`}</div>`;
     return;
   }
-  const mio = puedoActuar(), off = !mio;
-  const quien = mio
-    ? `<p class="quien">Decide <b>${esc(p.nombre)}</b> · ${nombreRazaClase(p)}${S.olivoActivo && S.zurron.bendicion > 0 ? " · la bendición dará +2" : ""}</p>`
-    : `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b> (${nombreRazaClase(p)}). Esperando su decisión en su dispositivo…</p>`;
-
-  if (S.fase === "resultado") {
+  const cab = `<h2>${sc.titulo}</h2>`;
+  if (S.fase === "resultado" && S.resultado) {
     const r = S.resultado;
-    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Decisión tomada";
-    const siguiente = S.players[siguienteVivo(S.turno + 1)];
-    el.innerHTML = `${cabeceraEscena(sc)}
-      <p class="sello ${r.ok ? "ok" : "ko"}">${sello}</p>
-      ${r.linea ? `<p class="linea-tirada">${esc(r.linea)}</p>` : ""}
-      ${parrafos([r.texto])}
+    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
+    el.innerHTML = `${cab}<p class="sello ${r.ok ? "ok" : "ko"}">${sello}</p>${parrafo(r.texto || "")}
       ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <div class="pie-escena">${mio ? `<button type="button" class="boton" data-acc="continuar">Continuar · turno de ${esc(siguiente.nombre)}</button>` : `<p class="espera">${esc(p.nombre)} pasará el turno a ${esc(siguiente.nombre)}.</p>`}</div>`;
+      <div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa"}</button>` : quienLinea(p, "")}</div>`;
+    return;
+  }
+  if (sc.tipo === "relato") {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}<div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sc.boton}</button>` : quienLinea(p, "")}</div>`;
     return;
   }
   if (sc.tipo === "prueba") {
-    el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}${quien}<ul class="menu">${sc.opciones.map((op, i) => {
-      let chip = "Sin tirada";
-      if (op.stat) {
-        const mod = stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0);
-        chip = op.inmuneElfo && p.raza === "elfo" ? "Inmune" : `${ABREV[op.stat]} ${fmt(mod)} · CD ${op.cd}`;
-      }
-      return boton(`data-op="${i}"`, op.txt, chip, "", off);
-    }).join("")}</ul>`;
-  } else if (sc.tipo === "enigma") {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decide")}<div class="menu">${sc.opciones.map((op, i) => {
+      const chip = op.stat ? `${ABREV[op.stat]}${fmt(stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0))} · CD ${op.cd}` : "";
+      return boton(`data-juego="op" data-v="${i}"`, op.txt, chip, "", off);
+    }).join("")}</div>`;
+    return;
+  }
+  if (sc.tipo === "enigma") {
     const tachada = respuestaTachada(sc);
-    el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
-      ${mio ? `<p class="quien">Responde <b>${esc(p.nombre)}</b>. Aquí no hay dados: discutidlo antes.${tachada >= 0 ? " Gracias al gnomo del grupo, una respuesta falsa está tachada." : ""}</p>` : quien}
-      <ul class="menu">${sc.respuestas.map((t, i) => boton(`data-resp="${i}"${i === tachada ? ' data-tachada="1"' : ""}`, i === tachada ? `<s>${t}</s>` : t, "", "", off || i === tachada)).join("")}</ul>`;
-  } else if (sc.tipo === "relato") {
-    el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
-      <ul class="efectos">${sc.fx.curarTodo ? "<li>PG restaurados por completo</li>" : ""}${sc.fx.almaTodos ? `<li>+${sc.fx.almaTodos} PG para el grupo</li>` : ""}${sc.fx.oro ? `<li>+${sc.fx.oro} po cada uno</li>` : ""}<li>+${sc.fx.xp} PX</li></ul>
-      <div class="pie-escena">${mio ? `<button type="button" class="boton" data-acc="relato">${sc.boton}</button>` : quien}</div>`;
-  } else if (sc.tipo === "final") {
-    el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
-      <p class="quien">Decidid entre todos. Esta elección cierra la partida${mio ? "" : ` y la marca ${esc(p.nombre)}`}.</p>
-      <ul class="menu">${sc.opciones.map(op => boton(`data-final="${op.final}"`, op.txt, "", "", off)).join("")}</ul>`;
-  } else if (sc.tipo === "tienda") renderTienda(el, sc, p, mio);
-  else if (sc.tipo === "combate") renderCombate(el, sc, p, cl, mio);
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Responde")}<div class="menu dos">${sc.respuestas.map((t, i) => boton(`data-juego="resp" data-v="${i}"`, i === tachada ? `<s>${t}</s>` : t, "", "", off || i === tachada)).join("")}</div>`;
+    return;
+  }
+  if (sc.tipo === "final") {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decidid juntos. Elige")}<div class="menu">${sc.opciones.map(op => boton(`data-juego="final" data-v="${op.final}"`, op.txt, "", "", off)).join("")}</div>`;
+    return;
+  }
+  if (sc.tipo === "tienda") return renderTienda(el, p, mio);
+  if (sc.tipo === "combate") return renderCombate(el, sc, p, mio);
 }
-
-function renderTienda(el, sc, p, mio) {
+function renderTienda(el, p, mio) {
   const t = TIENDAS[S.tienda.clave];
   const items = t.objetos.map(id => {
     const o = OBJETOS[id], pr = precio(p, id);
     const equipado = o.tipo !== "consumible" && o.tipo !== "servicio" && p.equipo[o.tipo] === id;
-    const actual = o.tipo !== "consumible" && o.tipo !== "servicio" ? p.equipo[o.tipo] : null;
-    const sub = `${o.desc}${actual && !equipado ? ` Sustituye a ${OBJETOS[actual].nombre} (te devuelven ${Math.floor(OBJETOS[actual].precio / 2)}).` : ""}${o.tipo === "consumible" ? ` Tenéis ${S.zurron[id]}.` : ""}`;
-    const tipo = o.tipo === "consumible" ? "Mochila" : o.tipo === "servicio" ? "Servicio" : RANURAS[o.tipo];
-    return boton(`data-comprar="${id}"`, `${o.nombre} <span class="etiqueta">${tipo}</span>`, equipado ? "Equipado" : `${pr} po`, sub, !mio || equipado || p.oro < pr);
+    return `<button type="button" class="articulo" data-juego="comprar" data-v="${id}" ${!mio || equipado || p.oro < pr ? "disabled" : ""}>
+      <strong>${o.nombre}</strong><small>${o.desc}</small><span class="chip">${equipado ? "Llevas" : `${pr} po`}</span></button>`;
   }).join("");
   const resto = S.tienda.cola.slice(S.tienda.pos + 1).map(i => S.players[i].nombre);
-  el.innerHTML = `${cabeceraEscena(sc)}${parrafos(sc.texto)}
-    <p class="saludo"><b>${t.nombre}:</b> ${t.saludo}</p>
-    ${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> con sus <b>${p.oro} po</b>${p.clase === "picaro" ? " (dedos largos: −25 %)" : ""}.</p>` : `<p class="quien espera">Está comprando <b>${esc(p.nombre)}</b> en su dispositivo…</p>`}
-    <ul class="menu tienda">${items}</ul>
-    <div class="pie-escena">${mio ? `<button type="button" class="boton" data-acc="terminar-compras">${resto.length ? `Terminar · le toca a ${esc(resto[0])}` : "Terminar las compras y seguir"}</button>` : ""}</div>`;
+  el.innerHTML = `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(t.pnj)}:${t.pnj}"></canvas><h2>${t.nombre}</h2></div>${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> · tiene <b>${p.oro} po</b>${p.clase === "picaro" ? " · −25 %" : ""}</p>` : quienLinea(p, "")}
+    <div class="articulos">${items}</div>
+    <div class="pie">${mio ? `<button type="button" class="boton" data-juego="terminar">${resto.length ? `Listo · le toca a ${esc(resto[0])}` : "Salir de la tienda"}</button>` : ""}</div>`;
+  pintarRetratos(el);
 }
-
-function renderCombate(el, sc, p, cl, mio) {
+function renderCombate(el, sc, p, mio) {
   const c = S.combate;
-  if (!c) { el.innerHTML = cabeceraEscena(sc); return; }
-  const e = ENEMIGOS[c.enemigo];
-  const arma = obj(p.equipo.arma) || {};
+  if (!c) { el.innerHTML = `<h2>${sc.titulo}</h2>`; return; }
+  const e = ENEMIGOS[c.enemigo], cl = CLASES[p.clase], arma = obj(p.equipo.arma) || {};
   const refStat = stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
   const modG = stat(p, "ani") + (arma.golpe || 0) + (p.clase === "explorador" ? 2 : 0), modR = stat(p, refStat) + (arma.golpe || 0);
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
-  const orden = c.orden.map((a, k) => {
-    const nombre = a.t === "e" ? e.nombre.split(",")[0] : S.players[a.i].nombre;
-    const caido = a.t === "h" && S.players[a.i].alma <= 0;
-    return `<li class="${k === c.pos ? "ahora" : ""}${caido ? " caido" : ""}${a.t === "e" ? " rival" : ""}">${esc(nombre)}</li>`;
-  }).join("");
-  const rasgos = [
-    `<span>CA ${e.ca}</span>`, `<span>PG ${c.hp}/${c.hpMax}</span>`,
-    c.resiste ? `<span>Resiste ${TIPOS_DANO[c.resiste]}</span>` : "", c.debil ? `<span class="alerta">Débil a ${TIPOS_DANO[c.debil]}</span>` : "",
-    c.maldito ? `<span class="alerta">Maldito</span>` : "", c.aturdido ? `<span class="alerta">Perderá su turno</span>` : "", c.escudo ? `<span class="alerta">Escudo de la Polis</span>` : ""
-  ].join("");
+  const chips = [`CA ${e.ca}`, c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.maldito ? "Maldito" : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Escudos" : ""].filter(Boolean);
+  const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : ""}${a.t === "h" && S.players[a.i].alma <= 0 ? " caido" : ""}">${esc(a.t === "e" ? e.nombre.split(",")[0] : S.players[a.i].nombre)}</li>`).join("");
   let menu;
-  if (c.enemigoActua) menu = `<p class="quien espera"><b>${e.nombre}</b> contraataca…</p>`;
-  else if (submenu === "objetos" && mio) {
-    menu = `${quien(p, mio)}<ul class="menu">${consumibles.map(k => boton(`data-objeto="${k}"`, OBJETOS[k].nombre, `× ${S.zurron[k]}`, OBJETOS[k].desc, false)).join("")}${boton('data-acc="volver-menu"', "Volver", "", "", false)}</ul>`;
-  } else {
-    const acciones = [
-      boton('data-accion="atacar"', "Atacar", `d20 ${fmt(modG)}`, `1d8 ${fmt(stat(p, "ani"))}${arma.fis ? ` +${arma.fis}` : ""} de daño físico`, !mio),
-      boton('data-accion="conjuro"', "Conjuro", `d20 ${fmt(modR)}`, `1d8 ${fmt(stat(p, refStat))}${(arma.arc || 0) + (p.clase === "mago" ? 2 : 0) ? ` +${(arma.arc || 0) + (p.clase === "mago" ? 2 : 0)}` : ""} de daño arcano (${ABREV[refStat]})`, !mio),
-      boton('data-accion="curar"', "Curar heridas", `SAB ${fmt(stat(p, "tem"))}`, `Cura al más herido${p.clase === "clerigo" ? " (doble)" : ""}`, !mio),
-      boton('data-accion="habilidad"', cl.hab, `${p.usos} uso${p.usos === 1 ? "" : "s"}`, cl.habDesc, !mio || p.usos <= 0),
-      boton('data-acc="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, consumibles.length ? consumibles.map(k => `${OBJETOS[k].nombre} ×${S.zurron[k]}`).join(", ") : "La mochila está vacía", !mio || !consumibles.length),
-      S.anillo ? boton('data-accion="anillo"', "Anillo de invisibilidad", c.anilloUsado ? "usado" : "1 vez", "El enemigo pierde su turno", !mio || c.anilloUsado) : ""
-    ];
-    menu = `${quien(p, mio)}<ul class="menu acciones">${acciones.join("")}</ul>`;
-  }
-  el.innerHTML = `${cabeceraEscena(sc)}
-    <div class="rival-info"><button type="button" class="rival-nombre" data-modal="bestia" data-bestia="${c.enemigo}">${e.nombre}</button><span class="etiqueta">${e.tipo} · VD ${e.vd} · ronda ${c.ronda}</span><div class="rasgos">${rasgos}</div><p class="rasgo-desc">${e.rasgoDesc}</p></div>
-    <ol class="orden" aria-label="Orden de iniciativa">${orden}</ol>
-    ${menu}`;
-}
-function quien(p, mio) {
-  return mio
-    ? `<p class="quien">Turno de <b>${esc(p.nombre)}</b> · ${nombreRazaClase(p)}${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2 preparada" : ""}</p>`
-    : `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b>. Esperando su decisión en su dispositivo…</p>`;
-}
-function renderCronica() {
-  const ol = $("#cronica");
-  ol.innerHTML = S.log.slice(-70).map(l => `<li class="${l.cls}">${esc(l.t)}</li>`).join("");
-  ol.scrollTop = ol.scrollHeight;
+  if (c.enemigoActua) menu = `<p class="quien espera"><b>${e.nombre}</b> ataca…</p>`;
+  else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${S.zurron[k]}`, "", false)).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
+  else menu = `${quienLinea(p, "Turno de")}<div class="menu dos acciones">
+    ${boton('data-juego="accion" data-v="atacar"', "Atacar", `d20${fmt(modG)}`, `1d8${fmt(stat(p, "ani"))} físico`, !mio)}
+    ${boton('data-juego="accion" data-v="conjuro"', "Conjuro", `d20${fmt(modR)}`, `1d8${fmt(stat(p, refStat))} arcano`, !mio)}
+    ${boton('data-juego="accion" data-v="habilidad"', cl.hab, `×${p.usos}`, "", !mio || p.usos <= 0)}
+    ${boton('data-juego="accion" data-v="curar"', "Curar", `SAB${fmt(stat(p, "tem"))}`, "Al más herido", !mio)}
+    ${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}
+    ${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
+  el.innerHTML = `<div class="rival-info"><button type="button" class="rival-nombre" data-ui="bestia" data-k="${c.enemigo}">${e.nombre}</button><span class="chips">${chips.map(x => `<span>${x}</span>`).join("")}</span></div>
+    ${c.ronda === 1 && sc.esJefe ? `<p class="rasgo">${sc.texto}</p>` : `<p class="rasgo">${e.rasgoDesc}</p>`}<ol class="orden">${orden}</ol>${menu}`;
 }
 
-/* ---------- Ventanas: ficha, mochila, compendio y crónica ---------- */
-function abrirModal(m) { modal = m; renderModal(); $("#capa").hidden = false; const b = $("#modal button"); if (b) b.focus(); }
+/* ---------- Ventanas ---------- */
+function abrirModal(m) { modal = m; renderModal(); $("#capa").hidden = false; }
 function cerrarModal() { modal = null; $("#capa").hidden = true; }
 function renderModal() {
-  if (!modal || !S && modal.tipo !== "codice") return cerrarModal();
+  if (!modal) return cerrarModal();
   const el = $("#modal");
   let html = "";
-  if (modal.tipo === "ficha") html = htmlFicha(S.players[modal.i]);
-  if (modal.tipo === "zurron") html = htmlZurron();
-  if (modal.tipo === "codice") html = htmlCodice(modal.pestana || "mundo", modal.bestia);
-  if (modal.tipo === "cronica") html = `<h2>Crónica</h2><ol class="cronica-larga">${S.log.slice().reverse().map(l => `<li class="${l.cls}">${esc(l.t)}</li>`).join("")}</ol>`;
-  el.innerHTML = `<button type="button" class="cerrar" data-acc="cerrar-modal" aria-label="Cerrar">×</button>${html}`;
+  if (modal.tipo === "ficha" && S) html = htmlFicha(S.players[modal.i]);
+  if (modal.tipo === "mochila" && S) html = htmlMochila();
+  if (modal.tipo === "compendio") html = htmlCompendio(modal.pestana || "bestiario", modal.k);
+  if (modal.tipo === "cronica" && S) html = `<h2>Crónica</h2><ol class="cronica-larga">${S.log.slice().reverse().map(l => `<li class="${l.cls}">${esc(l.t)}</li>`).join("")}</ol>`;
+  if (modal.tipo === "ayuda") html = htmlAyuda();
+  if (modal.tipo === "menu") html = `<h2>Menú</h2><div class="menu">
+      ${S ? boton('data-ui="modal" data-m="cronica"', "Crónica", "", "Todo lo que ha pasado", false) : ""}
+      ${boton('data-ui="modal" data-m="compendio"', "Compendio", "", "Bestiario, razas, clases y el mundo", false)}
+      ${boton('data-ui="modal" data-m="ayuda"', "Cómo se juega", "", "", false)}
+      ${S && S.online ? boton('data-ui="salir"', "Salir de la partida", "", "Sigue para los demás", false) : S ? boton('data-ui="abandonar"', "Volver al inicio", "", "La partida queda guardada", false) : ""}</div>`;
+  el.innerHTML = `<button type="button" class="cerrar" data-ui="cerrar" aria-label="Cerrar">×</button>${html}`;
   pintarRetratos(el);
 }
 function htmlFicha(p) {
   if (!p) return "";
-  const rz = RAZAS[p.raza], cl = CLASES[p.clase], max = maxAlma(p);
-  const sig = NIVELES[p.nivel] !== undefined ? NIVELES[p.nivel] : null;
-  const equipo = Object.keys(RANURAS).map(k => `<li><span class="etiqueta">${RANURAS[k]}</span> ${p.equipo[k] ? `<b>${OBJETOS[p.equipo[k]].nombre}</b> · ${OBJETOS[p.equipo[k]].desc}` : "—"}</li>`).join("");
-  return `
-    <div class="ficha">
-      <canvas class="retrato-grande" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
-      <div>
-        <h2>${esc(p.nombre)}</h2>
-        <p class="ed-linea">${rz.nombre} · ${cl.nombre} <span class="etiqueta">(${cl.rol})</span> · ${ALINEAMIENTOS[p.alin]}</p>
-        <p class="ed-cifras">Nivel ${p.nivel} · PX ${p.xp}${sig !== null ? `/${sig}` : ""} · PG ${p.alma}/${max} · CA ${ca(p)} · Iniciativa ${fmt(iniMod(p))} · ${p.oro} po</p>
-        <div class="ed-stats">${Object.keys(STATS).map(k => `<div><b>${fmt(stat(p, k))}</b><span>${ABREV[k]}</span><small>${STATS[k]}</small></div>`).join("")}</div>
-      </div>
-    </div>
-    <dl class="habilidades">
-      <dt>Habilidad · ${cl.hab}</dt><dd>${cl.habDesc} ${usosHab(p)} uso${usosHab(p) === 1 ? "" : "s"} por combate.</dd>
-      <dt>Pasiva de clase · ${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd>
-      <dt>Pasiva de raza · ${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd>
-      <dt>Patrón</dt><dd>${cl.patron}. ${cl.desc}</dd>
-    </dl>
-    <h3>Equipo</h3><ul class="equipo">${equipo}</ul>`;
+  const rz = RAZAS[p.raza], cl = CLASES[p.clase], max = maxAlma(p), sig = NIVELES[p.nivel];
+  return `<div class="ficha"><canvas class="retrato-grande" data-tam="84" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
+    <div><h2>${esc(p.nombre)}</h2><p>${rz.nombre} · ${cl.nombre} · ${ALINEAMIENTOS[p.alin]}</p>
+    <p class="cifras">Nv ${p.nivel} · PX ${p.xp}${sig !== undefined ? `/${sig}` : ""} · PG ${p.alma}/${max} · CA ${ca(p)} · ${p.oro} po</p>
+    <p class="stats">${Object.keys(STATS).map(k => `<span><b>${fmt(stat(p, k))}</b>${ABREV[k]}</span>`).join("")}</p></div></div>
+    <dl class="habilidades"><dt>${cl.hab}</dt><dd>${cl.habDesc}</dd><dt>${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd><dt>${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd></dl>
+    <ul class="equipo">${Object.keys(RANURAS).map(k => `<li><span class="etiqueta">${RANURAS[k]}</span> ${p.equipo[k] ? OBJETOS[p.equipo[k]].nombre : "—"}</li>`).join("")}</ul>`;
 }
-function htmlZurron() {
-  const mio = puedoActuar() && !S.combate && !ocupado;
-  const filas = CONSUMIBLES.map(k => {
+function htmlMochila() {
+  const libre = turnoMio() && !S.combate && !ocupado && !esperandoHost;
+  return `<h2>Mochila</h2><ul class="mochila">${CONSUMIBLES.map(k => {
     const n = S.zurron[k];
-    let acciones = "";
-    if (mio && n > 0 && (k === "pocion" || k === "superior")) acciones = S.players.map((p, i) => p.alma < maxAlma(p) ? `<button type="button" class="boton sec mini" data-usar="${k}" data-en="${i}">${esc(p.nombre)}</button>` : "").join("");
-    if (k === "bendicion" && n > 0 && (puedoActuar())) acciones = `<button type="button" class="boton ${S.olivoActivo ? "" : "sec "}mini" data-acc="olivo" aria-pressed="${S.olivoActivo}">${S.olivoActivo ? "Preparada: +2" : "Usar en la próxima tirada"}</button>`;
-    return `<li><div><b>${OBJETOS[k].nombre} × ${n}</b><span>${OBJETOS[k].desc}</span></div><div class="zurron-acciones">${acciones}</div></li>`;
-  }).join("");
-  return `<h2>Mochila del grupo</h2>
-    <ul class="zurron">${filas}${S.anillo ? `<li><div><b>Anillo de invisibilidad</b><span>Una vez por combate: el enemigo pierde su turno.</span></div></li>` : ""}</ul>
-    ${S.combate ? `<p class="espera">En combate, los objetos se usan desde el menú «Objetos» en tu turno.</p>` : !puedoActuar() ? `<p class="espera">Solo puede usar objetos quien tiene el turno.</p>` : ""}
-    <h3>Bolsas</h3><ul class="bolsas">${S.players.map(p => `<li><b>${esc(p.nombre)}</b> ${p.oro} po</li>`).join("")}</ul>`;
+    let acc = "";
+    if (libre && n > 0 && (k === "pocion" || k === "superior")) acc = S.players.map((p, i) => p.alma < maxAlma(p) ? `<button type="button" class="boton sec mini" data-juego="usar" data-v="${k}:${i}">${esc(p.nombre)}</button>` : "").join("");
+    if (k === "bendicion" && n > 0 && turnoMio()) acc = `<button type="button" class="boton ${S.olivoActivo ? "" : "sec "}mini" data-juego="olivo">${S.olivoActivo ? "Preparada" : "Usar en la próxima tirada"}</button>`;
+    return `<li><div><b>${OBJETOS[k].nombre} ×${n}</b><span>${OBJETOS[k].desc}</span></div><div class="acciones-mochila">${acc}</div></li>`;
+  }).join("")}</ul>${S.anillo ? "<p>Anillo de invisibilidad: una vez por combate, el enemigo pierde su turno.</p>" : ""}`;
 }
-function htmlCodice(pestana, bestia) {
-  const pestanas = { mundo: "Mundo", lugares: "Lugares", bestiario: "Bestiario", razas: "Razas", clases: "Clases" };
-  const tabs = Object.keys(pestanas).map(k => `<button type="button" role="tab" data-pestana="${k}" aria-selected="${k === pestana}">${pestanas[k]}</button>`).join("");
+function htmlCompendio(pestana, k) {
+  const tabs = { bestiario: "Bestiario", mundo: "Mundo", razas: "Razas", clases: "Clases" };
   let cuerpo = "";
-  if (pestana === "mundo") cuerpo = LORE.mundo.map(x => `<article><h3>${x.titulo}</h3>${x.texto.map(t => `<p>${t}</p>`).join("")}</article>`).join("");
-  if (pestana === "lugares") cuerpo = Object.keys(LORE.lugares).map(k => {
-    const visto = S && S.vistos.lugares.includes(+k);
-    const l = LORE.lugares[k];
-    return `<article><h3>${ROMANOS[k]} · ${visto ? l.titulo : "???"}</h3>${visto ? l.texto.map(t => `<p>${t}</p>`).join("") : "<p class=\"espera\">Todavía no habéis llegado.</p>"}</article>`;
-  }).join("");
-  if (pestana === "bestiario") cuerpo = Object.keys(ENEMIGOS).map(k => {
-    const e = ENEMIGOS[k], visto = (S && S.vistos.bestias.includes(k)) || bestia === k;
-    if (!visto) return `<article class="bestia"><canvas class="mini oculto" data-rival="${tipoRival(k)}:${k}"></canvas><div><h3>???</h3><p class="espera">Todavía no os habéis cruzado con esta criatura.</p></div></article>`;
-    return `<article class="bestia${bestia === k ? " destacada" : ""}"><canvas class="mini" data-rival="enemigo:${k}"></canvas><div>
-      <h3>${e.nombre}</h3><p class="etiqueta">${e.tipo}, ${e.alin.toLowerCase()} · VD ${e.vd}</p>
-      <p class="bloque-stats">CA ${e.ca} · PG ${e.alma} · Ataque ${fmt(e.atk)} · ${e.ataques} ataque${e.ataques > 1 ? "s" : ""} de ${e.dano[0]}d${e.dano[1]}${e.dano[2] ? fmt(e.dano[2]) : ""}${e.resiste ? ` · Resiste ${TIPOS_DANO[e.resiste]}` : ""}${e.debil ? ` · Débil a ${TIPOS_DANO[e.debil]}` : ""}</p>
-      <p><b>${e.rasgoDesc}</b></p><p>${e.lore}</p></div></article>`;
-  }).join("");
-  if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(k => { const r = RAZAS[k]; return `<article><h3>${r.nombre}</h3><p>${r.lore}</p><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p class="etiqueta">${Object.keys(r.mods).map(s => `${ABREV[s]} ${fmt(r.mods[s])}`).join(" · ")}${r.alma ? ` · Alma +${r.alma}` : ""}</p></article>`; }).join("");
-  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(k => { const c = CLASES[k]; return `<article><h3>${c.nombre} <span class="etiqueta">(${c.rol})</span></h3><p>${c.desc} Patrón: ${c.patron}.</p><p><b>${c.hab}:</b> ${c.habDesc}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
-  return `<h2>Compendio de Valdren</h2><div class="pestanas" role="tablist">${tabs}</div><div class="codice">${cuerpo}</div>`;
+  if (pestana === "mundo") cuerpo = LORE.mundo.map(x => `<article><h3>${x.titulo}</h3>${x.texto.map(t => `<p>${t}</p>`).join("")}</article>`).join("")
+    + Object.keys(LORE.lugares).filter(i => S && S.vistos.lugares.includes(+i)).map(i => `<article><h3>${LORE.lugares[i].titulo}</h3><p>${LORE.lugares[i].texto[0]}</p></article>`).join("");
+  if (pestana === "bestiario") cuerpo = Object.keys(ENEMIGOS).filter(x => (S && S.vistos.bestias.includes(x)) || x === k).map(x => {
+    const e = ENEMIGOS[x];
+    return `<article class="bestia${x === k ? " destacada" : ""}"><canvas class="mini" data-tam="54" data-rival="enemigo:${x}"></canvas><div><h3>${e.nombre}</h3>
+      <p class="bloque-stats">${e.tipo} · VD ${e.vd} · CA ${e.ca} · PG ${e.alma}${e.resiste ? ` · resiste ${TIPOS_DANO[e.resiste]}` : ""}${e.debil ? ` · débil a ${TIPOS_DANO[e.debil]}` : ""}</p>
+      <p><b>${e.rasgoDesc}</b> ${e.lore}</p></div></article>`;
+  }).join("") || `<p class="espera">Aún no os habéis cruzado con ningún monstruo.</p>`;
+  if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(x => { const r = RAZAS[x]; return `<article><h3>${r.nombre}</h3><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p>${r.lore}</p></article>`; }).join("");
+  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p><b>${c.hab}:</b> ${c.habDesc}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
+  return `<h2>Compendio</h2><div class="pestanas">${Object.keys(tabs).map(t => `<button type="button" data-ui="pestana" data-p="${t}" aria-selected="${t === pestana}">${tabs[t]}</button>`).join("")}</div><div class="compendio">${cuerpo}</div>`;
+}
+function htmlAyuda() {
+  return `<h2>Cómo se juega</h2><ul class="ayuda">
+    <li><b>En línea:</b> uno crea la partida y pasa el código de 4 letras. Cada amigo abre este mismo juego en claude.ai con su cuenta, pulsa «Unirse» y lo escribe. El móvil del anfitrión lleva la partida: que no lo cierre.</li>
+    <li><b>Personaje:</b> 90 segundos para elegir clase, raza y aspecto. Al acabar el tiempo, empieza la aventura.</li>
+    <li><b>Mapa:</b> en cada acto elegís camino entre combates, sucesos, una tienda y una hoguera. Al final espera el jefe. Son 4 actos: bosque, mazmorra, castillo y volcán.</li>
+    <li><b>Tiradas:</b> d20 + atributo contra la CD (o la CA del enemigo). 20 es crítico y 1 es pifia.</li>
+    <li><b>Turnos:</b> decide quien tiene el marco dorado. En combate manda la iniciativa.</li>
+    <li><b>Si caéis todos,</b> volvéis al inicio del acto.</li></ul>`;
 }
 
-/* ---------- Eventos ---------- */
-const DE_TURNO = new Set(["continuar", "relato", "terminar-compras", "objetos", "volver-menu"]);
+/* ---------- Jugadas ---------- */
+function ejecutar(k, v) {
+  switch (k) {
+    case "nodo": return elegirNodo(+v);
+    case "op": return elegirOpcion(+v);
+    case "resp": return responder(+v);
+    case "final": return elegirFinal(v);
+    case "accion": return accion(v);
+    case "objeto": return accion("objeto", v);
+    case "comprar": return comprar(v);
+    case "terminar": return terminarCompras();
+    case "continuar": return continuar();
+    case "reintentar": return reintentar();
+    case "olivo": S.olivoActivo = !S.olivoActivo; guardar(); return render();
+    case "usar": { const [id, i] = String(v).split(":"); return usarFuera(id, +i); }
+  }
+}
+async function volverASeleccion() {
+  if (!esHost()) return;
+  try { await red.db.doc(`partidas/${red.mesa}`).update({ estado: "seleccion", juego: null, fin: Date.now() + SEGUNDOS * 1000 }); }
+  catch (e) { avisarError(e); }
+}
 document.addEventListener("click", ev => {
-  const b = ev.target.closest("button");
   if (ev.target.id === "capa") return cerrarModal();
+  const b = ev.target.closest("button");
   if (!b || b.disabled) return;
   const ds = b.dataset;
-  if (ds.modo) { borrador.modo = ds.modo; avisar(""); return render(); }
-  if (ds.sel !== undefined) { grupoEditor().sel = +ds.sel; return renderTaberna(); }
-  if (ds.quitar !== undefined) { const g = grupoEditor(); g.heroes.splice(+ds.quitar, 1); g.sel = Math.min(g.sel, g.heroes.length - 1); return renderTaberna(); }
-  if (ds.ed) return editar(ds.ed, ds.valor);
-  if (ds.unirse) return entrarMesa(ds.unirse);
-  if (ds.ficha !== undefined) return abrirModal({ tipo: "ficha", i: +ds.ficha });
-  if (ds.modal) return abrirModal({ tipo: ds.modal === "bestia" ? "codice" : ds.modal, pestana: ds.modal === "bestia" ? "bestiario" : null, bestia: ds.bestia });
-  if (ds.pestana) { modal.pestana = ds.pestana; modal.bestia = null; return renderModal(); }
-  if (ds.usar) { usarFuera(ds.usar, +ds.en); return renderModal(); }
-  if (ds.libre) {
-    if (ocupado) return;
-    const caras = +ds.libre, r = d(caras);
-    return tirarDado(r, caras, () => { mostrarTirada(`Tirada libre de d${caras}: ${r}`, undefined, false); if (S) { log(`Tirada libre de d${caras}: ${r}`); renderCronica(); } });
+  if (ds.juego) {
+    if (!S || ocupado || esperandoHost) return;
+    const k = ds.juego, v = ds.v;
+    if (k === "reintentar" ? S.online && !esHost() : !turnoMio()) return;
+    if (S.online && !esHost()) return enviarJugada(k, v);
+    return ejecutar(k, v);
   }
-  const juega = ds.op || ds.resp || ds.final || ds.accion || ds.objeto || ds.comprar || DE_TURNO.has(ds.acc);
-  if (S && juega && !puedoActuar()) return;
-  if (ds.op) return elegirOpcion(+ds.op);
-  if (ds.resp) return responder(+ds.resp);
-  if (ds.final) return elegirFinal(ds.final);
-  if (ds.accion) return accion(ds.accion);
-  if (ds.objeto) return accion("objeto", ds.objeto);
-  if (ds.comprar) return comprar(ds.comprar);
-  switch (ds.acc) {
-    case "continuar": return continuar();
-    case "relato": return continuarRelato();
-    case "terminar-compras": return terminarCompras();
+  switch (ds.ui) {
+    case "crear": return crearPartida();
+    case "ir-unirse": vista = "unirse"; return render();
+    case "volver-inicio": vista = "inicio"; return render();
+    case "local": sel.heroes = [heroeAlAzar(0)]; return empezarSeleccionLocal();
+    case "cargar": S = cargar(); vista = "juego"; return render();
+    case "sel-ant": return cambiarSeleccion(ds.c, -1);
+    case "sel-sig": return cambiarSeleccion(ds.c, 1);
+    case "sel-azar": { const h = heroeEditado(); const n = heroeAlAzar(Math.floor(Math.random() * 9)); Object.assign(h, { raza: n.raza, clase: n.clase, look: n.look }); if (sel.online) publicarPresencia(); return renderSeleccion(); }
+    case "sel-heroe": sel.actual = +ds.i; return renderSeleccion();
+    case "sel-anadir": sel.heroes.push(heroeAlAzar(sel.heroes.length)); sel.actual = sel.heroes.length - 1; return renderSeleccion();
+    case "sel-quitar": sel.heroes.splice(sel.actual, 1); sel.actual = Math.max(0, sel.actual - 1); return renderSeleccion();
+    case "sel-listo":
+      if (!sel.online) return comenzarLocal();
+      if (esHost()) return comenzarEnLinea();
+      sel.listo = !sel.listo; publicarPresencia(); return renderSeleccion();
+    case "sel-salir": if (sel.online) return salirPartida(); sel.fin = 0; vista = "inicio"; return render();
+    case "ficha": return abrirModal({ tipo: "ficha", i: +ds.i });
+    case "mochila": return abrirModal({ tipo: "mochila" });
+    case "menu": return abrirModal({ tipo: "menu" });
+    case "modal": return abrirModal({ tipo: ds.m });
+    case "bestia": return abrirModal({ tipo: "compendio", pestana: "bestiario", k: ds.k });
+    case "pestana": modal.pestana = ds.p; return renderModal();
+    case "cronica": return abrirModal({ tipo: "cronica" });
     case "objetos": submenu = "objetos"; return renderEscena();
     case "volver-menu": submenu = null; return renderEscena();
-    case "olivo": if (puedoActuar()) { S.olivoActivo = !S.olivoActivo; guardar(); render(); } return;
-    case "reencarnar": return esAnfitrion() && reencarnar();
-    case "confirmar": confirmando = true; return renderHerramientas();
-    case "cancelar": confirmando = false; return renderHerramientas();
-    case "reiniciar": confirmando = false; S = null; borrar(); pantalla = ""; cerrarModal(); return render();
-    case "cargar": S = cargar(); return arrancar();
-    case "anadir": { const g = grupoEditor(); g.heroes.push(heroeAlAzar(g.heroes.length)); g.sel = g.heroes.length - 1; return renderTaberna(); }
-    case "nombre-azar": { const g = grupoEditor(); g.heroes[g.sel].nombre = azarDe(NOMBRES); return renderTaberna(); }
-    case "comenzar-local": return nuevaPartida(borrador.local.heroes);
-    case "crear": return crearMesa();
-    case "sentarse": return sentarse();
-    case "comenzar-online": return comenzarEnLinea();
-    case "salir": confirmando = false; cerrarModal(); return salirMesa();
-    case "volver-sala": return volverASala();
-    case "cerrar-modal": return cerrarModal();
-    case "ver-cronica": return abrirModal({ tipo: "cronica" });
+    case "cerrar": return cerrarModal();
+    case "salir": cerrarModal(); return salirPartida();
+    case "abandonar": cerrarModal(); S = null; vista = "inicio"; return render();
+    case "otra": if (S && S.online) return volverASeleccion(); escribir(CLAVE, null); S = null; return empezarSeleccionLocal();
   }
 });
 document.addEventListener("input", ev => {
-  if (ev.target.id !== "ed-nombre") return;
-  const g = grupoEditor();
-  g.heroes[g.sel].nombre = ev.target.value;
-  const fila = document.querySelector(`.plantel-heroe[data-sel="${g.sel}"] strong`);
-  if (fila) fila.textContent = ev.target.value || "Sin nombre";
+  if (ev.target.id !== "sel-nombre") return;
+  heroeEditado().nombre = ev.target.value.slice(0, 16);
+  clearTimeout(document.nombreT);
+  document.nombreT = setTimeout(() => { if (sel.online) publicarPresencia(); renderSeleccion(); }, 400);
 });
 document.addEventListener("submit", ev => {
   ev.preventDefault();
   if (ev.target.id === "form-unirse") {
     const c = ($("#codigo-mesa").value || "").trim().toUpperCase();
     if (!/^[A-Z]{4}$/.test(c)) return avisar("El código tiene 4 letras, por ejemplo KRTO.");
-    return entrarMesa(c);
+    return entrarPartida(c);
   }
 });
-document.addEventListener("keydown", ev => {
-  if (ev.key === "Escape" && modal) return cerrarModal();
-  if (!S || modal || ocupado || ev.target.closest("input, textarea")) return;
-  if (/^[1-9]$/.test(ev.key)) {
-    const botones = $$("#escena .menu button:not([disabled])");
-    const b = botones[+ev.key - 1];
-    if (b) { ev.preventDefault(); b.click(); }
-  } else if (ev.key === "Enter" && !ev.target.closest("button")) {
-    const b = $("#escena .pie-escena .boton:not([disabled])");
-    if (b) { ev.preventDefault(); b.click(); }
-  }
-});
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
+window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-function arrancar() {
-  if (S && S.combate) {
-    S.combate.enemigoActua = false;
-    if (S.combate.orden[S.combate.pos].t === "e") { pantalla = ""; render(); return turnoEnemigo(); }
-  }
-  pantalla = ""; render();
-}
+if (location.hash === "#prueba") window.__dym = { estado: () => S };
 render();
 conectar();
 })();

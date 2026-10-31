@@ -390,6 +390,116 @@ const { MONSTRUOS, PNJ } = (() => {
     return g.contorno();
   }
 
+  function lobo() {
+    const g = new Rejilla(), G = R.piel.gris, P = R.piedra;
+    new Capa().curva(28, 22, 34, 22, 34, 29, 3.5, 2).pintar(g, G, { relieve: 2, max: 3 });
+    new Capa().linea(26, 27, 28, 33, 2).rect(26, 33, 4, 2).linea(16, 27, 15, 33, 2).rect(13, 33, 4, 2).pintar(g, G, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(20, 24.5, 9, 5).ell(13, 23, 4.5, 5);
+    for (const i of [14, 17, 20, 23, 26]) cuerpo.poly([[i - 1.5, 21], [i + 1, 17.5], [i + 1.5, 21]]);
+    cuerpo.pintar(g, G, { relieve: 3.5, separar: true });
+    for (const [i, j] of [[16, 22], [20, 21], [24, 22], [19, 25], [23, 26], [14, 26]]) pon(g, G, 1, [i, j], [i + 1, j + 1]);
+    new Capa().linea(23, 27, 25, 33, 2).rect(23, 33, 4, 2).linea(12, 27, 10, 33, 2).rect(7, 33, 4, 2).pintar(g, G, { relieve: 1.5, separar: true });
+    pon(g, HUESO, 4, [7, 34], [9, 34], [23, 34]);
+    const cab = new Capa().ell(9, 20.5, 4, 3.5).poly([[7, 19], [1.5, 21.5], [2, 23.5], [8, 24]]).poly([[9, 18], [10, 13.5], [12.5, 18]]).poly([[6, 18.5], [6, 14.5], [8.5, 18]]);
+    cab.pintar(g, G, { relieve: 3, separar: true });
+    pon(g, G, 1, [10, 16], [7, 16]);
+    pon(g, P, 0, [2, 23], [3, 23], [4, 23], [5, 23], [6, 23], [1, 21]);
+    pon(g, HUESO, 4, [3, 22], [5, 22], [4, 24]);
+    pon(g, R.sangre, 2, [3, 24], [5, 24]);
+    pon(g, R.bronce, 4, [6, 19]);
+    pon(g, NEGRO, 0, [7, 19], [5, 18], [6, 18], [7, 18]);
+    pon(g, G, 1, [3, 20], [4, 20], [5, 20]);
+    return g.contorno();
+  }
+
+  function armadura() {
+    const t = HEROES.plantilla("normal"), piel = R.piel.clara, F = R.hierro;
+    const g = HEROES.componer({ raza: "humano", clase: "guerrero", piel: "clara", tela: "negro", objeto: "ninguno", sinContorno: true });
+    const x = t.cabX, y = t.ojoY, [mx, my] = t.mano;
+    for (let j = 0; j < 36; j++) for (let i = 0; i < 36; i++) {
+      if (g.rampa(i, j) !== piel && g.get(i, j) !== "#1b1210" && g.get(i, j) !== "#f4ead8") continue;
+      if (j >= y - 1 && j <= y + 3 && i >= x - 1 && i <= x + 6) g.set(i, j, R.tela.negro[0], R.tela.negro);
+      else if (g.rampa(i, j) === piel) g.set(i, j, F[Math.max(1, piel.indexOf(g.get(i, j)))], F);
+    }
+    pon(g, R.mar, 4, [x + 2, y], [x + 5, y]);
+    pon(g, R.mar, 2, [x + 2, y + 1], [x + 5, y + 1], [x + 1, y]);
+    for (const [i, j] of [[t.torL + 2, t.torTop + 3], [t.torR - 1, t.torTop + 6], [x - 3, y - 3], [x + 1, t.cabY - 4], [t.cx - 3, t.pierTop + 4], [t.cx + 3, t.suelo - 4], [t.torL, t.torBot]]) pon(g, R.oricalco, 1, [i, j], [i + 1, j]);
+    new Capa().rect(mx, my - 16, 2, 15).poly([[mx, my - 16], [mx + 1, my - 18.5], [mx + 2, my - 16]]).pintar(g, R.plata, { relieve: 1, min: 2 });
+    pon(g, R.plata, 4, [mx, my - 15], [mx, my - 12], [mx, my - 9]);
+    new Capa().rect(mx - 2, my - 1, 6, 1).pintar(g, F, { plano: 3 });
+    pon(g, R.madera, 2, [mx, my + 1], [mx + 1, my + 1], [mx, my + 2], [mx + 1, my + 2]);
+    pon(g, F, 4, [mx, my + 3], [mx + 1, my + 3]);
+    brazoDelante(g, t, F);
+    g.contorno();
+    return g.espejo();
+  }
+
+  function vampiro() {
+    const t = HEROES.plantilla("normal");
+    const g = HEROES.componer({ raza: "humano", clase: LLANO, piel: "plata", pelo: "negro", peinado: "corto", tela: "negro", objeto: "ninguno", sinContorno: true, extras: [(g, t, { piel, pelo, tela }) => {
+      for (let j = 0; j < 36; j++) for (let i = 0; i < 36; i++) if (g.rampa(i, j) === pelo) pon(g, pelo, Math.min(2, pelo.indexOf(g.get(i, j))), [i, j]);
+      faldaLarga(g, t, tela);
+      for (let i = t.cx - 1; i <= t.cx + 2; i++) for (let j = t.torTop; j <= t.torTop + 3; j++) if (g.rampa(i, j) === tela) pon(g, HUESO, j === t.torTop ? 4 : 3, [i, j]);
+      pon(g, R.sangre, 3, [t.cx, t.torTop + 2], [t.cx + 1, t.torTop + 2]);
+      const x = t.cabX, y = t.ojoY;
+      pon(g, R.sangre, 4, [x + 1, y], [x + 4, y]);
+      pon(g, R.sangre, 2, [x + 1, y + 1], [x + 4, y + 1]);
+      pon(g, NEGRO, 1, [x + 1, y - 1], [x + 2, y - 1], [x + 4, y - 1], [x + 5, y - 1], [x, y - 1]);
+      pon(g, piel, 0, [x + 3, y + 3], [x + 4, y + 3]);
+      pon(g, HUESO, 4, [x + 3, y + 4], [x + 5, y + 4]);
+      pon(g, NEGRO, 3, [x - 2, t.cabY - 4], [x + 1, t.cabY - 4]);
+    }] });
+    const N = R.tela.negro, S = R.sangre;
+    const ala = new Capa().poly([[t.torL + 2, t.torTop], [3, 9], [1.5, 22], [4, 33], [t.torL, 33]]).poly([[t.torR - 2, t.torTop], [32, 9], [33.5, 22], [31, 33], [t.torR, 33]]);
+    for (const [i, j] of [[2.5, 15], [2.5, 27], [33, 15], [32.5, 27]]) ala.quitarEll(i + (i < 18 ? -1.5 : 1.5), j, 2.2, 3);
+    const forro = ala.copia();
+    for (let j = 0; j < 36; j++) for (let i = 0; i < 36; i++) if (!ala.tiene(i - 1, j) || !ala.tiene(i + 1, j) || !ala.tiene(i, j - 1)) forro.off(i, j);
+    detras(g, new Capa().poly([[t.cabX - 7, t.torTop - 8], [t.cabX - 3, t.torTop], [t.cabX + 3, t.torTop], [t.cabX + 7, t.torTop - 8], [t.cabX + 4, t.torTop + 2], [t.cabX - 4, t.torTop + 2]]), S, { relieve: 1.5, separar: true });
+    detras(g, ala, N, { relieve: 2, separar: true });
+    for (let j = 0; j < 36; j++) for (let i = 0; i < 36; i++) if (!ala.tiene(i, j)) forro.off(i, j);
+    forro.pintar(g, S, { relieve: 2.5, max: 3 });
+    bordeLuz(g, N);
+    g.contorno();
+    return g.espejo();
+  }
+
+  function kobold() {
+    const t = HEROES.plantilla("bajo");
+    const g = HEROES.componer({ raza: "draconido", clase: LLANO, cuerpo: "bajo", piel: "roja", tela: "terracota", objeto: "ninguno", sinContorno: true, extras: [(g, t, { piel }) => {
+      const [mx, my] = t.mano, [ax, ay] = t.manoAtras;
+      for (let i = t.torL; i <= t.torR; i++) pon(g, R.madera, 2, [i, t.torBot - 2]);
+      detras(g, new Capa().ell(ax - 1, ay + 1, 3, 3.2), R.madera, { relieve: 1.5, separar: true });
+      new Capa().rect(mx, 9, 1, t.suelo - 9).pintar(g, R.madera, { plano: 2 });
+      new Capa().poly([[mx - 1.5, 9.5], [mx + 0.5, 4.5], [mx + 2.5, 9.5]]).pintar(g, R.hierro, { relieve: 1, min: 2 });
+      pon(g, R.tela.granate, 3, [mx - 1, 10], [mx + 1, 11]);
+      brazoDelante(g, t, piel);
+      pon(g, HUESO, 4, [t.cabX + 2, t.cabY - 1]);
+    }] });
+    const [ax, ay] = t.manoAtras;
+    pon(g, R.hierro, 3, [ax - 1, ay + 1]);
+    g.contorno();
+    for (const [i, j] of [[t.cabX + 5, t.cabY - 5], [t.cabX + 6, t.cabY - 4]]) if (!g.get(i, j)) pon(g, R.mar, 4, [i, j]);
+    return g.espejo();
+  }
+
+  function elemental() {
+    const g = new Rejilla(), F = R.fuego;
+    const llamas = (c, puntas) => { puntas.forEach(([x, y, h, a = 1.4]) => c.poly([[x - a, y], [x + 0.5, y - h], [x + a, y]])); return c; };
+    const cuerpo = new Capa().ell(18, 9, 4, 4.2).ell(18.5, 18, 6, 6).poly([[13, 21], [24, 21], [21, 28], [19, 31], [17, 28]]);
+    llamas(cuerpo, [[15, 7, 4], [18, 6, 5.5], [21, 7, 4.5], [13.5, 15, 3], [23.5, 14, 3.5], [16, 28, 3, 1], [22, 26, 3, 1]]);
+    const brazos = new Capa().linea(14, 15, 9, 18, 3).linea(9, 18, 5, 14, 2).linea(23, 15, 27, 19, 3).linea(27, 19, 29, 24, 2);
+    llamas(brazos, [[5, 13, 3, 1], [7, 15.5, 3, 1], [29, 23, 3, 1]]);
+    brazos.pintar(g, F, { relieve: 1.5, min: 1, max: 3 });
+    cuerpo.pintar(g, F, { relieve: 3, separar: true });
+    new Capa().ell(18.5, 18, 3, 3.5).ell(18, 10, 2, 2).pintar(g, F, { relieve: 1.5, min: 3 });
+    pon(g, HUESO, 4, [18, 17], [19, 18], [18, 19], [17, 10]);
+    pon(g, F, 0, [15, 9], [16, 9], [19, 9], [20, 9]);
+    pon(g, R.sangre, 1, [16, 12], [17, 12], [18, 12]);
+    g.contorno(F[0]);
+    for (const [i, j, k] of [[10, 8, 4], [26, 9, 3], [12, 26, 3], [25, 30, 4], [8, 24, 2], [30, 14, 4]]) if (!g.get(i, j)) pon(g, F, k, [i, j]);
+    return g;
+  }
+
   /* ---------- Personajes no jugadores ---------- */
   /* PNJ con cuerpo de héroe, mirando a la izquierda. «encima» pinta antes del contorno y «brillo» después
      (destellos sin borde). Las dos reciben las coordenadas del héroe, que mira a la derecha. */
@@ -550,7 +660,7 @@ const { MONSTRUOS, PNJ } = (() => {
   };
 
   return {
-    MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon },
+    MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon, lobo, armadura, vampiro, kobold, elemental },
     PNJ: PNJS
   };
 })();

@@ -1655,6 +1655,200 @@ const FONDOS = (() => {
     });
   }
 
+  /* ---------- El patio del castillo, de noche ---------- */
+  const NOCHE = [SO[0], SO[1], AZ[0], SO[2], AZ[1], MA[1]];
+  const LUNA = [158, 19];
+  const ANTORCHAS_CASTILLO = [[64, 49], [128, 49]];
+  const ESTANDARTES = [[38, 43, 24], [148, 43, 24]];
+  const luzCastillo = (x, y) => lim(ANTORCHAS_CASTILLO.reduce((v, [tx, ty]) => v + Math.max(0, 1 - Math.hypot((x - tx) / 40, (y - ty) / 34)) ** 1.5, 0));
+  /* Torre con tejado cónico de pizarra y ventanas encendidas; el lado derecho recibe la luna. */
+  function torre(g, x, y, w, base, techo) {
+    for (let j = y; j < base; j++) for (let i = 0; i < w; i++) g.set(x + i, j, GRIS[i > w - 3 ? 2 : i === 0 ? 0 : 1]);
+    const c = capa().poly([[x - 2, y + 1], [x + w / 2, y - techo], [x + w + 1, y + 1]]);
+    cada(c, (px, py) => g.set(px, py, px > x + w / 2 ? GRIS[2] : SO[1]));
+    for (let i = -1; i <= w; i += 2) g.set(x + i, y + 1, GRIS[2]);
+    for (let j = y + 5; j < base - 4; j += 9) for (let i = 3; i + 2 < w; i += 6) if (hash(x + i, j) > 0.35) {
+      g.set(x + i, j, OC[4]).set(x + i + 1, j, F[3]).set(x + i, j + 1, F[3]).set(x + i + 1, j + 1, F[2]).set(x + i, j - 1, GRIS[0]).set(x + i + 1, j - 1, GRIS[0]);
+    }
+  }
+  function antorcha(g, x, y) {
+    capa().rect(x - 1, y + 2, 3, 2).pintar(g, HI, { plano: 2 });
+    capa().linea(x, y + 4, x + 2, y + 8, 1).pintar(g, HI, { plano: 1 });
+    capa().rect(x - 1, y - 1, 3, 3).pintar(g, M, { relieve: 1, max: 2 });
+    g.set(x, y - 2, F[3]).set(x, y - 3, F[4]);
+  }
+  function castillo(g) {
+    const [lx, ly] = LUNA;
+    rellenar(g, 0, 0, W, 60, NOCHE, (x, y) => (y / 60) * 3.4 + Math.max(0, 1 - Math.hypot(x - lx, y - ly) / 42) * 1.8, 0.5);
+    for (let i = 0; i < 46; i++) {
+      const x = Math.floor(hash(i, 1, 9) * W), y = Math.floor(hash(i, 2, 9) * 40);
+      if (Math.hypot(x - lx, y - ly) > 16) g.set(x, y, hash(i, 3, 9) > 0.7 ? HU[4] : HU[2]);
+    }
+    capa().ell(lx, ly, 9, 9).pintar(g, [HU[4]], { plano: 0 });
+    for (const [cx, cy, r] of [[155, 16, 2], [161, 22, 2.5], [154, 23, 1.2], [160, 14, 1]]) capa().ell(cx, cy, r, r).pintar(g, [HU[3]], { plano: 0 });
+    for (let a = -0.6; a < 1.9; a += 0.05) g.set(Math.round(lx + Math.cos(a) * 9), Math.round(ly + Math.sin(a) * 9), HU[3]);
+    // torres y torreón al fondo, recortados contra el cielo
+    torre(g, 6, 18, 16, 44, 16);
+    torre(g, 44, 28, 11, 44, 10);
+    torre(g, 82, 14, 28, 44, 12);
+    torre(g, 136, 26, 12, 44, 10);
+    torre(g, 172, 16, 16, 44, 15);
+    for (let i = 0; i < 6; i++) g.set(96, 1 + i, GRIS[1]);
+    // muralla con almenas
+    for (let x = 0; x < W; x += 8) for (let j = 33; j < 38; j++) for (let i = 0; i < 5; i++) g.set(x + i, j, GRIS[i === 4 ? 1 : 2]);
+    sillares(g, 0, 38, W, [6, 6, 6, 6, 5, 5], GRIS, (x, y) => 1.4 + luzCastillo(x, y) * 1.8 + (x > 120 ? 0.2 : 0), { sem: 61, ancho: 12, bisel: 0.6, junta: 1.3, vari: 0.5 });
+    for (let x = 0; x < W; x++) if (luzCastillo(x, 50) > 0.35 && umbral(x, 40) < luzCastillo(x, 50) - 0.3) g.set(x, 39, TE[1]);
+    // la puerta con el rastrillo a medio subir
+    capa().rect(76, 40, 40, 32).pintar(g, GRIS, { relieve: 2, max: 3, sesgo: -0.05, separar: 1 });
+    for (let x = 76; x < 116; x += 8) for (let j = 35; j < 40; j++) for (let i = 0; i < 5; i++) g.set(x + i, j, GRIS[i === 4 ? 1 : 3]);
+    const arco = capa().rect(84, 52, 24, 20).ell(96, 52, 12, 9);
+    cada(arco, (x, y) => g.set(x, y, y > 66 ? GRIS[0] : SO[0]));
+    cada(arco, (x, y) => { if (y < 62 && ((x - 84) % 4 === 0 || (y - 43) % 4 === 0)) g.set(x, y, (x - 84) % 4 === 0 ? HI[2] : HI[1]); });
+    for (let x = 84; x < 108; x += 4) g.set(x, 62, HI[3]).set(x, 63, HI[2]);
+    for (let a = Math.PI; a <= 2 * Math.PI; a += 0.04) g.set(Math.round(96 + Math.cos(a) * 13), Math.round(52 + Math.sin(a) * 10), GRIS[3]);
+    // estandartes del señor del castillo
+    for (const [x, y, largo] of ESTANDARTES) {
+      for (let j = 0; j < largo - 3; j++) for (let i = 0; i < 10; i++) {
+        const borde = i === 0 || i === 9;
+        g.set(x + i, y + j, borde ? B[2] : GR[i < 3 ? 3 : i > 7 ? 1 : 2]);
+      }
+      for (let i = -1; i < 11; i++) g.set(x + i, y - 1, M[1]);
+      plantilla(g, ["b  b", "bbbb", " bb ", "b  b"], x + 3, y + 7, { b: SO[0] });
+    }
+    for (const [x, y] of ANTORCHAS_CASTILLO) antorcha(g, x, y);
+    // adoquines del patio
+    adoquines(g, 72, 96, -70, 6.5, GRIS, (x, y) => 1.7 + luzCastillo(x, y - 20) * 1.4, GRIS[0]);
+    for (let x = 0; x < W; x++) g.set(x, 72, GRIS[0]);
+  }
+  function castilloAnim(ctx, t) {
+    ANTORCHAS_CASTILLO.forEach(([x, y], i) => { lengua(ctx, x, y - 1, 4, 8, t, i * 2.3); chispas(ctx, x, y - 6, 2, 12, t, i * 0.4); });
+    // las colas de los estandartes ondean
+    ESTANDARTES.forEach(([x, y, largo], k) => {
+      for (let j = 0; j < 3; j++) {
+        const d = Math.round(Math.sin(t / 320 + k + j * 0.6) * (j + 1) * 0.5), yy = y + largo - 3 + j;
+        ctx.fillStyle = B[2]; ctx.fillRect(x + d, yy, 1, 1); ctx.fillRect(x + 9 + d, yy, 1, 1);
+        ctx.fillStyle = GR[2]; ctx.fillRect(x + 1 + d + (j === 2 ? 2 : 0), yy, j === 2 ? 4 : 8, 1);
+      }
+    });
+    // un murciélago cruza delante de la luna de vez en cuando
+    const p = (t / 1000) % 9;
+    if (p < 3.2) {
+      const x = Math.round(196 - p * 64), y = Math.round(26 + Math.sin(p * 4) * 4), ala = Math.floor(t / 110) % 2;
+      ctx.fillStyle = SO[0];
+      ctx.fillRect(x, y, 2, 2);
+      ctx.fillRect(x - 2, y - ala, 2, 1); ctx.fillRect(x + 2, y - ala, 2, 1);
+      ctx.fillRect(x - 3, y + 1 - ala * 2, 1, 1); ctx.fillRect(x + 4, y + 1 - ala * 2, 1, 1);
+    }
+  }
+
+  /* ---------- La sala del trono del señor vampiro ---------- */
+  const HACES_TRONO = [[30, 26, 0.55, 1, 9], [162, 26, -0.55, 1, 9]];
+  const VELAS_TRONO = [];
+  const LUCES_TRONO = [[68, 36], [124, 36], [96, 56]];
+  const luzTrono = (x, y) => lim(LUCES_TRONO.reduce((v, [lx, ly]) => v + Math.max(0, 1 - Math.hypot((x - lx) / 34, (y - ly) / 30)) ** 1.6 * 0.8, 0));
+  function hazLuna(x, y) {
+    let v = 0;
+    for (const [x0, y0, dx, dy, w] of HACES_TRONO) {
+      const l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, rx = x - x0, ry = y - y0, a = rx * ux + ry * uy;
+      if (a < 0) continue;
+      v = Math.max(v, Math.max(0, 1 - Math.abs(rx * uy - ry * ux) / (w + a * 0.12)) * Math.max(0, 1 - a / 110));
+    }
+    return v;
+  }
+  /* Vidriera apuntada: plomos oscuros y vidrios de colores bañados por la luna. */
+  function vidriera(g, cx, y0, ancho, alto) {
+    const c = capa().rect(cx - ancho, y0 + ancho, ancho * 2 + 1, alto - ancho).ell(cx, y0 + ancho, ancho, ancho * 1.3);
+    const cols = [GR[3], AZ[3], MG[3], OC[3], AZ[4], GR[4]];
+    cada(c, (x, y) => {
+      const plomo = (x - cx + y) % 5 === 0 || (cx - x + y) % 5 === 0;
+      g.set(x, y, plomo ? NE[0] : cols[Math.floor(hash(Math.floor((x - cx + y) / 5), Math.floor((cx - x + y) / 5), cx) * cols.length)]);
+    });
+    cada(c, (x, y) => { if (!c.tiene(x - 1, y) || !c.tiene(x + 1, y) || !c.tiene(x, y - 1)) g.set(x, y, GRIS[3]); });
+    for (let y = y0 + ancho; y < y0 + alto; y++) g.set(cx, y, NE[0]);
+  }
+  function trono(g) {
+    VELAS_TRONO.length = 0;
+    g.rect(0, 0, W, H, GRIS[0]);
+    sillares(g, 0, 0, W, [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6], GRIS, (x, y) => 0.6 + luzTrono(x, y) * 2.2 + hazLuna(x, y) * 1.4, { sem: 71, ancho: 11, bisel: 0.5, junta: 1.2, vari: 0.4 });
+    vidriera(g, 30, 8, 7, 34);
+    vidriera(g, 162, 8, 7, 34);
+    // rosetón tras el trono
+    for (let y = 6; y < 34; y++) for (let x = 82; x < 111; x++) {
+      const d = Math.hypot(x - 96, y - 20), a = Math.atan2(y - 20, x - 96);
+      if (d > 13) continue;
+      g.set(x, y, d > 12 ? GRIS[3] : d < 3 ? GR[4] : Math.abs(Math.sin(a * 4)) < 0.16 || Math.abs(d - 7) < 0.5 ? NE[0] : d < 7 ? MG[3] : GR[3]);
+    }
+    // pilares góticos con capiteles
+    for (const x of [0, 54, 130, 184]) {
+      capa().rect(x, 0, 8, 72).pintar(g, GRIS, { relieve: 2.5, max: 3, sesgo: -0.1, separar: 1 });
+      for (const y of [10, 66]) capa().rect(x - 1, y, 10, 3).pintar(g, GRIS, { relieve: 1, max: 4, separar: 1 });
+    }
+    // estandartes raídos
+    for (const x of [16, 170]) {
+      for (let y = 0; y < 40; y++) for (let i = 0; i < 8; i++) {
+        const corte = y > 30 + hash(x + i, 1) * 9, roto = hash(x + i, y >> 2) > 0.92 && y > 12;
+        if (!corte && !roto) g.set(x + i, y, i === 0 ? GR[3] : i === 7 ? GR[0] : GR[1 + ((i + (y >> 3)) % 2)]);
+      }
+      plantilla(g, ["b  b", "bbbb", " bb ", "b  b"], x + 2, 12, { b: SO[0] });
+    }
+    // estrado con escalones y el trono
+    for (let k = 0; k < 3; k++) {
+      const x0 = 70 + k * 6, x1 = 122 - k * 6, y = 68 - k * 4;
+      for (let x = x0; x < x1; x++) { g.set(x, y, GRIS[3]); for (let j = y + 1; j < y + 4; j++) g.set(x, j, GRIS[j === y + 3 ? 0 : 1]); }
+    }
+    conBorde(g, NE[0], tmp => {
+      const resp = capa().rect(87, 26, 18, 32);
+      for (const [x, h] of [[87, 6], [93, 9], [96, 12], [99, 9], [104, 6]]) resp.poly([[x - 1.5, 26], [x, 26 - h], [x + 1.5, 26]]);
+      resp.pintar(tmp, NE, { relieve: 2, max: 3 });
+      capa().rect(90, 30, 12, 22).pintar(tmp, GR, { relieve: 2, max: 3, sesgo: -0.1 });
+      capa().rect(84, 46, 24, 4).rect(84, 50, 4, 8).rect(104, 50, 4, 8).pintar(tmp, NE, { relieve: 1.5, max: 3 });
+      capa().rect(88, 46, 16, 3).pintar(tmp, GR, { relieve: 1, max: 4 });
+      for (const [x, y] of [[96, 14], [87, 20], [105, 20], [84, 46], [107, 46]]) tmp.set(x, y, B[3], B);
+      tmp.set(96, 33, B[4], B).set(95, 34, B[2], B).set(97, 34, B[2], B);
+    });
+    // candelabros de hierro a los lados del estrado
+    for (const x of [68, 124]) {
+      capa().rect(x, 40, 1, 31).pintar(g, HI, { plano: 2 });
+      capa().linea(x, 66, x - 4, 71, 1).linea(x, 66, x + 4, 71, 1).rect(x - 5, 40, 11, 1).rect(x - 5, 38, 1, 2).rect(x + 5, 38, 1, 2).pintar(g, HI, { plano: 1 });
+      for (const dx of [-5, 0, 5]) { vela(g, x + dx, dx ? 37 : 39, dx ? 3 : 4); VELAS_TRONO.push([x + dx, dx ? 33 : 34]); }
+    }
+    for (const x of [74, 118]) { vela(g, x, 67, 3, true); VELAS_TRONO.push([x, 63]); }
+    // suelo de losas y la alfombra roja hasta el estrado
+    losas(g, 73, [3, 4, 5, 6, 8, 10], 20, 96, -60, GRIS, (x, y) => 1.4 + luzTrono(x, 66) * 1.2, 77, GRIS[0]);
+    for (let y = 72; y < H; y++) {
+      const t = (y - 72) / 36, a = 96 - (12 + t * 22), b = 96 + (12 + t * 22);
+      for (let x = Math.round(a); x <= Math.round(b); x++) {
+        const orla = x - a < 2 || b - x < 2, dibujo = !orla && Math.abs(x - 96) < 4 + t * 6 && (y % 6 === 0);
+        g.set(x, y, orla ? B[x - a < 1 || b - x < 1 ? 1 : 2] : dibujo ? GR[3] : GR[tono(x, y, 1.6 + luzTrono(x, 66) * 0.8, 0.3) > 1 ? 2 : 1]);
+      }
+    }
+    for (let x = 0; x < W; x++) g.set(x, 72, GRIS[0]);
+    // haces de luna que caen desde las vidrieras sobre la piedra
+    for (let y = 30; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = hazLuna(x, y), k = GRIS.indexOf(g.get(x, y));
+      if (k >= 0 && v > 0.1 && umbral(x, y) < v * 0.8) g.set(x, y, k < 2 ? AZ[1] : AZ[2]);
+    }
+    telarana(g, 8, 0, 12, 1, 1);
+    telarana(g, 183, 0, 12, -1, 1);
+  }
+  function tronoAnim(ctx, t) {
+    if (!VELAS_TRONO.length) trono(new Rejilla(W, H));
+    VELAS_TRONO.forEach(([x, y], i) => llamaVela(ctx, x, y, t, i * 1.7));
+    // la luz de la luna tiembla: motas que brillan en los haces y destellos en los vidrios
+    for (let i = 0; i < 18; i++) {
+      const f = (t / 1000) * (0.2 + hash(i, 5) * 0.3) + hash(i, 6) * 6.28;
+      const lado = i % 2, [x0, y0, dx] = HACES_TRONO[lado], a = 10 + hash(i, 7) * 70;
+      const x = Math.round(x0 + dx * a * 0.85 + Math.sin(f) * 3), y = Math.round(y0 + a * 0.85 + Math.sin(f * 0.7) * 2);
+      if (Math.sin(f * 1.3) < 0.2 || hazLuna(x, y) < 0.25) continue;
+      ctx.fillStyle = Math.sin(f * 1.3) > 0.7 ? AZ[4] : GRIS[4]; ctx.fillRect(x, y, 1, 1);
+    }
+    for (let i = 0; i < 4; i++) {
+      if (Math.sin(t / 700 + i * 1.9) < 0.75) continue;
+      const cx = i < 2 ? 30 : 162, x = cx - 4 + Math.floor(hash(i, Math.floor(t / 700), 2) * 9), y = 18 + Math.floor(hash(i, Math.floor(t / 700), 3) * 20);
+      ctx.fillStyle = HU[4]; ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
   return {
     taberna: { base: taberna, anim: tabernaAnim },
     sotano: { base: sotano, anim: sotanoAnim },
@@ -1666,6 +1860,8 @@ const FONDOS = (() => {
     mina: { base: mina, anim: minaAnim },
     forja: { base: forja, anim: forjaAnim },
     pico: { base: pico, anim: picoAnim },
-    guarida: { base: guarida, anim: guaridaAnim }
+    guarida: { base: guarida, anim: guaridaAnim },
+    castillo: { base: castillo, anim: castilloAnim },
+    trono: { base: trono, anim: tronoAnim }
   };
 })();

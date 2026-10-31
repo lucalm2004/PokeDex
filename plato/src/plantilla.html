@@ -7,54 +7,86 @@
 /*CSS*/
 </style>
 <!--CUERPO-->
-<section id="taberna" class="taberna" hidden>
+<main class="app">
+<section id="p-inicio" class="pantalla inicio" hidden>
   <header class="portada">
     <h1 class="logo">Dados <span>y</span> Mazmorras</h1>
-    <p class="lema">Rol de espada y brujería · de 1 a 6 jugadores</p>
+    <p class="lema">Rol de espada y brujería · de 1 a 4 héroes</p>
   </header>
-  <div class="escenario escenario-taberna" id="caja-taberna"><canvas id="lienzo-taberna" aria-label="La taberna del Grifo Tuerto con vuestro grupo"></canvas></div>
-  <div class="modos" id="modos" role="tablist" aria-label="Cómo vais a jugar"></div>
-  <div id="taberna-cuerpo"></div>
+  <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="La taberna del Grifo Tuerto"></canvas></div>
+  <p class="intro">Bosque, mazmorra, castillo y volcán. Cuatro jefes os esperan entre vosotros y el tesoro del dragón.</p>
+  <div class="botones-inicio" id="inicio-botones"></div>
 </section>
 
-<section id="juego" class="juego" hidden>
-  <header class="barra">
-    <p class="logo-mini">Dados <span>y</span> Mazmorras</p>
-    <ol class="capitulos" id="capitulos" aria-label="Capítulos"></ol>
-    <div class="herramientas" id="herramientas"></div>
+<section id="p-unirse" class="pantalla unirse" hidden>
+  <header class="cabecera">
+    <button type="button" class="boton sec mini" data-ui="volver-inicio">‹ Volver</button>
+    <h2>Unirse a una partida</h2>
   </header>
-  <div class="tablero">
-    <div class="izquierda">
-      <div class="escenario" id="caja-escenario"><canvas id="lienzo" aria-label="Escenario"></canvas></div>
-      <div class="grupo" id="grupo" aria-label="El grupo"></div>
-      <div class="pie-izq">
-      <section class="mesa marco" aria-label="Mesa de dados">
-        <canvas id="dado" class="dado" data-tam="64" aria-hidden="true"></canvas>
-        <div class="mesa-info">
-          <p id="dado-info">Cuando una acción lo pida, el d20 rodará aquí.</p>
-          <div class="libres" aria-label="Tiradas libres">
-            <span class="etiqueta">Tirada libre</span>
-            <button type="button" data-libre="4">d4</button>
-            <button type="button" data-libre="6">d6</button>
-            <button type="button" data-libre="8">d8</button>
-            <button type="button" data-libre="10">d10</button>
-            <button type="button" data-libre="12">d12</button>
-            <button type="button" data-libre="20">d20</button>
-          </div>
-        </div>
-        <button type="button" class="boton sec mini solo-movil" data-acc="ver-cronica">Crónica</button>
-      </section>
-      <section class="cronica marco" aria-label="Crónica">
-        <h3>Crónica de la partida</h3>
-        <ol id="cronica"></ol>
-      </section>
-      </div>
+  <form id="form-unirse" class="form-unirse marco" autocomplete="off">
+    <label for="codigo-mesa" class="etiqueta">Código de 4 letras</label>
+    <input id="codigo-mesa" name="codigo" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="KRTO">
+    <button type="submit" class="boton grande">Entrar</button>
+  </form>
+  <ol class="pasos">
+    <li>Quien crea la partida pulsa <b>Compartir</b> en claude.ai y te invita con tu correo.</li>
+    <li>Abre el enlace con tu cuenta de claude.ai iniciada (un enlace público no conecta).</li>
+    <li>Escribe aquí el código que ve el anfitrión en su pantalla.</li>
+  </ol>
+</section>
+
+<section id="p-seleccion" class="pantalla seleccion" hidden>
+  <header class="cabecera sel-cab">
+    <button type="button" class="boton sec mini" data-ui="sel-salir" aria-label="Salir">‹</button>
+    <div class="sel-titulo"><h2>Elige tu héroe</h2><p class="etiqueta" id="sel-codigo"></p></div>
+    <p class="reloj" id="sel-reloj" aria-live="off">1:30</p>
+  </header>
+  <div class="sel-barra" id="sel-barra" aria-hidden="true"><i></i></div>
+  <div class="escenario" id="caja-sel"><canvas id="lienzo-sel" aria-label="Vuestro grupo en la taberna"></canvas></div>
+  <div class="sel-jugadores" id="sel-jugadores" aria-label="Jugadores"></div>
+  <div class="sel-nombre">
+    <input id="sel-nombre" maxlength="16" aria-label="Nombre del héroe" autocomplete="off" spellcheck="false">
+    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">🎲 Azar</button>
+  </div>
+  <div class="sel-cuerpo">
+    <div class="selector">
+      <button type="button" class="flecha" data-ui="sel-ant" data-c="clase" aria-label="Clase anterior">‹</button>
+      <div class="sel-info" id="sel-clase"></div>
+      <button type="button" class="flecha" data-ui="sel-sig" data-c="clase" aria-label="Clase siguiente">›</button>
     </div>
-    <div class="derecha">
-      <section class="escena marco" id="escena" aria-live="polite"></section>
+    <div class="selector">
+      <button type="button" class="flecha" data-ui="sel-ant" data-c="raza" aria-label="Raza anterior">‹</button>
+      <div class="sel-info" id="sel-raza"></div>
+      <button type="button" class="flecha" data-ui="sel-sig" data-c="raza" aria-label="Raza siguiente">›</button>
     </div>
   </div>
+  <div class="sel-aspecto" aria-label="Aspecto">
+    <button type="button" data-ui="sel-sig" data-c="piel">Piel</button>
+    <button type="button" data-ui="sel-sig" data-c="pelo">Pelo</button>
+    <button type="button" data-ui="sel-sig" data-c="peinado">Peinado</button>
+    <button type="button" data-ui="sel-sig" data-c="tela">Ropa</button>
+  </div>
+  <p class="sel-stats" id="sel-stats"></p>
+  <button type="button" class="boton grande ancho" id="sel-listo" data-ui="sel-listo">¡A la aventura!</button>
 </section>
+
+<section id="p-juego" class="pantalla juego" hidden>
+  <header class="cabecera barra">
+    <p class="barra-titulo" id="barra-titulo"></p>
+    <button type="button" class="boton sec mini" data-ui="mochila">Mochila</button>
+    <button type="button" class="boton sec mini" data-ui="menu" aria-label="Menú">☰</button>
+  </header>
+  <div class="escenario" id="caja-juego"><canvas id="lienzo" aria-label="Escenario"></canvas></div>
+  <div class="grupo" id="grupo" aria-label="El grupo"></div>
+  <div class="mapa" id="mapa" aria-label="Mapa del acto"></div>
+  <section class="panel marco" id="panel" aria-live="polite"></section>
+  <div class="mesa">
+    <canvas id="dado" class="dado" data-tam="34" aria-hidden="true"></canvas>
+    <p id="dado-info"></p>
+    <button type="button" class="boton sec mini" data-ui="cronica">Crónica</button>
+  </div>
+</section>
+</main>
 
 <p id="aviso" class="aviso" role="status" hidden></p>
 <div id="capa" class="capa" hidden><div class="modal marco" id="modal" role="dialog" aria-modal="true" aria-label="Detalle"></div></div>
