@@ -7,9 +7,9 @@ const DATOS = (() => {
   const STATS = { raz: "Inteligencia", ani: "Fuerza", elo: "Carisma", tem: "Sabiduría" };
   const ABREV = { raz: "INT", ani: "FUE", elo: "CAR", tem: "SAB" };
   const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán"];
-  const ROMANOS = ["I", "II", "III", "IV", "V", "VI"];
+  const ROMANOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
-  const NIVELES = [0, 10, 25, 45, 70, 100];
+  const NIVELES = [0, 8, 18, 30, 44, 60, 78, 98, 120, 145];
   const NOMBRES = ["Aldric", "Lyra", "Borin", "Elowen", "Garrick", "Isolde", "Kael", "Mirela", "Rowan", "Sylva", "Thalor", "Vesna", "Wulfric", "Yara", "Corwin", "Ilsa"];
 
   const RAZAS = {
@@ -95,7 +95,7 @@ const DATOS = (() => {
     clerigo: {
       nombre: "Clérigo", rol: "Sanador", alma: 10, stats: { raz: 0, ani: 1, elo: 0, tem: 3 }, patron: "Solara, la Dama del Alba",
       hab: "Luz sagrada", habDesc: "2d6 + SAB de daño sagrado. Los no muertos reciben el doble.",
-      pasiva: "Manos sanadoras", pasivaDesc: "Curar heridas cura el doble.",
+      pasiva: "Manos sanadoras", pasivaDesc: "Sus curaciones curan un 50 % más.",
       desc: "Sacerdote de Solara. Cura heridas, bendice armas y no soporta a los no muertos."
     },
     bardo: {
@@ -104,6 +104,62 @@ const DATOS = (() => {
       pasiva: "Inspiración bárdica", pasivaDesc: "Tras cada victoria, todo el grupo recupera 3 PG.",
       desc: "Toca el laúd en todas las tabernas de Valdren. Sus canciones curan, aunque no lo parezca."
     }
+  };
+
+  /* Habilidades: cada héroe lleva como mucho 4 (como los movimientos de un Pokémon).
+     efecto: dano | cura | escudo | aturde | maldice | debilita | veneno. usos: por combate (0 = sin límite). */
+  const HABILIDADES = {
+    golpe: { nombre: "Golpe", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], tirada: true, usos: 0, desc: "Ataque básico con el arma." },
+    disparo: { nombre: "Disparo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], tirada: true, usos: 0, desc: "Ataque básico a distancia." },
+    estocada: { nombre: "Estocada", efecto: "dano", tipo: "fisica", stat: "elo", dado: [1, 8], tirada: true, usos: 0, desc: "Ataque elegante con estoque. Usa Carisma." },
+    rayo: { nombre: "Rayo arcano", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, usos: 0, desc: "Proyectil mágico básico." },
+    descarga: { nombre: "Descarga sobrenatural", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 8], tirada: true, usos: 0, desc: "Energía de tu patrón. Usa Carisma." },
+    muro: { nombre: "Muro de escudos", efecto: "escudo", usos: 2, desc: "El próximo ataque enemigo no hace daño." },
+    furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], usos: 2, desc: "Golpe seguro y brutal." },
+    humo: { nombre: "Bomba de humo", efecto: "aturde", usos: 1, desc: "El enemigo pierde su próximo turno." },
+    flechas: { nombre: "Lluvia de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 2, usos: 2, desc: "Dos disparos seguros." },
+    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, usos: 2, desc: "Explosión segura de fuego." },
+    maleficio: { nombre: "Maleficio", efecto: "maldice", usos: 1, desc: "El enemigo recibe +2 de cada golpe todo el combate." },
+    luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, usos: 2, desc: "Daño seguro. Doble contra no muertos." },
+    cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
+    curar: { nombre: "Curar heridas", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 3, desc: "Cura al aliado más herido." },
+    tajo: { nombre: "Tajo poderoso", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, usos: 3, desc: "Golpe fuerte con tirada." },
+    aliento: { nombre: "Segundo aliento", efecto: "cura", a: "yo", stat: "ani", dado: [1, 10], usos: 1, desc: "Te curas a ti mismo." },
+    grito: { nombre: "Grito de guerra", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
+    frenesi: { nombre: "Frenesí", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], golpes: 2, tirada: true, usos: 2, desc: "Dos golpes seguidos con tirada." },
+    devastar: { nombre: "Golpe devastador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 8], usos: 1, desc: "Un golpe seguro enorme." },
+    veneno: { nombre: "Hoja envenenada", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], tirada: true, veneno: 3, usos: 2, desc: "Golpe que envenena 3 turnos." },
+    asesinar: { nombre: "Golpe furtivo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], tirada: true, critico: 17, usos: 2, desc: "Crítico con 17 o más." },
+    danza: { nombre: "Danza de cuchillas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 3, tirada: true, usos: 1, desc: "Tres cuchilladas con tirada." },
+    marca: { nombre: "Marca del cazador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], maldice: true, usos: 1, desc: "Disparo seguro que maldice al enemigo (+2 daño)." },
+    balsamo: { nombre: "Bálsamo silvestre", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 2, desc: "Cura al aliado más herido." },
+    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 6], usos: 1, desc: "Lluvia segura de flechas." },
+    escudoMag: { nombre: "Escudo mágico", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
+    escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
+    sueno: { nombre: "Sueño", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
+    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], usos: 1, desc: "El conjuro más destructivo del mago." },
+    drenar: { nombre: "Toque vampírico", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, drena: true, usos: 2, desc: "Daño y te curas la mitad." },
+    miedo: { nombre: "Susurro aterrador", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
+    plaga: { nombre: "Nube de veneno", efecto: "veneno", turnos: 4, usos: 1, desc: "Envenena al enemigo 4 turnos." },
+    infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], usos: 1, desc: "Llamas del abismo, sin fallo." },
+    plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
+    escudoFe: { nombre: "Escudo de fe", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
+    orden: { nombre: "Orden divina", efecto: "aturde", usos: 1, desc: "El enemigo obedece y pierde su turno." },
+    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [4, 6], noMuerto: 2, usos: 1, desc: "Luz que fulmina. Doble contra no muertos." },
+    burla: { nombre: "Burla cruel", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
+    cuna: { nombre: "Canción de cuna", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
+    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 8], usos: 1, desc: "Una onda de sonido que no falla." }
+  };
+  /* Qué aprende cada clase y a qué nivel. */
+  const APRENDE = {
+    guerrero: { 1: ["golpe", "muro"], 2: ["tajo"], 3: ["aliento"], 5: ["grito"], 7: ["frenesi"], 9: ["devastar"] },
+    barbaro: { 1: ["golpe", "furia"], 2: ["grito"], 3: ["aliento"], 5: ["frenesi"], 7: ["tajo"], 9: ["devastar"] },
+    picaro: { 1: ["golpe", "humo"], 2: ["veneno"], 3: ["asesinar"], 5: ["danza"], 7: ["miedo"], 9: ["devastar"] },
+    explorador: { 1: ["disparo", "flechas"], 2: ["veneno"], 3: ["marca"], 5: ["balsamo"], 7: ["frenesi"], 9: ["tormenta"] },
+    mago: { 1: ["rayo", "bola"], 2: ["escudoMag"], 3: ["escarcha"], 5: ["sueno"], 7: ["miedo"], 9: ["meteoro"] },
+    brujo: { 1: ["descarga", "maleficio"], 2: ["drenar"], 3: ["miedo"], 5: ["plaga"], 7: ["escarcha"], 9: ["infernal"] },
+    clerigo: { 1: ["golpe", "curar", "luz"], 2: ["escudoFe"], 3: ["plegaria"], 5: ["orden"], 7: ["miedo"], 9: ["juicio"] },
+    bardo: { 1: ["estocada", "cancion"], 2: ["burla"], 3: ["curar"], 5: ["cuna"], 7: ["drenar"], 9: ["acorde"] }
   };
 
   const ALINEAMIENTOS = {
@@ -146,6 +202,27 @@ const DATOS = (() => {
     botas: { nombre: "Botas aladas", tipo: "talisman", precio: 60, ca: 1, ini: 3, desc: "+1 a la CA y +3 a la iniciativa." },
     piedra: { nombre: "Piedra de la suerte", tipo: "talisman", precio: 90, critico: 19, desc: "Críticos con 19 o 20." }
   };
+  /* Botín: solo se encuentra en cofres y enemigos. */
+  Object.assign(OBJETOS, {
+    daga: { nombre: "Daga de plata", tipo: "arma", precio: 20, golpe: 1, fis: 1, desc: "+1 para atacar y +1 al daño físico." },
+    martillo: { nombre: "Martillo enano", tipo: "arma", precio: 60, golpe: 1, fis: 3, desc: "+1 para atacar y +3 al daño físico." },
+    grimorio: { nombre: "Grimorio de las sombras", tipo: "arma", precio: 60, golpe: 1, arc: 3, desc: "+1 a los conjuros y +3 al daño arcano." },
+    cetro: { nombre: "Cetro del alba", tipo: "arma", precio: 60, cura: 3, arc: 2, desc: "+3 a tus curaciones y +2 al daño mágico." },
+    flamigera: { nombre: "Espada flamígera", tipo: "arma", precio: 120, golpe: 2, fis: 4, arc: 2, desc: "+2 para atacar, +4 físico y +2 mágico." },
+    elfica: { nombre: "Cota élfica", tipo: "armadura", precio: 60, ca: 2, alma: 2, desc: "+2 a la CA y +2 PG máximos." },
+    escamas: { nombre: "Armadura de escamas de dragón", tipo: "armadura", precio: 150, ca: 4, alma: 6, rareza: "legendario", desc: "+4 a la CA y +6 PG máximos." },
+    sortija: { nombre: "Sortija de protección", tipo: "talisman", precio: 30, ca: 1, desc: "+1 a la Clase de Armadura." },
+    capa: { nombre: "Capa élfica", tipo: "talisman", precio: 55, ca: 1, ini: 2, desc: "+1 a la CA y +2 a la iniciativa." },
+    corona: { nombre: "Corona del rey muerto", tipo: "talisman", precio: 100, stat: "raz", ca: 1, desc: "+1 a Inteligencia y +1 a la CA." }
+  });
+  const RAREZAS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" };
+  const rareza = id => OBJETOS[id].rareza || (OBJETOS[id].precio > 80 ? "epico" : OBJETOS[id].precio > 35 ? "raro" : "comun");
+  const BOTIN = [
+    ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita"],
+    ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro"],
+    ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas"],
+    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"]
+  ];
   const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
   const TIENDAS = {
@@ -450,6 +527,6 @@ const DATOS = (() => {
 
   return {
     STATS, ABREV, CAPITULOS, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, ORDEN_ALIN,
-    ejesAlin, moverMoral, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
+    ejesAlin, moverMoral, HABILIDADES, APRENDE, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
   };
 })();

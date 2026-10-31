@@ -4,11 +4,11 @@
 (() => {
 "use strict";
 const D = DATOS;
-const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
+const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, HABILIDADES, APRENDE, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
 const RP = PX.RAMPAS;
 
-const CLAVE = "dym-partida-v4";
-const CLAVE_MESA = "dym-mesa-v4";
+const CLAVE = "dym-partida-v5";
+const CLAVE_MESA = "dym-mesa-v5";
 const MAX_HEROES = 4;
 const SEGUNDOS = 90;
 const $ = s => document.querySelector(s);
@@ -53,7 +53,7 @@ function nuevoHeroe(def) {
   return {
     nombre: String(def.nombre || "").trim().slice(0, 16) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
     look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, oro: 15,
-    equipo: { arma: null, armadura: null, talisman: null }, usos: 1, est: { aturdido: 0, cegado: 0 }, fl: {}
+    equipo: { arma: null, armadura: null, talisman: null }, habs: APRENDE[clase][1].slice(), usosH: {}, est: { aturdido: 0, cegado: 0 }, fl: {}
   };
 }
 const lookDe = p => Object.assign({ raza: p.raza, clase: p.clase }, p.look);
@@ -66,7 +66,23 @@ function ca(p) {
 }
 function iniMod(p) { const t = obj(p.equipo.talisman); return stat(p, "tem") + (t && t.ini ? t.ini : 0); }
 function critMin(p) { const t = obj(p.equipo.talisman); return t && t.critico ? t.critico : 20; }
-const usosHab = p => (p.nivel >= 3 ? 2 : 1);
+const H = id => HABILIDADES[id];
+const ABR_TIPO = { fisica: "físico", arcana: "mágico", sagrada: "sagrado" };
+/* Resumen corto de una habilidad para los botones: «1d8+3 físico», «Cura 1d8+2»… */
+function resumenHab(id, p) {
+  const h = H(id), m = h.stat ? statHab(p, h) : 0;
+  const dados = h.dado ? `${h.golpes ? h.golpes + "×" : ""}${h.dado[0]}d${h.dado[1]}${fmt(m + (h.bono || 0))}` : "";
+  if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}`;
+  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}`;
+  return { escudo: "Bloquea un ataque", aturde: "Pierde un turno", maldice: "+2 daño recibido", debilita: "−2 a su ataque", veneno: `Veneno ${h.turnos} turnos` }[h.efecto];
+}
+function statHab(p, h) { return h.stat ? stat(p, h.stat) : 0; }
+/* Próxima habilidad que aprenderá el héroe. */
+function proximaHab(p) {
+  const t = APRENDE[p.clase];
+  const n = Object.keys(t).map(Number).filter(l => l > p.nivel).sort((a, b) => a - b)[0];
+  return n ? { nivel: n, ids: t[n] } : null;
+}
 const nombreRazaClase = p => `${CLASES[p.clase].nombre} ${RAZAS[p.raza].nombre.toLowerCase()}`;
 const EJEMPLO = [
   { nombre: "Aldric", raza: "humano", clase: "guerrero", look: { piel: "oliva", pelo: "castano", tela: "granate", peinado: "corto", barba: true } },
@@ -99,7 +115,7 @@ function guardar() {
   }
   escribir(CLAVE, JSON.stringify(S));
 }
-function cargar() { try { const g = JSON.parse(leer(CLAVE, "null")); return g && g.v === 4 && !g.online ? g : null; } catch (e) { return null; } }
+function cargar() { try { const g = JSON.parse(leer(CLAVE, "null")); return g && g.v === 5 && !g.online ? g : null; } catch (e) { return null; } }
 
 function avisar(t) {
   const a = $("#aviso");
@@ -129,7 +145,7 @@ async function crearPartida() {
   let c = "";
   for (let i = 0; i < 4; i++) c += letras[Math.floor(Math.random() * letras.length)];
   try {
-    await red.db.doc(`partidas/${c}`).set({ v: 4, codigo: c, host: miId, estado: "seleccion", fin: Date.now() + SEGUNDOS * 1000, creada: Date.now(), juego: null });
+    await red.db.doc(`partidas/${c}`).set({ v: 5, codigo: c, host: miId, estado: "seleccion", fin: Date.now() + SEGUNDOS * 1000, creada: Date.now(), juego: null });
     entrarPartida(c);
   } catch (e) { avisarError(e); }
 }
@@ -243,12 +259,19 @@ function procesarAcciones() {
     red.vistoAcc[pr.id] = pr.acc.n;
     /* De alguien sin historial (p. ej. tras recargar el anfitrión) solo se acepta una jugada hecha sobre el estado actual. */
     if (!visto && pr.acc.rev !== S.rev) continue;
-    /* Solo vale si sigue siendo el turno de quien la manda (una jugada vieja se descarta). */
-    const j = S.players[S.turno];
-    if (!j || j.uid !== pr.id || pr.acc.k === "reintentar") continue;
-    remoto = j.uid;
+    /* Solo vale si quien la manda puede hacerla ahora (una jugada vieja se descarta). */
+    if (pr.acc.k === "reintentar" || !permitido(pr.acc.k, pr.id)) continue;
+    remoto = pr.id;
     try { ejecutar(pr.acc.k, pr.acc.v); } finally { remoto = null; }
   }
+}
+/* ¿Puede el jugador uid hacer la jugada k? Equipar botín vale para cualquiera; aprender, para el dueño del héroe. */
+function permitido(k, uid) {
+  if (!S || !S.online) return true;
+  if (k === "equipar") return S.players.some(p => p.uid === uid);
+  if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
+  const p = S.players[S.turno];
+  return !!p && p.uid === uid;
 }
 function enviarJugada(k, v) {
   if (!red.sala) return avisar("Sin conexión con la sala.");
@@ -291,11 +314,30 @@ function ganarXp(n) {
   return out;
 }
 function subirNivel(p, out) {
-  p.nivel++; p.almaBase += 2; p.alma = Math.min(maxAlma(p), p.alma + 2);
-  const bajo = Object.keys(STATS).reduce((a, k) => (p.base[k] < p.base[a] ? k : a), "raz");
-  if (p.base[bajo] < 5) p.base[bajo]++;
-  const t = `${p.nombre} sube a nivel ${p.nivel}${p.nivel === 3 ? " (habilidad ×2)" : ""}`;
+  p.nivel++; p.almaBase += 3; p.alma = Math.min(maxAlma(p), p.alma + 3);
+  if (p.nivel % 2 === 0) {
+    const bajo = Object.keys(STATS).reduce((a, k) => (p.base[k] < p.base[a] ? k : a), "raz");
+    if (p.base[bajo] < 5) p.base[bajo]++;
+  }
+  const t = `${p.nombre} sube a nivel ${p.nivel}`;
   log(t, "nivel"); out.push(t);
+  for (const id of APRENDE[p.clase][p.nivel] || []) {
+    if (p.habs.includes(id)) continue;
+    if (p.habs.length < 4) { p.habs.push(id); const a = `${p.nombre} aprende ${H(id).nombre}`; log(a, "nivel"); out.push(a); }
+    else S.aprender.push({ i: idx(p), hab: id });
+  }
+}
+/* Aprender una habilidad nueva olvidando otra (slot 0-3), o renunciar a ella (-1). */
+function aprender(slot) {
+  const a = S.aprender[0];
+  if (!a) return;
+  const p = S.players[a.i];
+  if (slot >= 0 && slot < p.habs.length) {
+    log(`${p.nombre} olvida ${H(p.habs[slot]).nombre} y aprende ${H(a.hab).nombre}.`, "nivel");
+    p.habs[slot] = a.hab;
+  } else log(`${p.nombre} decide no aprender ${H(a.hab).nombre}.`);
+  S.aprender.shift();
+  guardar(); render();
 }
 function aplicarFx(f = {}, actor) {
   const out = [];
@@ -362,6 +404,7 @@ function generarMapa() {
     const n = f === 5 ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0);
     const fila = [];
     for (let i = 0; i < n; i++) fila.push({ tipo: f === 1 || Math.random() < 0.5 ? "combate" : "evento", sig: [] });
+    if (f === 2 || (f === 4 && Math.random() < 0.5)) fila[Math.floor(Math.random() * n)].tipo = "tesoro";
     if (f === 3) fila[Math.floor(Math.random() * n)].tipo = "tienda";
     if (f === 5) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
     filas.push(fila);
@@ -378,7 +421,7 @@ function generarMapa() {
   filas[0][0].hecho = true;
   return { filas, fila: 0, col: 0 };
 }
-const NOMBRE_NODO = { combate: "Combate", evento: "Suceso", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
+const NOMBRE_NODO = { combate: "Combate", evento: "Suceso", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
 const VICTORIAS = ["Cae el último golpe. El camino queda libre.", "Recogéis el botín y seguís adelante.", "Victoria. Os curáis las heridas como podéis.", "El enemigo cae. Hay monedas entre los restos."];
 const VICTORIAS_JEFE = [
   "El trol cae al barranco. Al otro lado del puente empieza la mazmorra.",
@@ -402,22 +445,75 @@ function crearEscena(tipo) {
     const k = azarDe(A.enemigos.filter(x => x !== S.ultimoEnemigo));
     S.ultimoEnemigo = k;
     return { tipo: "combate", enemigo: k, fondo: azarDe(A.fondos), titulo: ENEMIGOS[k].nombre,
-      victoria: { t: azarDe(VICTORIAS), fx: { xp: 4 + S.acto * 2, oro: 8 + S.acto * 4, pocion: Math.random() < 0.35 ? 1 : 0 } } };
+      victoria: { t: azarDe(VICTORIAS), fx: { xp: 5 + S.acto * 2, oro: 8 + S.acto * 4, pocion: Math.random() < 0.35 ? 1 : 0 } } };
   }
+  if (tipo === "tesoro") return { tipo: "tesoro", fondo: azarDe(A.fondos), titulo: "Un cofre olvidado", texto: azarDe(COFRES) };
   if (tipo === "tienda") return { tipo: "tienda", tienda: A.tienda, fondo: azarDe(A.fondos), pnj: TIENDAS[A.tienda].pnj, titulo: TIENDAS[A.tienda].nombre };
   if (tipo === "hoguera") return Object.assign({ tipo: "prueba", fondo: azarDe(A.fondos) }, JSON.parse(JSON.stringify(HOGUERA)));
   return { tipo: "combate", esJefe: true, enemigo: A.jefe, fondo: A.fondoJefe, titulo: ENEMIGOS[A.jefe].nombre, texto: A.jefeTexto,
     victoria: { t: VICTORIAS_JEFE[S.acto], fx: { xp: 10 + S.acto * 3, oro: 25, superior: 1 } } };
 }
 
+const COFRES = [
+  "Medio enterrado entre raíces hay un cofre con remaches de hierro. La cerradura está oxidada.",
+  "Junto a un esqueleto con armadura descansa un cofre cerrado. Nadie ha vuelto a por él.",
+  "Un cofre de roble con runas talladas espera en un rincón, cubierto de polvo.",
+  "Tras una losa suelta aparece un pequeño cofre. Alguien lo escondió con prisa."
+];
+/* ---------- Botín ---------- */
+const PESO_RAREZA = { comun: 50, raro: 30, epico: 14, legendario: 6 };
+function sacarBotin(bueno) {
+  const pool = BOTIN[Math.max(0, S.acto)].filter(id => !bueno || rareza(id) !== "comun");
+  let t = pool.reduce((a, id) => a + PESO_RAREZA[rareza(id)], 0) * Math.random();
+  for (const id of pool) { t -= PESO_RAREZA[rareza(id)]; if (t <= 0) return id; }
+  return pool[pool.length - 1];
+}
+function abrirCofre() {
+  const sc = S.esc;
+  if (ocupado || !sc || sc.tipo !== "tesoro" || S.fase === "resultado") return;
+  if (S.acto >= 1 && Math.random() < 0.25) {
+    log("¡El cofre tenía dientes! Es un mímico.", "ko");
+    S.esc = { tipo: "combate", enemigo: "mimico", fondo: sc.fondo, titulo: ENEMIGOS.mimico.nombre, botinSeguro: true,
+      victoria: { t: "El mímico cae. Dentro de su panza hay de todo.", fx: { xp: 5 + S.acto * 2, oro: 12 } } };
+    return iniciarCombate(S.esc);
+  }
+  S.botin = [sacarBotin(false)];
+  if (S.acto >= 2 && Math.random() < 0.5) S.botin.push(sacarBotin(false));
+  const efectos = aplicarFx({ oro: 6 + S.acto * 4, pocion: Math.random() < 0.5 ? 1 : 0, xp: 2 });
+  S.fase = "resultado";
+  S.resultado = { ok: true, tipo: "cofre", texto: "La tapa cede con un crujido. ¡Hay algo dentro!", efectos };
+  log(`${S.players[S.turno].nombre} abre el cofre: ${S.botin.map(id => OBJETOS[id].nombre).join(", ")}.`, "ok");
+  guardar(); render();
+}
+/* Darle a un héroe un objeto del botín (se vende lo que llevaba). */
+function equipar(k, i) {
+  const id = S.botin[k], p = S.players[i];
+  if (!id || !p || ocupado) return;
+  const o = OBJETOS[id], viejo = p.equipo[o.tipo];
+  p.equipo[o.tipo] = id; S.botin.splice(k, 1);
+  let t = `${p.nombre} se equipa ${o.nombre}`;
+  if (viejo) { const v = Math.floor(OBJETOS[viejo].precio / 2); p.oro += v; t += ` y vende ${OBJETOS[viejo].nombre} (+${v} po)`; }
+  p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
+  fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.bronce });
+  log(t + ".", "ok"); avisar(t + ".");
+  guardar(); render();
+}
+function venderSobrante() {
+  if (!S.botin.length) return;
+  const total = S.botin.reduce((a, id) => a + Math.floor(OBJETOS[id].precio / 2), 0), cada = Math.max(1, Math.floor(total / S.players.length));
+  S.players.forEach(p => { p.oro += cada; });
+  log(`Vendéis lo que nadie quiere: +${cada} po cada uno.`, "ok");
+  S.botin = [];
+}
+
 /* ---------- Flujo de partida ---------- */
 function nuevaPartida(defs, codigo) {
   S = {
-    v: 4, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
+    v: 5, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
     players: defs.slice(0, MAX_HEROES).map(nuevoHeroe),
     zurron: { pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
     acto: -1, mapa: null, modo: "escena", esc: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
-    derrota: false, final: null, guardadoActo: null, log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null
+    derrota: false, final: null, guardadoActo: null, aprender: [], botin: [], log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null
   };
   log(`Comienza la aventura: ${S.players.map(p => `${p.nombre} (${nombreRazaClase(p)})`).join(", ")}.`);
   if (S.players.length === 1) { const p = S.players[0]; p.almaBase += 4; p.alma += 4; }
@@ -457,6 +553,7 @@ function elegirNodo(j) {
   log(`${S.players[S.turno].nombre} elige: ${NOMBRE_NODO[nodo.tipo]} · ${S.esc.titulo}`, "esc");
   if (S.esc.tipo === "combate") return iniciarCombate(S.esc);
   if (S.esc.tipo === "tienda") abrirTienda(S.esc);
+  S.botin = [];
   guardar(); render();
 }
 function elegirOpcion(i) {
@@ -497,7 +594,8 @@ function continuar() {
   if (ocupado) return;
   const sc = S.esc;
   if (sc && sc.tipo === "relato") return volverAlMapa();
-  if (!S.resultado) return;
+  if (!S.resultado || S.aprender.length) return;
+  venderSobrante();
   S.turno = siguienteVivo(S.turno + 1);
   if (sc && sc.esJefe) return siguienteActo();
   volverAlMapa();
@@ -570,10 +668,10 @@ function iniciarCombate(sc) {
   const c = S.combate = {
     enemigo: sc.enemigo, hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0), blando: n === 1, ronda: 1, orden: [], pos: 0,
     aturdido: false, escudo: false, maldito: false, anilloUsado: false, partido: false, quemado: false,
-    resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false
+    resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false, veneno: 0, atkMod: 0
   };
   if (!S.vistos.bestias.includes(sc.enemigo)) S.vistos.bestias.push(sc.enemigo);
-  S.players.forEach(p => { p.usos = usosHab(p); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
+  S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos; }); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
   const orden = S.players.map((p, i) => ({ t: "h", i, ini: d(20) + iniMod(p) }));
   orden.push({ t: "e", ini: d(20) + e.ini });
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
@@ -634,45 +732,67 @@ function accion(tipo, arg) {
   const c = S.combate, e = ENEMIGOS[c.enemigo], p = S.players[S.turno], yo = "h" + S.turno, cl = CLASES[p.clase];
   const arma = obj(p.equipo.arma) || {};
   const fin = () => { submenu = null; if (c.hp <= 0) return victoria(); avanzar(); prepararTurno(); };
-  if (tipo === "atacar" || tipo === "conjuro") {
-    const clase = tipo === "atacar" ? "fisica" : "arcana";
-    const st = tipo === "atacar" ? "ani" : stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
-    const mod = stat(p, st) + (arma.golpe || 0) + (clase === "fisica" && p.clase === "explorador" ? 2 : 0);
-    const bono = usarOlivo();
-    const { r, nota } = tiradaD20(p);
-    tirarDado(r, 20, () => {
-      const total = r + mod + bono, crit = r >= critMin(p);
-      const ok = crit || (r !== 1 && total >= e.ca);
-      let linea = lineaTirada(p.nombre, tipo === "atacar" ? "ataca" : "conjura", r, mod, bono, total, `CA ${e.ca}`, crit) + nota;
+  if (tipo === "hab") {
+    const id = p.habs[+arg], h = id && H(id);
+    if (!h || (h.usos && !(p.usosH[id] > 0))) return;
+    if (h.usos) p.usosH[id]--;
+    const m = statHab(p, h);
+    const efectosExtra = (dmg, partes) => {
+      if (h.veneno) { c.veneno = Math.max(c.veneno, h.veneno); partes.push("veneno"); }
+      if (h.debilita) { c.atkMod = Math.max(-4, c.atkMod - 2); partes.push("−2 a su ataque"); }
+      if (h.maldice) { c.maldito = true; partes.push("maldito"); }
+      if (h.drena && dmg > 0) { const cu = curar(p, Math.max(1, Math.floor(dmg / 2))); fx({ tipo: "cura", objetivo: yo }); partes.push(`te curas ${cu}`); }
+    };
+    if (h.efecto === "dano") {
+      const extraArma = h.tipo === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" && h.tipo === "arcana" ? 2 : 0);
+      const golpes = crit => {
+        const antes = c.hp, partes = [];
+        for (let k = 0; k < (h.golpes || 1) && c.hp > 0; k++)
+          partes.push(danarRival(tirar(h.dado[0] * (crit ? 2 : 1), h.dado[1], m + (h.bono || 0)) + extraArma, h.tipo, crit, h.noMuerto && e.nomuerto ? h.noMuerto : 1, h.tipo === "arcana" ? RP.fuego : undefined));
+        efectosExtra(antes - c.hp, partes);
+        return partes.join(" · ");
+      };
       fx({ tipo: "ataque", actor: yo });
-      if (ok) {
-        const extra = clase === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" ? 2 : 0);
-        linea += ` → ${danarRival(tirar(crit ? 2 : 1, 8, stat(p, st)) + extra, clase, crit)}`;
-        log(linea, "ok"); mostrarTirada(linea, true);
-      } else {
-        linea += " → falla";
-        fx({ tipo: "numero", objetivo: "e", texto: "FALLO", color: RP.hueso[3] });
-        log(linea, "ko"); mostrarTirada(linea, false);
+      if (!h.tirada) {
+        const t = `${p.nombre} usa ${h.nombre} → ${golpes(false)}`;
+        log(t, "ok"); mostrarTirada(t, true);
+        return fin();
       }
-      fin();
-    });
-    return;
-  }
-  if (tipo === "curar") {
-    const bono = usarOlivo();
-    const { r, nota } = tiradaD20(p);
-    tirarDado(r, 20, () => {
-      const o = masHerido(), mod = stat(p, "tem");
-      const ok = r >= critMin(p) || (r !== 1 && r + mod + bono >= 10);
-      let cura = ok ? Math.max(1, d(6) + mod) + (arma.cura || 0) : 1;
-      if (p.clase === "clerigo") cura *= 2;
-      const real = curar(o, cura), oi = idx(o);
-      const t = `${p.nombre} cura (SAB ${r} ${fmt(mod)} vs 10)${nota}: +${real} PG a ${o === p ? "sí mismo" : o.nombre}`;
-      fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
-      log(t, ok ? "ok" : "ko"); mostrarTirada(t, ok);
-      fin();
-    });
-    return;
+      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0);
+      const bono = usarOlivo();
+      const { r, nota } = tiradaD20(p);
+      tirarDado(r, 20, () => {
+        const total = r + mod + bono, crit = r >= Math.min(critMin(p), h.critico || 20);
+        const ok = crit || (r !== 1 && total >= e.ca);
+        let linea = lineaTirada(p.nombre, h.nombre, r, mod, bono, total, `CA ${e.ca}`, crit) + nota;
+        if (ok) { linea += ` → ${golpes(crit)}`; log(linea, "ok"); mostrarTirada(linea, true); }
+        else { linea += " → falla"; fx({ tipo: "numero", objetivo: "e", texto: "FALLO", color: RP.hueso[3] }); log(linea, "ko"); mostrarTirada(linea, false); }
+        fin();
+      });
+      return;
+    }
+    if (h.efecto === "cura") {
+      const base = Math.max(1, tirar(h.dado[0], h.dado[1], m) + (arma.cura || 0));
+      const n = p.clase === "clerigo" ? Math.ceil(base * 1.5) : base;
+      const objetivos = h.a === "grupo" ? S.players : h.a === "yo" ? [p] : [masHerido()];
+      const partes = objetivos.map(o => {
+        const real = curar(o, n), oi = idx(o);
+        fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
+        return `${o.nombre} +${real}`;
+      });
+      const t = `${p.nombre} usa ${h.nombre} → ${partes.join(", ")} PG`;
+      log(t, "ok"); mostrarTirada(t, true);
+      return fin();
+    }
+    fx({ tipo: "magia", objetivo: h.efecto === "escudo" ? yo : "e" });
+    if (h.efecto === "escudo") c.escudo = true;
+    if (h.efecto === "aturde") c.aturdido = true;
+    if (h.efecto === "maldice") c.maldito = true;
+    if (h.efecto === "debilita") c.atkMod = Math.max(-4, c.atkMod - 2);
+    if (h.efecto === "veneno") c.veneno = Math.max(c.veneno, h.turnos);
+    const t = `${p.nombre} usa ${h.nombre}: ${resumenHab(id, p).toLowerCase()}.`;
+    log(t, "ok"); mostrarTirada(t, true);
+    return fin();
   }
   if (tipo === "objeto") {
     if (!S.zurron[arg] || arg === "bendicion") return;
@@ -693,32 +813,6 @@ function accion(tipo, arg) {
     log(`${p.nombre} se vuelve invisible. ${e.nombre} no sabe a quién atacar.`, "ok");
     return fin();
   }
-  if (tipo === "habilidad") {
-    if (p.usos <= 0) return;
-    p.usos--;
-    fx({ tipo: "ataque", actor: yo });
-    switch (p.clase) {
-      case "mago": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "raz")) + 2, "arcana", false, 1, RP.fuego)}`, "ok"); break;
-      case "barbaro": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 8, stat(p, "ani")), "fisica", false)}`, "ok"); break;
-      case "clerigo": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "tem")), "sagrada", false, e.nomuerto ? 2 : 1, RP.bronce)}`, "ok"); break;
-      case "explorador": {
-        const a1 = danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false);
-        const a2 = c.hp > 0 ? danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false) : "ya no hace falta";
-        log(`${p.nombre}: ${cl.hab} → ${a1} y ${a2}`, "ok");
-        break;
-      }
-      case "guerrero": c.escudo = true; log(`${p.nombre}: ${cl.hab}. El próximo turno enemigo no hará daño.`, "ok"); break;
-      case "picaro": c.aturdido = true; log(`${p.nombre}: ${cl.hab}. ${e.nombre} os pierde de vista.`, "ok"); break;
-      case "bardo": {
-        const n = Math.max(1, tirar(1, 6, stat(p, "elo")) + (arma.cura || 0));
-        S.players.forEach((x, i) => { curar(x, n); fx({ tipo: "cura", objetivo: "h" + i }); });
-        log(`${p.nombre}: ${cl.hab}. Todo el grupo +${n} PG.`, "ok");
-        break;
-      }
-      case "brujo": c.maldito = true; fx({ tipo: "magia", objetivo: "e" }); log(`${p.nombre}: ${cl.hab}. ${e.nombre} recibirá +2 de cada golpe.`, "ok"); break;
-    }
-    return fin();
-  }
 }
 function heroeAlAzarVivo() { const l = vivos(); return l.length ? l[Math.floor(Math.random() * l.length)] : -1; }
 function turnoEnemigo() {
@@ -727,7 +821,16 @@ function turnoEnemigo() {
   ocupado = true; document.body.classList.add("ocupado");
   render();
   setTimeout(() => {
-    if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; c.quemado = false; }
+    const atk = e.atk + c.atkMod;
+    if (c.veneno > 0) {
+      c.veneno--;
+      const v = d(6);
+      c.hp = Math.max(0, c.hp - v);
+      fx({ tipo: "numero", objetivo: "e", texto: "-" + v, color: RP.hoja[4] });
+      log(`El veneno quema a ${e.nombre}: ${v} de daño.`, "ok");
+    }
+    if (c.hp <= 0) { /* el veneno lo ha rematado */ }
+    else if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; c.quemado = false; }
     else {
       const cada = n => c.ronda % n === 0;
       if (e.regenera) {
@@ -747,17 +850,17 @@ function turnoEnemigo() {
           const t = S.players[ti];
           if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); continue; }
           const r = d(20), def = ca(t);
-          const ok = r === 20 || (r !== 1 && r + e.atk >= def);
+          const ok = r === 20 || (r !== 1 && r + atk >= def);
           mostrarTirada.ultimo = r;
           if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), r);
           if (ok) {
             const dmg = Math.max(1, tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2]) - (c.blando ? 2 : 0));
-            let txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(e.atk)} vs CA ${def} → ${danarHeroe(ti, dmg, true)}`;
+            let txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(atk)} vs CA ${def} → ${danarHeroe(ti, dmg, true)}`;
             if (e.drena) { const cu = Math.max(1, Math.floor(dmg / 2)); c.hp = Math.min(c.hpMax, c.hp + cu); txt += `. Bebe y se cura ${cu}`; }
             if (e.roba && t.oro > 0) { const rob = Math.min(e.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
             log(txt, "ko"); mostrarTirada(txt, false);
           } else {
-            const txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(e.atk)} vs CA ${def} → falla`;
+            const txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(atk)} vs CA ${def} → falla`;
             fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] });
             log(txt, "ok"); mostrarTirada(txt, true);
           }
@@ -794,6 +897,9 @@ function victoria() {
   if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => curar(p, 3)); extra.push("Inspiración +3 PG"); }
   S.players.forEach(p => { if (p.clase === "brujo") { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   S.combate = null;
+  S.botin = [];
+  if (sc.esJefe || sc.botinSeguro || Math.random() < 0.5) S.botin.push(sacarBotin(sc.esJefe));
+  if (sc.esJefe && S.players.length >= 3) S.botin.push(sacarBotin(false));
   const efectos = aplicarFx(sc.victoria.fx).concat(extra);
   S.fase = "resultado";
   S.resultado = { ok: true, tipo: "victoria", enemigo: c.enemigo, linea: null, texto: sc.victoria.t, efectos };
@@ -815,6 +921,11 @@ function iconoNodo(tipo) {
     new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.azul, { relieve: 3 });
     const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.hueso[4]); } };
     PX.texto(pinta, "?", 4, 2, RP.hueso[4], null, 2);
+  } else if (tipo === "tesoro") {
+    new C(14, 14).rect(2, 3, 10, 3).pintar(g, RP.madera, { relieve: 1 });
+    new C(14, 14).rect(2, 6, 10, 6).pintar(g, RP.madera, { relieve: 2 });
+    new C(14, 14).rect(2, 6, 10, 1).rect(6, 3, 2, 9).pintar(g, RP.bronce, { plano: 3 });
+    g.set(6, 7, RP.bronce[4]).set(7, 7, RP.bronce[4]).set(6, 8, PX.CONTORNO).set(7, 8, PX.CONTORNO);
   } else if (tipo === "tienda") {
     new C(14, 14).ell(7, 8.5, 4.8, 4.2).pintar(g, RP.madera, { relieve: 2 });
     new C(14, 14).rect(5, 3, 5, 2).pintar(g, RP.madera, { plano: 1 });
@@ -909,12 +1020,12 @@ function renderSeleccion() {
   escSel.mostrar({ fondo: "taberna", heroes: jugadores.map(j => ({ look: Object.assign({ raza: j.heroe.raza, clase: j.heroe.clase }, j.heroe.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: sel.online ? 0 : sel.actual });
   const nombre = $("#sel-nombre");
   if (document.activeElement !== nombre) nombre.value = h.nombre;
-  const cl = CLASES[h.clase], rz = RAZAS[h.raza];
-  $("#sel-clase").innerHTML = `<strong>${cl.nombre}</strong> <span class="etiqueta">${cl.rol}</span>
-    <p><b>${cl.hab}:</b> ${cl.habDesc}</p><p><b>${cl.pasiva}:</b> ${cl.pasivaDesc}</p>`;
-  $("#sel-raza").innerHTML = `<strong>${rz.nombre}</strong> <span class="etiqueta">${Object.keys(rz.mods).map(s => `${ABREV[s]}${fmt(rz.mods[s])}`).join(" ")}${rz.alma ? ` PG+${rz.alma}` : ""}</span>
+  const cl = CLASES[h.clase], rz = RAZAS[h.raza], p = nuevoHeroe(h);
+  $("#sel-clase").innerHTML = `<p class="sel-tit"><strong>${cl.nombre}</strong><span class="etiqueta">${cl.rol}</span></p>
+    <ul class="habs-ini">${p.habs.map(id => `<li><b>${H(id).nombre}</b><span>${resumenHab(id, p)}</span></li>`).join("")}</ul>
+    <p><b>${cl.pasiva}:</b> ${cl.pasivaDesc}</p>`;
+  $("#sel-raza").innerHTML = `<p class="sel-tit"><strong>${rz.nombre}</strong><span class="etiqueta">${Object.keys(rz.mods).map(s => `${ABREV[s]} ${fmt(rz.mods[s])}`).join(" · ")}${rz.alma ? ` · PG +${rz.alma}` : ""}</span></p>
     <p><b>${rz.pasiva}:</b> ${rz.pasivaDesc}</p>`;
-  const p = nuevoHeroe(h);
   $("#sel-stats").innerHTML = Object.keys(STATS).map(k => `<span><b>${fmt(p.base[k])}</b>${ABREV[k]}</span>`).join("") + `<span><b>${p.almaBase}</b>PG</span><span><b>${ca(p)}</b>CA</span>`;
   $("#sel-jugadores").innerHTML = jugadores.map((j, i) => `
     <button type="button" class="chip-jugador${(!sel.online && i === sel.actual) || (sel.online && j.id === miId) ? " sel" : ""}${j.listo || j.host ? " listo" : ""}" ${sel.online ? "disabled" : `data-ui="sel-heroe" data-i="${i}"`}>
@@ -959,13 +1070,16 @@ function limitesJuego() {
 function renderJuego() {
   if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
   const enMapa = S.modo === "mapa" && !S.derrota && !S.final;
-  const enTienda = !enMapa && !S.final && !S.derrota && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
+  /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */
+  const vivo = !enMapa && !S.final && !S.derrota;
+  const enTienda = vivo && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
+  const enPanel = enTienda || (vivo && S.aprender.length > 0) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
-  $("#p-juego").classList.toggle("modo-tienda", enTienda);
+  $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
   if (!$("#dado").dataset.listo) { $("#dado").dataset.listo = "1"; ESCENARIO.dibujarDado($("#dado"), 20); }
   const acto = Math.max(0, S.acto);
-  $("#barra-titulo").innerHTML = `<b>${ROMANOS[acto]}</b> ${ACTOS[acto].nombre}`;
+  $("#barra-titulo").innerHTML = `<span class="progreso">${ACTOS.map((_, i) => `<i class="${i < acto ? "hecho" : i === acto ? "ahora" : ""}"></i>`).join("")}</span><span>Acto ${ROMANOS[acto]} · ${ACTOS[acto].nombre}</span>`;
   sincronizarEscenario();
   renderGrupo();
   if (enMapa) renderMapa(); else { $("#mapa").innerHTML = ""; renderEscena(); }
@@ -996,9 +1110,23 @@ function renderGrupo() {
     return `<button type="button" class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
       <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
-      <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras">${p.alma}/${max} · Nv${p.nivel}</span></span></button>`;
+      <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
+      <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span></span></button>`;
   }).join("");
   pintarRetratos($("#grupo"));
+}
+function pctXp(p) {
+  const a = NIVELES[p.nivel - 1] || 0, b = NIVELES[p.nivel];
+  return b === undefined ? 100 : Math.max(0, Math.min(100, Math.round((100 * (p.xp - a)) / (b - a))));
+}
+function tarjetaBotin(id, k) {
+  const o = OBJETOS[id], r = rareza(id), puede = permitido("equipar", miId) && !esperandoHost;
+  return `<div class="objeto r-${r}"><p class="obj-cab"><strong>${o.nombre}</strong><span class="rareza">${RAREZAS[r]}</span></p>
+    <small>${RANURAS[o.tipo]} · ${o.desc}</small>
+    <div class="para"><span class="etiqueta">Dar a</span>${S.players.map((p, i) => {
+      const v = p.equipo[o.tipo], mejor = !v || OBJETOS[v].precio < o.precio;
+      return `<button type="button" class="chip-heroe${mejor ? " mejor" : ""}" data-juego="equipar" data-v="${k}:${i}" ${puede ? "" : "disabled"} title="${v ? `Lleva ${esc(OBJETOS[v].nombre)}` : "Sin objeto"}">${esc(p.nombre)}${mejor ? " ▲" : ""}</button>`;
+    }).join("")}</div></div>`;
 }
 const parrafo = t => `<p class="texto">${t}</p>`;
 function boton(attrs, titulo, chip, sub, off) {
@@ -1023,7 +1151,7 @@ function renderMapa() {
   pintarIconos($("#mapa"));
   requestAnimationFrame(dibujarLineas);
   $("#panel").innerHTML = `${quienLinea(p, "Elige el camino:")}
-    <p class="leyenda">${["combate", "evento", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
+    <p class="leyenda">${["combate", "evento", "tesoro", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
   pintarIconos($("#panel"));
 }
 function dibujarLineas() {
@@ -1058,13 +1186,29 @@ function renderEscena() {
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-juego="reintentar">Volver al inicio del acto</button>` : `<p class="espera">El anfitrión decide.</p>`}</div>`;
     return;
   }
+  if (S.aprender.length) {
+    const a = S.aprender[0], q = S.players[a.i], nueva = H(a.hab);
+    const mia = !S.online || q.uid === miId;
+    el.innerHTML = `<p class="sello ok">¡Nivel ${q.nivel}!</p><h2>${esc(q.nombre)} quiere aprender ${nueva.nombre}</h2>
+      <div class="hab-nueva"><p><b>${nueva.nombre}</b><span>${resumenHab(a.hab, q)}${nueva.usos ? ` · ${nueva.usos} usos` : " · sin límite"}</span></p><small>${nueva.desc}</small></div>
+      <p class="quien${mia ? "" : " espera"}">${mia ? "Solo caben 4 habilidades. ¿Cuál olvida?" : `${esc(q.nombre)} está eligiendo en su móvil…`}</p>
+      <div class="menu dos olvidar">${q.habs.map((id, k) => boton(`data-juego="aprender" data-v="${k}"`, H(id).nombre, "Olvidar", resumenHab(id, q), !mia)).join("")}</div>
+      ${mia ? `<button type="button" class="boton sec" data-juego="aprender" data-v="-1">No aprender ${nueva.nombre}</button>` : ""}`;
+    return;
+  }
   const cab = `<h2>${sc.titulo}</h2>`;
   if (S.fase === "resultado" && S.resultado) {
     const r = S.resultado;
-    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
+    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "cofre" ? "¡Botín!" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
+    const sigue = sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa";
     el.innerHTML = `${cab}<p class="sello ${r.ok ? "ok" : "ko"}">${sello}</p>${parrafo(r.texto || "")}
       ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa"}</button>` : quienLinea(p, "")}</div>`;
+      ${S.botin.length ? `<div class="botin">${S.botin.map(tarjetaBotin).join("")}</div>` : ""}
+      <div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sigue}${S.botin.length ? " · vender el resto" : ""}</button>` : quienLinea(p, "")}</div>`;
+    return;
+  }
+  if (sc.tipo === "tesoro") {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decide")}<div class="pie">${mio ? `<button type="button" class="boton" data-juego="abrir">Abrir el cofre</button>` : ""}</div>`;
     return;
   }
   if (sc.tipo === "relato") {
@@ -1099,7 +1243,7 @@ function renderTienda(el, p, mio) {
       <strong>${o.nombre}</strong><small>${o.desc}</small><span class="chip">${equipado ? "Llevas" : `${pr} po`}</span></button>`;
   }).join("");
   const resto = S.tienda.cola.slice(S.tienda.pos + 1).map(i => S.players[i].nombre);
-  el.innerHTML = `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(t.pnj)}:${t.pnj}"></canvas><h2>${t.nombre}</h2></div>${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> · tiene <b>${p.oro} po</b>${p.clase === "picaro" ? " · −25 %" : ""}</p>` : quienLinea(p, "")}
+  el.innerHTML = `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(t.pnj)}:${t.pnj}"></canvas><div><h2>${t.nombre}</h2>${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> · tiene <b class="oro">${p.oro} po</b>${p.clase === "picaro" ? " · −25 %" : ""}</p>` : quienLinea(p, "")}</div></div>
     <div class="articulos">${items}</div>
     <div class="pie">${mio ? `<button type="button" class="boton" data-juego="terminar">${resto.length ? `Listo · le toca a ${esc(resto[0])}` : "Salir de la tienda"}</button>` : ""}</div>`;
   pintarRetratos(el);
@@ -1107,24 +1251,20 @@ function renderTienda(el, p, mio) {
 function renderCombate(el, sc, p, mio) {
   const c = S.combate;
   if (!c) { el.innerHTML = `<h2>${sc.titulo}</h2>`; return; }
-  const e = ENEMIGOS[c.enemigo], cl = CLASES[p.clase], arma = obj(p.equipo.arma) || {};
-  const refStat = stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
-  const modG = stat(p, "ani") + (arma.golpe || 0) + (p.clase === "explorador" ? 2 : 0), modR = stat(p, refStat) + (arma.golpe || 0);
+  const e = ENEMIGOS[c.enemigo];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
-  const chips = [`CA ${e.ca}`, c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.maldito ? "Maldito" : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Escudos" : ""].filter(Boolean);
+  const chips = [`CA ${e.ca}`, c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.maldito ? "Maldito" : "", c.veneno ? `Veneno ${c.veneno}` : "", c.atkMod ? `Ataque ${c.atkMod}` : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Bloqueado" : ""].filter(Boolean);
   const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : ""}${a.t === "h" && S.players[a.i].alma <= 0 ? " caido" : ""}">${esc(a.t === "e" ? e.nombre.split(",")[0] : S.players[a.i].nombre)}</li>`).join("");
   let menu;
   if (c.enemigoActua) menu = `<p class="quien espera"><b>${e.nombre}</b> ataca…</p>`;
   else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${S.zurron[k]}`, "", false)).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
-  else menu = `${quienLinea(p, "Turno de")}<div class="menu dos acciones">
-    ${boton('data-juego="accion" data-v="atacar"', "Atacar", `d20${fmt(modG)}`, `1d8${fmt(stat(p, "ani"))} físico`, !mio)}
-    ${boton('data-juego="accion" data-v="conjuro"', "Conjuro", `d20${fmt(modR)}`, `1d8${fmt(stat(p, refStat))} arcano`, !mio)}
-    ${boton('data-juego="accion" data-v="habilidad"', cl.hab, `×${p.usos}`, "", !mio || p.usos <= 0)}
-    ${boton('data-juego="accion" data-v="curar"', "Curar", `SAB${fmt(stat(p, "tem"))}`, "Al más herido", !mio)}
-    ${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}
-    ${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
+  else menu = `${quienLinea(p, "Turno de")}<div class="menu dos acciones">${p.habs.map((id, k) => {
+      const h = H(id), quedan = h.usos ? p.usosH[id] || 0 : 0;
+      return boton(`data-juego="hab" data-v="${k}" data-tipo="${h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo"}"`, h.nombre, h.usos ? `${quedan}/${h.usos}` : "∞", resumenHab(id, p), !mio || (h.usos && quedan <= 0));
+    }).join("")}</div>
+    <div class="fila-extra">${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
   el.innerHTML = `<div class="rival-info"><button type="button" class="rival-nombre" data-ui="bestia" data-k="${c.enemigo}">${e.nombre}</button><span class="chips">${chips.map(x => `<span>${x}</span>`).join("")}</span></div>
-    ${c.ronda === 1 && sc.esJefe ? `<p class="rasgo">${sc.texto}</p>` : `<p class="rasgo">${e.rasgoDesc}</p>`}<ol class="orden">${orden}</ol>${menu}`;
+    <ol class="orden">${orden}</ol>${menu}`;
 }
 
 /* ---------- Ventanas ---------- */
@@ -1154,7 +1294,11 @@ function htmlFicha(p) {
     <div><h2>${esc(p.nombre)}</h2><p>${rz.nombre} · ${cl.nombre} · ${ALINEAMIENTOS[p.alin]}</p>
     <p class="cifras">Nv ${p.nivel} · PX ${p.xp}${sig !== undefined ? `/${sig}` : ""} · PG ${p.alma}/${max} · CA ${ca(p)} · ${p.oro} po</p>
     <p class="stats">${Object.keys(STATS).map(k => `<span><b>${fmt(stat(p, k))}</b>${ABREV[k]}</span>`).join("")}</p></div></div>
-    <dl class="habilidades"><dt>${cl.hab}</dt><dd>${cl.habDesc}</dd><dt>${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd><dt>${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd></dl>
+    <span class="barra-xp grande"><i style="width:${pctXp(p)}%"></i></span>
+    <h3>Habilidades (${p.habs.length}/4)</h3>
+    <ul class="lista-habs">${p.habs.map(id => `<li><p><b>${H(id).nombre}</b><span>${resumenHab(id, p)}${H(id).usos ? ` · ${H(id).usos} usos` : ""}</span></p><small>${H(id).desc}</small></li>`).join("")}</ul>
+    ${proximaHab(p) ? `<p class="proxima">Nivel ${proximaHab(p).nivel}: aprenderá <b>${proximaHab(p).ids.map(x => H(x).nombre).join(", ")}</b></p>` : ""}
+    <dl class="habilidades"><dt>${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd><dt>${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd></dl>
     <ul class="equipo">${Object.keys(RANURAS).map(k => `<li><span class="etiqueta">${RANURAS[k]}</span> ${p.equipo[k] ? OBJETOS[p.equipo[k]].nombre : "—"}</li>`).join("")}</ul>`;
 }
 function htmlMochila() {
@@ -1179,7 +1323,7 @@ function htmlCompendio(pestana, k) {
       <p><b>${e.rasgoDesc}</b> ${e.lore}</p></div></article>`;
   }).join("") || `<p class="espera">Aún no os habéis cruzado con ningún monstruo.</p>`;
   if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(x => { const r = RAZAS[x]; return `<article><h3>${r.nombre}</h3><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p>${r.lore}</p></article>`; }).join("");
-  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p><b>${c.hab}:</b> ${c.habDesc}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
+  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p>${Object.keys(APRENDE[x]).map(l => `<b>Nv ${l}:</b> ${APRENDE[x][l].map(id => H(id).nombre).join(", ")}`).join(" · ")}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
   return `<h2>Compendio</h2><div class="pestanas">${Object.keys(tabs).map(t => `<button type="button" data-ui="pestana" data-p="${t}" aria-selected="${t === pestana}">${tabs[t]}</button>`).join("")}</div><div class="compendio">${cuerpo}</div>`;
 }
 function htmlAyuda() {
@@ -1187,6 +1331,8 @@ function htmlAyuda() {
     <li><b>En línea:</b> uno crea la partida y pasa el código de 4 letras. Cada amigo abre este mismo juego en claude.ai con su cuenta, pulsa «Unirse» y lo escribe. El móvil del anfitrión lleva la partida: que no lo cierre.</li>
     <li><b>Personaje:</b> 90 segundos para elegir clase, raza y aspecto. Al acabar el tiempo, empieza la aventura.</li>
     <li><b>Mapa:</b> en cada acto elegís camino entre combates, sucesos, una tienda y una hoguera. Al final espera el jefe. Son 4 actos: bosque, mazmorra, castillo y volcán.</li>
+    <li><b>Habilidades:</b> cada héroe lleva hasta 4, como los movimientos de un Pokémon. Al subir de nivel aprende otras; si ya tiene 4, elige cuál olvida. Las de usos limitados se recargan en cada combate.</li>
+    <li><b>Botín:</b> los cofres y los enemigos sueltan armas, armaduras y objetos mágicos. Pulsa el nombre del héroe que se lo queda (▲ = mejor que lo que lleva). Lo que nadie coge se vende.</li>
     <li><b>Tiradas:</b> d20 + atributo contra la CD (o la CA del enemigo). 20 es crítico y 1 es pifia.</li>
     <li><b>Turnos:</b> decide quien tiene el marco dorado. En combate manda la iniciativa.</li>
     <li><b>Si caéis todos,</b> volvéis al inicio del acto.</li></ul>`;
@@ -1200,6 +1346,10 @@ function ejecutar(k, v) {
     case "resp": return responder(+v);
     case "final": return elegirFinal(v);
     case "accion": return accion(v);
+    case "hab": return accion("hab", v);
+    case "abrir": return abrirCofre();
+    case "equipar": { const [k, i] = String(v).split(":"); return equipar(+k, +i); }
+    case "aprender": return aprender(+v);
     case "objeto": return accion("objeto", v);
     case "comprar": return comprar(v);
     case "terminar": return terminarCompras();
@@ -1222,7 +1372,7 @@ document.addEventListener("click", ev => {
   if (ds.juego) {
     if (!S || ocupado || esperandoHost) return;
     const k = ds.juego, v = ds.v;
-    if (k === "reintentar" ? S.online && !esHost() : !turnoMio()) return;
+    if (k === "reintentar" ? S.online && !esHost() : !permitido(k, miId)) return;
     if (S.online && !esHost()) return enviarJugada(k, v);
     return ejecutar(k, v);
   }

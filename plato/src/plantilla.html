@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
 <style>
 /*CSS*/
 </style>
@@ -11,7 +11,7 @@
 <section id="p-inicio" class="pantalla inicio" hidden>
   <header class="portada">
     <h1 class="logo">Dados <span>y</span> Mazmorras</h1>
-    <p class="lema">Rol de espada y brujería · de 1 a 4 héroes</p>
+    <p class="lema">Rol de fantasía por turnos · 1 a 4 héroes</p>
   </header>
   <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="La taberna del Grifo Tuerto"></canvas></div>
   <p class="intro">Bosque, mazmorra, castillo y volcán. Cuatro jefes os esperan entre vosotros y el tesoro del dragón.</p>
@@ -20,10 +20,10 @@
 
 <section id="p-unirse" class="pantalla unirse" hidden>
   <header class="cabecera">
-    <button type="button" class="boton sec mini" data-ui="volver-inicio">‹ Volver</button>
+    <button type="button" class="icono" data-ui="volver-inicio" aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <h2>Unirse a una partida</h2>
   </header>
-  <form id="form-unirse" class="form-unirse marco" autocomplete="off">
+  <form id="form-unirse" class="form-unirse tarjeta" autocomplete="off">
     <label for="codigo-mesa" class="etiqueta">Código de 4 letras</label>
     <input id="codigo-mesa" name="codigo" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="KRTO">
     <button type="submit" class="boton grande">Entrar</button>
@@ -37,7 +37,7 @@
 
 <section id="p-seleccion" class="pantalla seleccion" hidden>
   <header class="cabecera sel-cab">
-    <button type="button" class="boton sec mini" data-ui="sel-salir" aria-label="Salir">‹</button>
+    <button type="button" class="icono" data-ui="sel-salir" aria-label="Salir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="sel-titulo"><h2>Elige tu héroe</h2><p class="etiqueta" id="sel-codigo"></p></div>
     <p class="reloj" id="sel-reloj" aria-live="off">1:30</p>
   </header>
@@ -46,7 +46,7 @@
   <div class="sel-jugadores" id="sel-jugadores" aria-label="Jugadores"></div>
   <div class="sel-nombre">
     <input id="sel-nombre" maxlength="16" aria-label="Nombre del héroe" autocomplete="off" spellcheck="false">
-    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">🎲 Azar</button>
+    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">Al azar</button>
   </div>
   <div class="sel-cuerpo">
     <div class="selector">
@@ -73,23 +73,23 @@
 <section id="p-juego" class="pantalla juego" hidden>
   <header class="cabecera barra">
     <p class="barra-titulo" id="barra-titulo"></p>
-    <button type="button" class="boton sec mini" data-ui="mochila">Mochila</button>
-    <button type="button" class="boton sec mini" data-ui="menu" aria-label="Menú">☰</button>
+    <button type="button" class="icono" data-ui="mochila" aria-label="Mochila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M9 13h6"/></svg></button>
+    <button type="button" class="icono" data-ui="menu" aria-label="Menú"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
   <div class="escenario" id="caja-juego"><canvas id="lienzo" aria-label="Escenario"></canvas></div>
   <div class="grupo" id="grupo" aria-label="El grupo"></div>
   <div class="mapa" id="mapa" aria-label="Mapa del acto"></div>
-  <section class="panel marco" id="panel" aria-live="polite"></section>
+  <section class="panel" id="panel" aria-live="polite"></section>
   <div class="mesa">
     <canvas id="dado" class="dado" data-tam="34" aria-hidden="true"></canvas>
     <p id="dado-info"></p>
-    <button type="button" class="boton sec mini" data-ui="cronica">Crónica</button>
+    <button type="button" class="icono" data-ui="cronica" aria-label="Crónica"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg></button>
   </div>
 </section>
 </main>
 
 <p id="aviso" class="aviso" role="status" hidden></p>
-<div id="capa" class="capa" hidden><div class="modal marco" id="modal" role="dialog" aria-modal="true" aria-label="Detalle"></div></div>
+<div id="capa" class="capa" hidden><div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Detalle"></div></div>
 <script>
 /*JS*/
 </script>

@@ -7,345 +7,414 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
 <style>
-/* Móvil primero: cada pantalla ocupa exactamente el alto visible (100dvh) y nunca hace scroll la página.
-   Una sola columna centrada (máx. 540 px); en pantallas grandes se ve como un móvil sobre la mesa.
-   Estética de taberna a la luz de las antorchas llevada al pixel art: madera oscura, oro viejo y marcos pixelados. */
+/* Móvil primero: cada pantalla ocupa exactamente el alto visible (100dvh) y la página nunca hace scroll.
+   Una sola columna centrada (máx. 540 px). Interfaz moderna y mínima: fondo noche azulada, tarjetas suaves,
+   un acento violeta para lo que se puede tocar y oro para las recompensas. El pixel art queda para el mundo. */
 :root {
-  --noche: #120b08;
-  --panel: #22160f;
-  --panel-2: #2e1e14;
-  --hundido: #180f0a;
-  --borde: #5c3a22;
-  --borde-luz: #8f5a30;
-  --barro: #d0743f;
-  --barro-luz: #f0a868;
-  --barro-sombra: #8f4122;
-  --hueso: #f2e5d1;
-  --ceniza: #b9a089;
-  --tenue: #8a7262;
-  --exito: #a8c860;
-  --fallo: #ef6c52;
-  --oro: #f0c050;
-  --velo: rgba(8, 5, 3, 0.82);
-  --f-titulo: "Silkscreen", "Courier New", monospace;
-  --f-texto: "Pixelify Sans", "Trebuchet MS", system-ui, sans-serif;
-  --px: 3px;
+  --bg: #0b0d1a;
+  --bg-2: #12152b;
+  --surface: #161a30;
+  --surface-2: #1e2340;
+  --line: #2a3055;
+  --line-2: #3a4275;
+  --text: #f1f2fb;
+  --muted: #a3a9cc;
+  --faint: #6c739c;
+  --accent: #8b7bff;
+  --accent-2: #b46cff;
+  --accent-soft: rgba(139, 123, 255, .16);
+  --gold: #ffc95c;
+  --ok: #3ddc97;
+  --ko: #ff6b81;
+  --fisica: #ff9f5a;
+  --arcana: #7fa8ff;
+  --sagrada: #ffd76a;
+  --cura: #3ddc97;
+  --apoyo: #5ed1ff;
+  --r-comun: #b8bdd6;
+  --r-raro: #5ea8ff;
+  --r-epico: #c27bff;
+  --r-legendario: #ffb347;
+  --velo: rgba(6, 7, 16, .78);
+  --radio: 14px;
+  --f: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
-html { height: 100%; box-sizing: border-box; background: var(--noche); }
+html { height: 100%; box-sizing: border-box; background: var(--bg); }
 *, *::before, *::after { box-sizing: inherit; }
 body {
   height: 100vh; height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none;
-  background: var(--noche); color: var(--hueso); font-family: var(--f-texto); font-size: 15px; line-height: 1.35;
-  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  background: radial-gradient(120% 60% at 50% 0%, var(--bg-2), var(--bg) 70%) fixed, var(--bg);
+  color: var(--text); font-family: var(--f); font-size: 15px; line-height: 1.4;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-font-smoothing: antialiased;
 }
 [hidden] { display: none !important; }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
-:focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
 h1, h2, h3 { text-wrap: balance; }
-.etiqueta { font-family: var(--f-titulo); font-size: 10px; letter-spacing: .04em; color: var(--ceniza); margin: 0; font-weight: 400; }
-.espera { margin: 0; color: var(--ceniza); }
-.nota { margin: 4px 0 0; font-size: 13px; color: var(--tenue); text-align: center; }
+.etiqueta { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 0; }
+.espera { margin: 0; color: var(--muted); }
+.nota { margin: 4px 0 0; font-size: 13px; color: var(--faint); text-align: center; }
+.tarjeta { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radio); }
 
-/* ---------- Marcos y botones pixelados ---------- */
-.marco {
-  background: var(--panel);
-  margin: var(--px);
-  box-shadow:
-    0 calc(var(--px) * -1) 0 0 var(--borde), 0 var(--px) 0 0 var(--borde),
-    calc(var(--px) * -1) 0 0 0 var(--borde), var(--px) 0 0 0 var(--borde),
-    inset 0 var(--px) 0 0 var(--panel-2);
-}
+/* ---------- Botones ---------- */
 .boton {
-  --b: var(--barro); --b-luz: var(--barro-luz); --b-sombra: var(--barro-sombra); --b-texto: var(--noche);
-  font-family: var(--f-titulo); font-size: 13px; line-height: 1.1; letter-spacing: .02em; font-weight: 400;
-  color: var(--b-texto); background: var(--b); border: 0; border-radius: 0;
-  padding: 10px 14px 12px; margin: var(--px);
-  box-shadow:
-    0 calc(var(--px) * -1) 0 0 var(--noche), 0 var(--px) 0 0 var(--noche),
-    calc(var(--px) * -1) 0 0 0 var(--noche), var(--px) 0 0 0 var(--noche),
-    inset 0 calc(var(--px) * -1) 0 0 var(--b-sombra), inset 0 var(--px) 0 0 var(--b-luz);
+  font-weight: 600; font-size: 15px; line-height: 1.15; border: 0; border-radius: 12px; padding: 13px 18px;
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 6px 18px -8px rgba(139, 123, 255, .8);
+  transition: transform .12s, filter .12s;
 }
-.boton:active:not(:disabled) { transform: translateY(2px); }
-.boton:disabled { opacity: .45; }
-.boton.sec { --b: var(--panel-2); --b-luz: var(--borde-luz); --b-sombra: var(--hundido); --b-texto: var(--barro-luz); }
-.boton.mini { font-size: 11px; padding: 7px 9px 9px; }
-.boton.grande { font-size: 15px; padding: 14px 18px 16px; }
-.boton.ancho { width: calc(100% - var(--px) * 2); }
+.boton:active:not(:disabled) { transform: scale(.97); }
+.boton:disabled { opacity: .4; box-shadow: none; }
+.boton.sec { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.boton.mini { font-size: 13px; padding: 9px 12px; border-radius: 10px; }
+.boton.grande { font-size: 16px; padding: 15px 18px; }
+.boton.ancho { width: 100%; }
+.icono {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px;
+  background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line);
+}
+.icono svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icono:active { background: var(--line); }
 @media (hover: hover) {
-  .boton:hover:not(:disabled) { --b: var(--barro-luz); --b-luz: var(--hueso); }
-  .boton.sec:hover:not(:disabled) { --b: var(--borde); --b-texto: var(--hueso); }
+  .boton:hover:not(:disabled) { filter: brightness(1.1); }
+  .icono:hover { background: var(--line); }
 }
 
-/* ---------- Armazón: una columna que llena la pantalla ---------- */
+/* ---------- Armazón ---------- */
 .app { height: 100%; max-width: 540px; margin: 0 auto; position: relative; }
 .pantalla {
-  height: 100%; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden;
-  padding: max(8px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  height: 100%; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden;
+  padding: max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 .pantalla > * { flex: none; min-width: 0; }
-.cabecera { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.cabecera h2 { margin: 0; font-family: var(--f-titulo); font-weight: 400; font-size: 17px; line-height: 1.1; color: var(--barro-luz); text-shadow: 2px 2px 0 var(--barro-sombra); }
+.cabecera { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cabecera h2 { margin: 0; font-weight: 700; font-size: 19px; line-height: 1.15; }
 .escenario { min-height: 0; min-width: 0; display: grid; place-items: center; overflow: hidden; }
-.escenario canvas { box-shadow: 0 0 0 var(--px) var(--borde), 0 0 0 calc(var(--px) * 2) var(--noche); }
+.escenario canvas { border-radius: var(--radio); box-shadow: 0 0 0 1px var(--line), 0 14px 30px -18px #000; }
 
 /* ---------- Inicio ---------- */
-.inicio { justify-content: center; gap: 12px; }
+.inicio { justify-content: center; gap: 14px; }
 .portada { text-align: center; }
-.logo {
-  font-family: var(--f-titulo); font-weight: 700; font-size: clamp(30px, 10vw, 46px); line-height: 1; margin: 0;
-  color: var(--barro-luz); text-shadow: 3px 3px 0 var(--barro-sombra), 6px 6px 0 var(--noche);
-}
-.logo span { color: var(--hueso); }
-.lema { font-family: var(--f-titulo); font-size: 11px; color: var(--ceniza); margin: 8px 0 0; }
-.intro { margin: 0; text-align: center; color: var(--ceniza); font-size: 14px; }
-.botones-inicio { display: grid; gap: 2px; }
-.botones-inicio .boton { width: calc(100% - var(--px) * 2); }
+.logo { font-weight: 800; font-size: clamp(34px, 11vw, 48px); line-height: 1; margin: 0; letter-spacing: -.02em; }
+.logo span { background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lema { font-size: 14px; color: var(--muted); margin: 8px 0 0; }
+.intro { margin: 0; text-align: center; color: var(--muted); font-size: 14px; }
+.botones-inicio { display: grid; gap: 8px; }
+.botones-inicio .boton { width: 100%; }
 
 /* ---------- Unirse ---------- */
-.unirse { gap: 14px; }
-.form-unirse { display: grid; gap: 10px; padding: 14px; }
+.unirse { gap: 16px; }
+.form-unirse { display: grid; gap: 12px; padding: 16px; }
 .form-unirse input {
-  width: 100%; text-align: center; font-family: var(--f-titulo); font-size: 40px; letter-spacing: .3em; text-transform: uppercase;
-  padding: 8px 0 8px .3em; background: var(--hundido); border: 0; color: var(--barro-luz); box-shadow: inset 0 0 0 2px var(--borde);
+  width: 100%; text-align: center; font-weight: 700; font-size: 40px; letter-spacing: .3em; text-transform: uppercase;
+  padding: 10px 0 10px .3em; background: var(--bg); border: 0; border-radius: 12px; color: var(--text); box-shadow: inset 0 0 0 1px var(--line);
 }
-.form-unirse input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--oro); }
-.form-unirse .boton { margin: var(--px) 0; }
-.pasos { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--ceniza); font-size: 14px; }
-.pasos b { color: var(--hueso); }
+.form-unirse input::placeholder { color: var(--line-2); }
+.form-unirse input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.pasos { margin: 0; padding-left: 20px; display: grid; gap: 10px; color: var(--muted); font-size: 14px; }
+.pasos b { color: var(--text); }
 
 /* ---------- Selección de personaje (90 s) ---------- */
-.seleccion { gap: 6px; }
+.seleccion { gap: 8px; }
 .sel-titulo { flex: 1; min-width: 0; }
-.sel-titulo .etiqueta b { color: var(--oro); font-weight: 400; letter-spacing: .14em; font-size: 12px; }
-.reloj { margin: 0; font-family: var(--f-titulo); font-size: 24px; line-height: 1; color: var(--oro); font-variant-numeric: tabular-nums; text-shadow: 2px 2px 0 var(--barro-sombra); }
-.reloj.urgente { color: var(--fallo); animation: parpadeo 1s steps(2) infinite; }
-.sel-barra { height: 6px; background: var(--hundido); box-shadow: inset 0 0 0 1px var(--borde); }
-.sel-barra i { display: block; height: 100%; width: 100%; background: var(--oro); transition: width .25s linear; }
-.sel-jugadores { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.sel-titulo .etiqueta b { color: var(--gold); letter-spacing: .16em; font-size: 12px; }
+.reloj { margin: 0; font-weight: 800; font-size: 26px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.reloj.urgente { color: var(--ko); animation: parpadeo 1s steps(2) infinite; }
+.sel-barra { height: 4px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.sel-barra i { display: block; height: 100%; width: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s linear; }
+.sel-jugadores { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .sel-jugadores::-webkit-scrollbar { display: none; }
 .chip-jugador {
-  flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; border: 0; min-height: 34px;
-  background: var(--hundido); box-shadow: inset 0 0 0 2px var(--borde); font-size: 13px; color: var(--ceniza);
+  flex: none; display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 4px; border: 0; min-height: 36px; border-radius: 999px;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 14px; font-weight: 500; color: var(--muted);
 }
+.chip-jugador canvas { border-radius: 50%; background: var(--surface-2); }
 .chip-jugador:disabled { cursor: default; }
-.chip-jugador.sel { box-shadow: inset 0 0 0 2px var(--oro); color: var(--hueso); background: var(--panel-2); }
-.chip-jugador.listo { color: var(--exito); }
-.chip-jugador.mas { padding: 2px 10px; font-family: var(--f-titulo); font-size: 11px; color: var(--barro-luz); }
+.chip-jugador.sel { box-shadow: inset 0 0 0 2px var(--accent); color: var(--text); background: var(--accent-soft); }
+.chip-jugador.listo { color: var(--ok); }
+.chip-jugador.mas { padding: 3px 14px; color: var(--accent); font-weight: 600; }
 .chip-jugador span { white-space: nowrap; }
-.sel-nombre { display: flex; gap: 4px; align-items: center; }
+.sel-nombre { display: flex; gap: 8px; align-items: center; }
 .sel-nombre input {
-  flex: 1; min-width: 0; padding: 8px 10px; font-size: 17px; font-weight: 600; background: var(--hundido); border: 0;
-  box-shadow: inset 0 0 0 2px var(--borde); color: var(--hueso);
+  flex: 1; min-width: 0; padding: 10px 14px; font-size: 17px; font-weight: 600; background: var(--surface); border: 0; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text);
 }
-.sel-nombre input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--oro); }
-.sel-cuerpo { flex: 1 1 auto !important; min-height: 0; display: grid; grid-template-rows: auto auto; align-content: start; gap: 6px; overflow-y: auto; overscroll-behavior: contain; }
-.selector { display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; align-items: stretch; background: var(--panel); box-shadow: inset 0 0 0 2px var(--borde); }
-.flecha { border: 0; background: var(--panel-2); color: var(--oro); font-family: var(--f-titulo); font-size: 22px; padding: 0; }
-.flecha:active { background: var(--borde); }
-.sel-info { padding: 6px 8px; min-width: 0; }
-.sel-info strong { font-family: var(--f-titulo); font-weight: 400; font-size: 15px; color: var(--barro-luz); }
-.sel-info .etiqueta { margin-left: 4px; }
-.sel-info p { margin: 3px 0 0; font-size: 13px; line-height: 1.3; color: var(--ceniza); }
-.sel-info p b { color: var(--hueso); font-weight: 600; }
-.sel-aspecto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-.sel-aspecto button { border: 0; padding: 7px 2px; background: var(--hundido); box-shadow: inset 0 0 0 2px var(--borde); font-family: var(--f-titulo); font-size: 10px; color: var(--ceniza); }
-.sel-aspecto button:active { box-shadow: inset 0 0 0 2px var(--oro); color: var(--hueso); }
-.sel-stats { margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
-.sel-stats span, .stats span { display: grid; justify-items: center; padding: 2px 0; background: var(--hundido); box-shadow: inset 0 0 0 1px var(--borde); font-family: var(--f-titulo); font-size: 9px; color: var(--barro-luz); }
-.sel-stats b, .stats b { font-size: 15px; font-weight: 400; color: var(--hueso); line-height: 1.1; }
+.sel-nombre input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.sel-cuerpo { flex: 1 1 auto !important; min-height: 0; display: grid; grid-template-rows: auto auto; align-content: start; gap: 8px; overflow-y: auto; overscroll-behavior: contain; }
+.selector { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; align-items: stretch; background: var(--surface); border-radius: var(--radio); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.flecha { border: 0; background: transparent; color: var(--accent); font-size: 26px; font-weight: 500; padding: 0; }
+.flecha:active { background: var(--accent-soft); }
+.sel-info { padding: 9px 4px; min-width: 0; display: grid; gap: 5px; }
+.sel-info p { margin: 0; font-size: 13px; line-height: 1.3; color: var(--muted); }
+.sel-info p b { color: var(--text); font-weight: 600; }
+.sel-tit { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sel-info .sel-tit strong { font-weight: 700; font-size: 17px; color: var(--text); }
+.habs-ini { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.habs-ini li { display: grid; padding: 4px 9px; border-radius: 9px; background: var(--accent-soft); line-height: 1.2; }
+.habs-ini b { font-size: 13px; font-weight: 600; }
+.habs-ini span { font-size: 11px; color: var(--muted); }
+.sel-aspecto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.sel-aspecto button { border: 0; padding: 9px 2px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; font-weight: 500; color: var(--muted); }
+.sel-aspecto button:active { box-shadow: inset 0 0 0 2px var(--accent); color: var(--text); }
+.sel-stats { margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.sel-stats span, .stats span { display: grid; justify-items: center; padding: 4px 0; border-radius: 10px; background: var(--surface); font-size: 10px; font-weight: 600; letter-spacing: .05em; color: var(--faint); }
+.sel-stats b, .stats b { font-size: 16px; font-weight: 700; letter-spacing: 0; color: var(--text); line-height: 1.15; }
+.stats span { background: var(--surface-2); }
 
 /* ---------- Partida ---------- */
-.juego { gap: 6px; }
-.barra { gap: 2px; }
-.barra-titulo { flex: 1; min-width: 0; margin: 0; font-family: var(--f-titulo); font-size: 12px; line-height: 1.15; color: var(--barro-luz); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.barra-titulo b { color: var(--noche); background: var(--oro); padding: 1px 5px; margin-right: 4px; font-weight: 400; }
-.barra .boton { margin: 0 var(--px); }
+.juego { gap: 8px; }
+.barra { gap: 6px; }
+.barra-titulo { flex: 1; min-width: 0; margin: 0; display: grid; gap: 5px; font-weight: 600; font-size: 14px; line-height: 1.1; }
+.barra-titulo > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progreso { display: flex; gap: 4px; }
+.progreso i { width: 22px; height: 4px; border-radius: 4px; background: var(--line); }
+.progreso i.hecho { background: var(--accent); }
+.progreso i.ahora { background: var(--gold); }
 .juego.modo-mapa #caja-juego { display: none; }
 .juego:not(.modo-mapa) .mapa { display: none; }
-.juego.modo-tienda #caja-juego { display: none; }
-.tendero { display: flex; align-items: center; gap: 8px; }
-.tendero canvas { flex: none; background: var(--hundido); box-shadow: inset 0 0 0 2px var(--borde); }
+.juego.modo-panel #caja-juego { display: none; }
 
-.grupo { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
+.grupo { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
 .heroe {
-  display: flex; align-items: center; gap: 4px; min-width: 0; padding: 2px 4px 2px 2px; border: 0; text-align: left;
-  background: var(--panel); box-shadow: inset 0 0 0 2px var(--borde); color: var(--hueso);
+  display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 8px 4px 4px; border: 0; text-align: left; border-radius: 12px;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--text);
 }
-.heroe.activo { background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--oro); }
-.heroe.caido { opacity: .5; }
+.heroe.activo { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+.heroe.caido { opacity: .45; }
 .heroe.fuera { filter: grayscale(.8); }
-.heroe .retrato { flex: none; background: var(--hundido); }
-.heroe-datos { display: grid; gap: 1px; min-width: 0; flex: 1; }
-.heroe-datos strong { font-weight: 600; font-size: 12px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.barra-alma { display: block; height: 6px; background: var(--hundido); box-shadow: inset 0 0 0 1px var(--noche); }
-.barra-alma i { display: block; height: 100%; background: var(--exito); box-shadow: inset 0 2px 0 0 rgba(255, 255, 255, .25); transition: width .3s steps(6); }
-.heroe.grave .barra-alma i { background: var(--fallo); }
-.cifras { font-size: 11px; color: var(--ceniza); font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; overflow: hidden; }
+.heroe .retrato { flex: none; border-radius: 9px; background: var(--surface-2); }
+.heroe-datos { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.heroe-datos strong { font-weight: 600; font-size: 13px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-alma, .barra-xp { display: block; height: 5px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.barra-alma i, .barra-xp i { display: block; height: 100%; border-radius: 5px; transition: width .35s; }
+.barra-alma i { background: var(--ok); }
+.barra-xp { height: 3px; }
+.barra-xp i { background: var(--gold); }
+.barra-xp.grande { height: 6px; }
+.heroe.grave .barra-alma i { background: var(--ko); }
+.cifras { display: flex; justify-content: space-between; gap: 4px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
+.cifras .nv { color: var(--gold); font-weight: 600; }
 
-/* Mapa de caminos: filas de abajo (salida) a arriba (jefe), con líneas SVG entre nodos. */
+/* Mapa de caminos: de abajo (salida) a arriba (jefe), con líneas SVG entre nodos. */
 .mapa {
   flex: 1 1 auto !important; min-height: 0; position: relative; display: flex; flex-direction: column; justify-content: space-between;
-  padding: 10px 6px; background:
-    radial-gradient(circle at 50% 0%, rgba(239, 108, 82, .16), transparent 55%),
-    repeating-linear-gradient(0deg, var(--hundido) 0 6px, #1b110b 6px 12px);
-  box-shadow: inset 0 0 0 2px var(--borde);
+  padding: 12px 6px; border-radius: var(--radio); background:
+    radial-gradient(circle at 50% 0%, rgba(255, 107, 129, .12), transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(139, 123, 255, .12), transparent 55%), var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .lineas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.lineas line { stroke: var(--borde); stroke-width: 3; stroke-dasharray: 3 5; }
-.lineas line.abierta { stroke: var(--oro); stroke-dasharray: 6 4; animation: hormigas 1s linear infinite; }
-.lineas line.usada { stroke: var(--barro); stroke-dasharray: none; }
+.lineas line { stroke: var(--line-2); stroke-width: 2; stroke-dasharray: 2 6; stroke-linecap: round; }
+.lineas line.abierta { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 6 6; animation: hormigas 1s linear infinite; }
+.lineas line.usada { stroke: var(--faint); stroke-dasharray: none; }
 .fila-mapa { position: relative; display: flex; justify-content: space-evenly; align-items: center; }
 .nodo {
-  width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0;
-  background: var(--panel); box-shadow: inset 0 0 0 2px var(--borde); opacity: .55;
+  width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
+  background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); opacity: .5;
 }
-.nodo.jefe { width: 56px; height: 56px; box-shadow: inset 0 0 0 2px var(--fallo); opacity: .8; }
-.nodo.hecho { opacity: .9; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--barro-sombra); }
-.nodo.aqui { opacity: 1; box-shadow: inset 0 0 0 3px var(--hueso); }
-.nodo.libre { opacity: 1; background: var(--panel-2); box-shadow: inset 0 0 0 3px var(--oro), 0 0 0 3px var(--noche), 0 0 12px rgba(240, 192, 80, .5); animation: latido 1.2s steps(2) infinite; }
+.nodo.jefe { width: 58px; height: 58px; box-shadow: inset 0 0 0 2px var(--ko), 0 0 22px -6px var(--ko); opacity: .9; }
+.nodo.hecho { opacity: .8; }
+.nodo.aqui { opacity: 1; box-shadow: inset 0 0 0 2px var(--text); }
+.nodo.libre { opacity: 1; background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent), 0 0 18px -4px var(--accent); animation: latido 1.4s ease-in-out infinite; }
 .nodo:disabled { cursor: default; }
-.leyenda { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--f-titulo); font-size: 9px; color: var(--ceniza); }
-.leyenda span { display: inline-flex; align-items: center; gap: 3px; }
+.leyenda { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); }
+.leyenda span { display: inline-flex; align-items: center; gap: 4px; }
 
 /* Panel de la escena: lo que ocurre y las opciones. Ocupa el hueco que queda. */
-.panel { flex: 1 1 auto !important; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-.juego.modo-mapa .panel { flex: none !important; padding: 8px 10px; }
-.panel h2 { margin: 0; font-family: var(--f-titulo); font-weight: 400; font-size: 16px; line-height: 1.15; color: var(--barro-luz); text-shadow: 2px 2px 0 var(--barro-sombra); }
-.panel h2.ko { color: var(--fallo); }
-.texto { margin: 0; font-size: 14px; }
-.quien { margin: 0; font-size: 13px; color: var(--ceniza); }
-.quien b { color: var(--hueso); font-weight: 600; }
-.quien.espera { color: var(--oro); }
+.panel {
+  flex: 1 1 auto !important; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px; border-radius: var(--radio); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);
+}
+.juego.modo-mapa .panel { flex: none !important; padding: 10px 12px; }
+.panel h2 { margin: 0; font-weight: 700; font-size: 18px; line-height: 1.2; }
+.panel h2.ko { color: var(--ko); }
+.texto { margin: 0; font-size: 14px; color: var(--muted); }
+.quien { margin: 0; font-size: 13px; color: var(--muted); }
+.quien b { color: var(--text); font-weight: 600; }
+.quien.espera { color: var(--gold); }
 .pie { margin-top: auto; display: grid; }
-.pie .boton { width: calc(100% - var(--px) * 2); }
-.menu { display: grid; gap: 5px; }
+.pie .boton, .panel > .boton { width: 100%; }
+.menu { display: grid; gap: 6px; }
 .menu.dos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .opcion {
-  width: 100%; height: 100%; min-height: 44px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; text-align: left;
-  background: var(--hundido); border: 0; padding: 7px 9px; font-size: 14px; line-height: 1.25; color: var(--hueso);
-  box-shadow: inset 0 0 0 2px var(--borde);
+  --tono: var(--accent);
+  width: 100%; height: 100%; min-height: 48px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; text-align: left;
+  background: var(--surface-2); border: 0; border-radius: 12px; padding: 8px 10px 8px 12px; font-size: 14px; font-weight: 600; line-height: 1.2; color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line); position: relative; overflow: hidden;
 }
-.opcion:active:not(:disabled) { background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--oro); }
-.opcion:disabled { opacity: .45; }
-.opcion small { display: block; color: var(--ceniza); font-size: 11px; line-height: 1.2; margin-top: 1px; }
-.opcion .chip { font-family: var(--f-titulo); font-size: 10px; color: var(--barro-luz); white-space: nowrap; text-align: right; }
+.opcion[data-tipo]::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--tono); }
+.opcion[data-tipo="fisica"] { --tono: var(--fisica); }
+.opcion[data-tipo="arcana"] { --tono: var(--arcana); }
+.opcion[data-tipo="sagrada"] { --tono: var(--sagrada); }
+.opcion[data-tipo="cura"] { --tono: var(--cura); }
+.opcion[data-tipo="apoyo"] { --tono: var(--apoyo); }
+.opcion:active:not(:disabled) { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--tono); }
+.opcion:disabled { opacity: .4; }
+.opcion small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1.2; margin-top: 2px; }
+.opcion .chip { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; text-align: right; padding: 2px 7px; border-radius: 999px; background: var(--bg); }
 .op-txt { min-width: 0; }
-@media (hover: hover) { .opcion:hover:not(:disabled) { background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--barro); } }
-.sello { margin: 0; align-self: flex-start; font-family: var(--f-titulo); font-size: 14px; padding: 3px 9px; box-shadow: inset 0 0 0 2px currentColor; }
-.sello.ok { color: var(--exito); }
-.sello.ko { color: var(--fallo); }
-.efectos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-.efectos li { font-family: var(--f-titulo); font-size: 10px; padding: 3px 6px; color: var(--hueso); box-shadow: inset 0 0 0 2px var(--borde); }
-.epilogo { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ceniza); font-size: 13px; }
-.epilogo b { color: var(--hueso); }
+@media (hover: hover) { .opcion:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--tono); } }
+.fila-extra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.fila-extra .opcion { min-height: 40px; font-weight: 500; }
+.sello { margin: 0; align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.sello.ok { color: var(--ok); background: rgba(61, 220, 151, .12); }
+.sello.ko { color: var(--ko); background: rgba(255, 107, 129, .12); }
+.efectos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.efectos li { font-size: 12px; font-weight: 500; padding: 4px 9px; border-radius: 999px; color: var(--gold); background: rgba(255, 201, 92, .1); }
+.epilogo { margin: 0; padding-left: 18px; display: grid; gap: 5px; color: var(--muted); font-size: 13px; }
+.epilogo b { color: var(--text); }
+
+/* Aprender habilidad */
+.hab-nueva { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.hab-nueva p { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.hab-nueva b { font-size: 16px; }
+.hab-nueva span { font-size: 13px; color: var(--muted); }
+.hab-nueva small { font-size: 13px; color: var(--text); }
+
+/* Botín */
+.botin { display: grid; gap: 6px; }
+.objeto { --rz: var(--r-comun); display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rz); }
+.objeto.r-raro { --rz: var(--r-raro); }
+.objeto.r-epico { --rz: var(--r-epico); }
+.objeto.r-legendario { --rz: var(--r-legendario); background: linear-gradient(135deg, rgba(255, 179, 71, .14), var(--surface-2)); }
+.obj-cab { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.obj-cab strong { font-size: 15px; color: var(--rz); }
+.rareza { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--rz); }
+.objeto small { font-size: 12px; color: var(--muted); }
+.para { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 2px; }
+.para .etiqueta { margin-right: 2px; }
+.chip-heroe { border: 0; padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--bg); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+.chip-heroe.mejor { color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+.chip-heroe:active:not(:disabled) { background: var(--accent-soft); }
+.chip-heroe:disabled { opacity: .4; }
 
 /* Combate */
-.rival-info { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-.rival-nombre { background: none; border: 0; padding: 0; font-family: var(--f-titulo); font-size: 14px; color: var(--fallo); text-decoration: underline dotted; text-underline-offset: 4px; text-align: left; }
-.chips { display: flex; flex-wrap: wrap; gap: 3px; }
-.chips span { font-family: var(--f-titulo); font-size: 9px; padding: 2px 5px; color: var(--ceniza); box-shadow: inset 0 0 0 2px var(--borde); }
-.rasgo { margin: 0; font-size: 12px; color: var(--ceniza); line-height: 1.25; }
-.orden { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 3px; counter-reset: ini; }
-.orden li { font-family: var(--f-titulo); font-size: 9px; padding: 2px 5px; color: var(--tenue); background: var(--hundido); counter-increment: ini; }
-.orden li::before { content: counter(ini) ". "; }
-.orden li.rival { color: var(--fallo); }
+.rival-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.rival-nombre { background: none; border: 0; padding: 0; font-weight: 700; font-size: 17px; color: var(--text); text-align: left; }
+.rival-nombre::after { content: " ⓘ"; color: var(--faint); font-weight: 400; font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips span { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; color: var(--muted); background: var(--bg); }
+.rasgo { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.orden { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.orden li { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; color: var(--faint); background: var(--bg); }
+.orden li.rival { color: var(--ko); }
 .orden li.caido { text-decoration: line-through; }
-.orden li.ahora { background: var(--oro); color: var(--noche); }
+.orden li.ahora { background: var(--accent); color: #fff; }
+.orden li.ahora.rival { background: var(--ko); }
 
 /* Tienda */
-.articulos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.tendero { display: flex; align-items: center; gap: 10px; }
+.tendero canvas { flex: none; border-radius: 12px; background: var(--surface-2); }
+.articulos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .articulo {
-  display: grid; grid-template-rows: auto 1fr auto; gap: 2px; text-align: left; border: 0; padding: 6px 8px; min-width: 0;
-  background: var(--hundido); box-shadow: inset 0 0 0 2px var(--borde); color: var(--hueso);
+  display: grid; grid-template-rows: auto 1fr auto; gap: 2px; text-align: left; border: 0; padding: 7px 9px; min-width: 0; border-radius: 12px;
+  background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--text);
 }
 .articulo strong { font-size: 13px; font-weight: 600; line-height: 1.15; }
-.articulo small { font-size: 11px; line-height: 1.2; color: var(--ceniza); }
-.articulo .chip { font-family: var(--f-titulo); font-size: 11px; color: var(--oro); }
-.articulo:disabled { opacity: .45; }
-.articulo:active:not(:disabled) { box-shadow: inset 0 0 0 2px var(--oro); }
+.articulo small { font-size: 11px; line-height: 1.25; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.oro { color: var(--gold) !important; }
+.articulo .chip { font-size: 12px; font-weight: 700; color: var(--gold); }
+.articulo:disabled { opacity: .4; }
+.articulo:active:not(:disabled) { box-shadow: inset 0 0 0 2px var(--accent); }
 
 /* Mesa de dados */
-.mesa { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 0 0 0 2px; }
+.mesa { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 0 0 0 2px; }
 .dado { width: 34px; height: 34px; }
-#dado-info { margin: 0; font-size: 12px; line-height: 1.25; color: var(--ceniza); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-#dado-info.ok { color: var(--exito); }
-#dado-info.ko { color: var(--fallo); }
-.ocupado .menu, .ocupado .pie, .ocupado .articulos { pointer-events: none; opacity: .65; }
+#dado-info { margin: 0; font-size: 12px; line-height: 1.3; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#dado-info.ok { color: var(--ok); }
+#dado-info.ko { color: var(--ko); }
+.ocupado .menu, .ocupado .pie, .ocupado .articulos, .ocupado .fila-extra, .ocupado .botin { pointer-events: none; opacity: .6; }
 
-/* ---------- Ventanas ---------- */
+/* ---------- Ventanas (hojas que suben desde abajo) ---------- */
 .capa {
-  position: fixed; inset: 0; z-index: 40; background: var(--velo); display: grid; place-items: center;
-  padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  position: fixed; inset: 0; z-index: 40; background: var(--velo); display: grid; place-items: end center; backdrop-filter: blur(4px);
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
 }
-.modal { position: relative; width: min(520px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 14px 14px 16px; display: grid; gap: 10px; align-content: start; }
-.modal h2 { margin: 0; padding-right: 36px; font-family: var(--f-titulo); font-weight: 400; font-size: 18px; color: var(--barro-luz); }
-.modal h3 { margin: 0; font-family: var(--f-titulo); font-weight: 400; font-size: 13px; color: var(--barro-luz); }
+.modal {
+  position: relative; width: min(520px, 100%); max-height: 88%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 16px;
+  display: grid; gap: 12px; align-content: start; border-radius: 20px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 -10px 40px -10px #000;
+  animation: subir .2s ease-out;
+}
+.modal h2 { margin: 0; padding-right: 40px; font-weight: 700; font-size: 20px; }
+.modal h3 { margin: 0; font-weight: 600; font-size: 14px; color: var(--muted); }
 .modal p { margin: 0; }
-.cerrar { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border: 0; background: var(--hundido); color: var(--ceniza); font-family: var(--f-titulo); font-size: 18px; box-shadow: inset 0 0 0 2px var(--borde); }
-.ficha { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.cerrar { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-size: 20px; line-height: 1; }
+.ficha { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
 .ficha > div { display: grid; gap: 4px; min-width: 0; }
-.retrato-grande { background: var(--hundido); box-shadow: inset 0 0 0 2px var(--borde); }
-.stats { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+.ficha .cifras { justify-content: flex-start; white-space: normal; font-size: 13px; }
+.retrato-grande { border-radius: 16px; background: var(--surface-2); }
+.stats { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.lista-habs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lista-habs li { display: grid; gap: 2px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+.lista-habs p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+.lista-habs span { font-size: 12px; color: var(--muted); }
+.lista-habs small { font-size: 12px; color: var(--faint); }
+.proxima { font-size: 13px; color: var(--gold); }
 .habilidades { margin: 0; display: grid; gap: 2px; }
-.habilidades dt { font-family: var(--f-titulo); font-size: 11px; color: var(--oro); }
-.habilidades dd { margin: 0 0 6px; color: var(--ceniza); font-size: 13px; }
+.habilidades dt { font-size: 13px; font-weight: 600; color: var(--accent); }
+.habilidades dd { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
 .equipo, .mochila, .ayuda, .cronica-larga { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.equipo li { font-size: 14px; color: var(--hueso); }
-.mochila li { display: grid; gap: 4px; padding: 7px 9px; box-shadow: inset 0 0 0 2px var(--borde); }
+.equipo li { font-size: 14px; display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.mochila li { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
 .mochila li > div:first-child { display: grid; }
-.mochila span { color: var(--ceniza); font-size: 13px; }
-.acciones-mochila { display: flex; flex-wrap: wrap; }
-.ayuda li { font-size: 14px; color: var(--ceniza); }
-.ayuda b { color: var(--hueso); }
-.cronica-larga li { font-size: 13px; color: var(--ceniza); }
-.cronica-larga .ok { color: var(--exito); }
-.cronica-larga .ko { color: var(--fallo); }
-.cronica-larga .esc { color: var(--barro-luz); font-family: var(--f-titulo); font-size: 11px; }
-.cronica-larga .nivel { color: var(--oro); }
-.pestanas { display: flex; flex-wrap: wrap; border-bottom: var(--px) solid var(--borde); }
-.pestanas button { border: 0; background: transparent; padding: 7px 8px; margin-bottom: calc(var(--px) * -1); font-family: var(--f-titulo); font-size: 11px; color: var(--tenue); border-bottom: var(--px) solid transparent; }
-.pestanas button[aria-selected="true"] { color: var(--barro-luz); border-bottom-color: var(--barro); }
-.compendio { display: grid; gap: 12px; }
+.mochila span { color: var(--muted); font-size: 13px; }
+.acciones-mochila { display: flex; flex-wrap: wrap; gap: 6px; }
+.ayuda li { font-size: 14px; color: var(--muted); }
+.ayuda b { color: var(--text); }
+.cronica-larga li { font-size: 13px; color: var(--muted); }
+.cronica-larga .ok { color: var(--ok); }
+.cronica-larga .ko { color: var(--ko); }
+.cronica-larga .esc { color: var(--text); font-weight: 600; margin-top: 4px; }
+.cronica-larga .nivel { color: var(--gold); }
+.pestanas { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--bg); }
+.pestanas button { flex: 1; border: 0; background: transparent; padding: 8px 4px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--faint); }
+.pestanas button[aria-selected="true"] { background: var(--surface-2); color: var(--text); }
+.compendio { display: grid; gap: 14px; }
 .compendio article { display: grid; gap: 4px; }
-.compendio p { color: var(--ceniza); font-size: 14px; }
-.compendio p b { color: var(--hueso); font-weight: 600; }
-.bestia { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 10px !important; padding: 8px; box-shadow: inset 0 0 0 2px var(--borde); }
+.compendio h3 { color: var(--text); font-size: 15px; }
+.compendio p { color: var(--muted); font-size: 14px; }
+.compendio p b { color: var(--text); font-weight: 600; }
+.bestia { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px !important; padding: 10px; border-radius: 12px; background: var(--surface-2); }
 .bestia > div { display: grid; gap: 4px; }
-.bestia.destacada { box-shadow: inset 0 0 0 2px var(--oro); }
-.bloque-stats { font-family: var(--f-titulo); font-size: 10px !important; line-height: 1.6; color: var(--barro-luz) !important; }
+.bestia canvas { border-radius: 10px; }
+.bestia.destacada { box-shadow: inset 0 0 0 1px var(--accent); }
+.bloque-stats { font-size: 12px !important; color: var(--accent) !important; }
 .aviso {
-  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); top: max(10px, env(safe-area-inset-top, 0px));
-  width: min(520px, calc(100% - 32px)); margin: 0; padding: 10px 14px; background: var(--panel-2); color: var(--barro-luz); font-size: 14px;
-  box-shadow: 0 0 0 var(--px) var(--barro), 0 6px 0 var(--velo);
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); top: max(12px, env(safe-area-inset-top, 0px));
+  width: min(520px, calc(100% - 32px)); margin: 0; padding: 12px 16px; border-radius: 14px; background: var(--surface-2); color: var(--text); font-size: 14px;
+  box-shadow: inset 0 0 0 1px var(--line-2), 0 12px 30px -10px #000;
 }
 
-@keyframes parpadeo { 50% { opacity: .35; } }
-@keyframes latido { 50% { transform: scale(1.08); } }
-@keyframes hormigas { to { stroke-dashoffset: -20; } }
+@keyframes parpadeo { 50% { opacity: .4; } }
+@keyframes latido { 50% { transform: scale(1.07); } }
+@keyframes hormigas { to { stroke-dashoffset: -24; } }
+@keyframes subir { from { transform: translateY(20px); opacity: 0; } }
 
 /* ---------- Móviles bajitos ---------- */
 @media (max-height: 640px) {
-  .pantalla { gap: 5px; }
+  .pantalla { gap: 6px; }
   .sel-info p { font-size: 12px; }
   .lema, .intro { display: none; }
   .nodo { width: 38px; height: 38px; }
   .nodo.jefe { width: 48px; height: 48px; }
-  .boton.grande { padding: 11px 16px 13px; }
+  .boton.grande { padding: 12px 16px; }
+  .panel { padding: 10px 12px; gap: 8px; }
+}
+@media (max-height: 700px) {
+  .articulos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-height: 600px) {
-  .articulo small, .juego .rasgo { display: none; }
-  .articulos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .opcion { min-height: 40px; }
-}
-/* En pantallas anchas (ordenador), un marco alrededor de la columna. */
-@media (min-width: 700px) {
-  .app { box-shadow: -3px 0 0 var(--borde), 3px 0 0 var(--borde); }
+  .articulo small, .juego .rasgo, .objeto small, .olvidar small, .hab-nueva small { display: none; }
+  .opcion { min-height: 40px; padding-block: 6px; }
+  .orden { display: none; }
+  .panel h2 { font-size: 16px; }
+  .hab-nueva { padding: 8px 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -359,7 +428,7 @@ h1, h2, h3 { text-wrap: balance; }
 <section id="p-inicio" class="pantalla inicio" hidden>
   <header class="portada">
     <h1 class="logo">Dados <span>y</span> Mazmorras</h1>
-    <p class="lema">Rol de espada y brujería · de 1 a 4 héroes</p>
+    <p class="lema">Rol de fantasía por turnos · 1 a 4 héroes</p>
   </header>
   <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="La taberna del Grifo Tuerto"></canvas></div>
   <p class="intro">Bosque, mazmorra, castillo y volcán. Cuatro jefes os esperan entre vosotros y el tesoro del dragón.</p>
@@ -368,10 +437,10 @@ h1, h2, h3 { text-wrap: balance; }
 
 <section id="p-unirse" class="pantalla unirse" hidden>
   <header class="cabecera">
-    <button type="button" class="boton sec mini" data-ui="volver-inicio">‹ Volver</button>
+    <button type="button" class="icono" data-ui="volver-inicio" aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <h2>Unirse a una partida</h2>
   </header>
-  <form id="form-unirse" class="form-unirse marco" autocomplete="off">
+  <form id="form-unirse" class="form-unirse tarjeta" autocomplete="off">
     <label for="codigo-mesa" class="etiqueta">Código de 4 letras</label>
     <input id="codigo-mesa" name="codigo" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="KRTO">
     <button type="submit" class="boton grande">Entrar</button>
@@ -385,7 +454,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 <section id="p-seleccion" class="pantalla seleccion" hidden>
   <header class="cabecera sel-cab">
-    <button type="button" class="boton sec mini" data-ui="sel-salir" aria-label="Salir">‹</button>
+    <button type="button" class="icono" data-ui="sel-salir" aria-label="Salir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="sel-titulo"><h2>Elige tu héroe</h2><p class="etiqueta" id="sel-codigo"></p></div>
     <p class="reloj" id="sel-reloj" aria-live="off">1:30</p>
   </header>
@@ -394,7 +463,7 @@ h1, h2, h3 { text-wrap: balance; }
   <div class="sel-jugadores" id="sel-jugadores" aria-label="Jugadores"></div>
   <div class="sel-nombre">
     <input id="sel-nombre" maxlength="16" aria-label="Nombre del héroe" autocomplete="off" spellcheck="false">
-    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">🎲 Azar</button>
+    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">Al azar</button>
   </div>
   <div class="sel-cuerpo">
     <div class="selector">
@@ -421,23 +490,23 @@ h1, h2, h3 { text-wrap: balance; }
 <section id="p-juego" class="pantalla juego" hidden>
   <header class="cabecera barra">
     <p class="barra-titulo" id="barra-titulo"></p>
-    <button type="button" class="boton sec mini" data-ui="mochila">Mochila</button>
-    <button type="button" class="boton sec mini" data-ui="menu" aria-label="Menú">☰</button>
+    <button type="button" class="icono" data-ui="mochila" aria-label="Mochila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M9 13h6"/></svg></button>
+    <button type="button" class="icono" data-ui="menu" aria-label="Menú"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
   <div class="escenario" id="caja-juego"><canvas id="lienzo" aria-label="Escenario"></canvas></div>
   <div class="grupo" id="grupo" aria-label="El grupo"></div>
   <div class="mapa" id="mapa" aria-label="Mapa del acto"></div>
-  <section class="panel marco" id="panel" aria-live="polite"></section>
+  <section class="panel" id="panel" aria-live="polite"></section>
   <div class="mesa">
     <canvas id="dado" class="dado" data-tam="34" aria-hidden="true"></canvas>
     <p id="dado-info"></p>
-    <button type="button" class="boton sec mini" data-ui="cronica">Crónica</button>
+    <button type="button" class="icono" data-ui="cronica" aria-label="Crónica"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg></button>
   </div>
 </section>
 </main>
 
 <p id="aviso" class="aviso" role="status" hidden></p>
-<div id="capa" class="capa" hidden><div class="modal marco" id="modal" role="dialog" aria-modal="true" aria-label="Detalle"></div></div>
+<div id="capa" class="capa" hidden><div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Detalle"></div></div>
 <script>
 /* Dados y Mazmorras · motor de pixel art.
    Rejillas pequeñas (36×36 para personajes, 192×108 para escenarios), capas con sombreado
@@ -3824,9 +3893,9 @@ const DATOS = (() => {
   const STATS = { raz: "Inteligencia", ani: "Fuerza", elo: "Carisma", tem: "Sabiduría" };
   const ABREV = { raz: "INT", ani: "FUE", elo: "CAR", tem: "SAB" };
   const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán"];
-  const ROMANOS = ["I", "II", "III", "IV", "V", "VI"];
+  const ROMANOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
-  const NIVELES = [0, 10, 25, 45, 70, 100];
+  const NIVELES = [0, 8, 18, 30, 44, 60, 78, 98, 120, 145];
   const NOMBRES = ["Aldric", "Lyra", "Borin", "Elowen", "Garrick", "Isolde", "Kael", "Mirela", "Rowan", "Sylva", "Thalor", "Vesna", "Wulfric", "Yara", "Corwin", "Ilsa"];
 
   const RAZAS = {
@@ -3912,7 +3981,7 @@ const DATOS = (() => {
     clerigo: {
       nombre: "Clérigo", rol: "Sanador", alma: 10, stats: { raz: 0, ani: 1, elo: 0, tem: 3 }, patron: "Solara, la Dama del Alba",
       hab: "Luz sagrada", habDesc: "2d6 + SAB de daño sagrado. Los no muertos reciben el doble.",
-      pasiva: "Manos sanadoras", pasivaDesc: "Curar heridas cura el doble.",
+      pasiva: "Manos sanadoras", pasivaDesc: "Sus curaciones curan un 50 % más.",
       desc: "Sacerdote de Solara. Cura heridas, bendice armas y no soporta a los no muertos."
     },
     bardo: {
@@ -3921,6 +3990,62 @@ const DATOS = (() => {
       pasiva: "Inspiración bárdica", pasivaDesc: "Tras cada victoria, todo el grupo recupera 3 PG.",
       desc: "Toca el laúd en todas las tabernas de Valdren. Sus canciones curan, aunque no lo parezca."
     }
+  };
+
+  /* Habilidades: cada héroe lleva como mucho 4 (como los movimientos de un Pokémon).
+     efecto: dano | cura | escudo | aturde | maldice | debilita | veneno. usos: por combate (0 = sin límite). */
+  const HABILIDADES = {
+    golpe: { nombre: "Golpe", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], tirada: true, usos: 0, desc: "Ataque básico con el arma." },
+    disparo: { nombre: "Disparo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], tirada: true, usos: 0, desc: "Ataque básico a distancia." },
+    estocada: { nombre: "Estocada", efecto: "dano", tipo: "fisica", stat: "elo", dado: [1, 8], tirada: true, usos: 0, desc: "Ataque elegante con estoque. Usa Carisma." },
+    rayo: { nombre: "Rayo arcano", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, usos: 0, desc: "Proyectil mágico básico." },
+    descarga: { nombre: "Descarga sobrenatural", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 8], tirada: true, usos: 0, desc: "Energía de tu patrón. Usa Carisma." },
+    muro: { nombre: "Muro de escudos", efecto: "escudo", usos: 2, desc: "El próximo ataque enemigo no hace daño." },
+    furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], usos: 2, desc: "Golpe seguro y brutal." },
+    humo: { nombre: "Bomba de humo", efecto: "aturde", usos: 1, desc: "El enemigo pierde su próximo turno." },
+    flechas: { nombre: "Lluvia de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 2, usos: 2, desc: "Dos disparos seguros." },
+    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, usos: 2, desc: "Explosión segura de fuego." },
+    maleficio: { nombre: "Maleficio", efecto: "maldice", usos: 1, desc: "El enemigo recibe +2 de cada golpe todo el combate." },
+    luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, usos: 2, desc: "Daño seguro. Doble contra no muertos." },
+    cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
+    curar: { nombre: "Curar heridas", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 3, desc: "Cura al aliado más herido." },
+    tajo: { nombre: "Tajo poderoso", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, usos: 3, desc: "Golpe fuerte con tirada." },
+    aliento: { nombre: "Segundo aliento", efecto: "cura", a: "yo", stat: "ani", dado: [1, 10], usos: 1, desc: "Te curas a ti mismo." },
+    grito: { nombre: "Grito de guerra", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
+    frenesi: { nombre: "Frenesí", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], golpes: 2, tirada: true, usos: 2, desc: "Dos golpes seguidos con tirada." },
+    devastar: { nombre: "Golpe devastador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 8], usos: 1, desc: "Un golpe seguro enorme." },
+    veneno: { nombre: "Hoja envenenada", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], tirada: true, veneno: 3, usos: 2, desc: "Golpe que envenena 3 turnos." },
+    asesinar: { nombre: "Golpe furtivo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], tirada: true, critico: 17, usos: 2, desc: "Crítico con 17 o más." },
+    danza: { nombre: "Danza de cuchillas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 3, tirada: true, usos: 1, desc: "Tres cuchilladas con tirada." },
+    marca: { nombre: "Marca del cazador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], maldice: true, usos: 1, desc: "Disparo seguro que maldice al enemigo (+2 daño)." },
+    balsamo: { nombre: "Bálsamo silvestre", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 2, desc: "Cura al aliado más herido." },
+    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 6], usos: 1, desc: "Lluvia segura de flechas." },
+    escudoMag: { nombre: "Escudo mágico", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
+    escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
+    sueno: { nombre: "Sueño", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
+    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], usos: 1, desc: "El conjuro más destructivo del mago." },
+    drenar: { nombre: "Toque vampírico", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, drena: true, usos: 2, desc: "Daño y te curas la mitad." },
+    miedo: { nombre: "Susurro aterrador", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
+    plaga: { nombre: "Nube de veneno", efecto: "veneno", turnos: 4, usos: 1, desc: "Envenena al enemigo 4 turnos." },
+    infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], usos: 1, desc: "Llamas del abismo, sin fallo." },
+    plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
+    escudoFe: { nombre: "Escudo de fe", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
+    orden: { nombre: "Orden divina", efecto: "aturde", usos: 1, desc: "El enemigo obedece y pierde su turno." },
+    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [4, 6], noMuerto: 2, usos: 1, desc: "Luz que fulmina. Doble contra no muertos." },
+    burla: { nombre: "Burla cruel", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
+    cuna: { nombre: "Canción de cuna", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
+    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 8], usos: 1, desc: "Una onda de sonido que no falla." }
+  };
+  /* Qué aprende cada clase y a qué nivel. */
+  const APRENDE = {
+    guerrero: { 1: ["golpe", "muro"], 2: ["tajo"], 3: ["aliento"], 5: ["grito"], 7: ["frenesi"], 9: ["devastar"] },
+    barbaro: { 1: ["golpe", "furia"], 2: ["grito"], 3: ["aliento"], 5: ["frenesi"], 7: ["tajo"], 9: ["devastar"] },
+    picaro: { 1: ["golpe", "humo"], 2: ["veneno"], 3: ["asesinar"], 5: ["danza"], 7: ["miedo"], 9: ["devastar"] },
+    explorador: { 1: ["disparo", "flechas"], 2: ["veneno"], 3: ["marca"], 5: ["balsamo"], 7: ["frenesi"], 9: ["tormenta"] },
+    mago: { 1: ["rayo", "bola"], 2: ["escudoMag"], 3: ["escarcha"], 5: ["sueno"], 7: ["miedo"], 9: ["meteoro"] },
+    brujo: { 1: ["descarga", "maleficio"], 2: ["drenar"], 3: ["miedo"], 5: ["plaga"], 7: ["escarcha"], 9: ["infernal"] },
+    clerigo: { 1: ["golpe", "curar", "luz"], 2: ["escudoFe"], 3: ["plegaria"], 5: ["orden"], 7: ["miedo"], 9: ["juicio"] },
+    bardo: { 1: ["estocada", "cancion"], 2: ["burla"], 3: ["curar"], 5: ["cuna"], 7: ["drenar"], 9: ["acorde"] }
   };
 
   const ALINEAMIENTOS = {
@@ -3963,6 +4088,27 @@ const DATOS = (() => {
     botas: { nombre: "Botas aladas", tipo: "talisman", precio: 60, ca: 1, ini: 3, desc: "+1 a la CA y +3 a la iniciativa." },
     piedra: { nombre: "Piedra de la suerte", tipo: "talisman", precio: 90, critico: 19, desc: "Críticos con 19 o 20." }
   };
+  /* Botín: solo se encuentra en cofres y enemigos. */
+  Object.assign(OBJETOS, {
+    daga: { nombre: "Daga de plata", tipo: "arma", precio: 20, golpe: 1, fis: 1, desc: "+1 para atacar y +1 al daño físico." },
+    martillo: { nombre: "Martillo enano", tipo: "arma", precio: 60, golpe: 1, fis: 3, desc: "+1 para atacar y +3 al daño físico." },
+    grimorio: { nombre: "Grimorio de las sombras", tipo: "arma", precio: 60, golpe: 1, arc: 3, desc: "+1 a los conjuros y +3 al daño arcano." },
+    cetro: { nombre: "Cetro del alba", tipo: "arma", precio: 60, cura: 3, arc: 2, desc: "+3 a tus curaciones y +2 al daño mágico." },
+    flamigera: { nombre: "Espada flamígera", tipo: "arma", precio: 120, golpe: 2, fis: 4, arc: 2, desc: "+2 para atacar, +4 físico y +2 mágico." },
+    elfica: { nombre: "Cota élfica", tipo: "armadura", precio: 60, ca: 2, alma: 2, desc: "+2 a la CA y +2 PG máximos." },
+    escamas: { nombre: "Armadura de escamas de dragón", tipo: "armadura", precio: 150, ca: 4, alma: 6, rareza: "legendario", desc: "+4 a la CA y +6 PG máximos." },
+    sortija: { nombre: "Sortija de protección", tipo: "talisman", precio: 30, ca: 1, desc: "+1 a la Clase de Armadura." },
+    capa: { nombre: "Capa élfica", tipo: "talisman", precio: 55, ca: 1, ini: 2, desc: "+1 a la CA y +2 a la iniciativa." },
+    corona: { nombre: "Corona del rey muerto", tipo: "talisman", precio: 100, stat: "raz", ca: 1, desc: "+1 a Inteligencia y +1 a la CA." }
+  });
+  const RAREZAS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" };
+  const rareza = id => OBJETOS[id].rareza || (OBJETOS[id].precio > 80 ? "epico" : OBJETOS[id].precio > 35 ? "raro" : "comun");
+  const BOTIN = [
+    ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita"],
+    ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro"],
+    ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas"],
+    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"]
+  ];
   const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
   const TIENDAS = {
@@ -4267,7 +4413,7 @@ const DATOS = (() => {
 
   return {
     STATS, ABREV, CAPITULOS, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, ORDEN_ALIN,
-    ejesAlin, moverMoral, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
+    ejesAlin, moverMoral, HABILIDADES, APRENDE, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
   };
 })();
 
@@ -4557,11 +4703,11 @@ const ESCENARIO = (() => {
 (() => {
 "use strict";
 const D = DATOS;
-const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, OBJETOS, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
+const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, HABILIDADES, APRENDE, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
 const RP = PX.RAMPAS;
 
-const CLAVE = "dym-partida-v4";
-const CLAVE_MESA = "dym-mesa-v4";
+const CLAVE = "dym-partida-v5";
+const CLAVE_MESA = "dym-mesa-v5";
 const MAX_HEROES = 4;
 const SEGUNDOS = 90;
 const $ = s => document.querySelector(s);
@@ -4606,7 +4752,7 @@ function nuevoHeroe(def) {
   return {
     nombre: String(def.nombre || "").trim().slice(0, 16) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
     look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, oro: 15,
-    equipo: { arma: null, armadura: null, talisman: null }, usos: 1, est: { aturdido: 0, cegado: 0 }, fl: {}
+    equipo: { arma: null, armadura: null, talisman: null }, habs: APRENDE[clase][1].slice(), usosH: {}, est: { aturdido: 0, cegado: 0 }, fl: {}
   };
 }
 const lookDe = p => Object.assign({ raza: p.raza, clase: p.clase }, p.look);
@@ -4619,7 +4765,23 @@ function ca(p) {
 }
 function iniMod(p) { const t = obj(p.equipo.talisman); return stat(p, "tem") + (t && t.ini ? t.ini : 0); }
 function critMin(p) { const t = obj(p.equipo.talisman); return t && t.critico ? t.critico : 20; }
-const usosHab = p => (p.nivel >= 3 ? 2 : 1);
+const H = id => HABILIDADES[id];
+const ABR_TIPO = { fisica: "físico", arcana: "mágico", sagrada: "sagrado" };
+/* Resumen corto de una habilidad para los botones: «1d8+3 físico», «Cura 1d8+2»… */
+function resumenHab(id, p) {
+  const h = H(id), m = h.stat ? statHab(p, h) : 0;
+  const dados = h.dado ? `${h.golpes ? h.golpes + "×" : ""}${h.dado[0]}d${h.dado[1]}${fmt(m + (h.bono || 0))}` : "";
+  if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}`;
+  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}`;
+  return { escudo: "Bloquea un ataque", aturde: "Pierde un turno", maldice: "+2 daño recibido", debilita: "−2 a su ataque", veneno: `Veneno ${h.turnos} turnos` }[h.efecto];
+}
+function statHab(p, h) { return h.stat ? stat(p, h.stat) : 0; }
+/* Próxima habilidad que aprenderá el héroe. */
+function proximaHab(p) {
+  const t = APRENDE[p.clase];
+  const n = Object.keys(t).map(Number).filter(l => l > p.nivel).sort((a, b) => a - b)[0];
+  return n ? { nivel: n, ids: t[n] } : null;
+}
 const nombreRazaClase = p => `${CLASES[p.clase].nombre} ${RAZAS[p.raza].nombre.toLowerCase()}`;
 const EJEMPLO = [
   { nombre: "Aldric", raza: "humano", clase: "guerrero", look: { piel: "oliva", pelo: "castano", tela: "granate", peinado: "corto", barba: true } },
@@ -4652,7 +4814,7 @@ function guardar() {
   }
   escribir(CLAVE, JSON.stringify(S));
 }
-function cargar() { try { const g = JSON.parse(leer(CLAVE, "null")); return g && g.v === 4 && !g.online ? g : null; } catch (e) { return null; } }
+function cargar() { try { const g = JSON.parse(leer(CLAVE, "null")); return g && g.v === 5 && !g.online ? g : null; } catch (e) { return null; } }
 
 function avisar(t) {
   const a = $("#aviso");
@@ -4682,7 +4844,7 @@ async function crearPartida() {
   let c = "";
   for (let i = 0; i < 4; i++) c += letras[Math.floor(Math.random() * letras.length)];
   try {
-    await red.db.doc(`partidas/${c}`).set({ v: 4, codigo: c, host: miId, estado: "seleccion", fin: Date.now() + SEGUNDOS * 1000, creada: Date.now(), juego: null });
+    await red.db.doc(`partidas/${c}`).set({ v: 5, codigo: c, host: miId, estado: "seleccion", fin: Date.now() + SEGUNDOS * 1000, creada: Date.now(), juego: null });
     entrarPartida(c);
   } catch (e) { avisarError(e); }
 }
@@ -4796,12 +4958,19 @@ function procesarAcciones() {
     red.vistoAcc[pr.id] = pr.acc.n;
     /* De alguien sin historial (p. ej. tras recargar el anfitrión) solo se acepta una jugada hecha sobre el estado actual. */
     if (!visto && pr.acc.rev !== S.rev) continue;
-    /* Solo vale si sigue siendo el turno de quien la manda (una jugada vieja se descarta). */
-    const j = S.players[S.turno];
-    if (!j || j.uid !== pr.id || pr.acc.k === "reintentar") continue;
-    remoto = j.uid;
+    /* Solo vale si quien la manda puede hacerla ahora (una jugada vieja se descarta). */
+    if (pr.acc.k === "reintentar" || !permitido(pr.acc.k, pr.id)) continue;
+    remoto = pr.id;
     try { ejecutar(pr.acc.k, pr.acc.v); } finally { remoto = null; }
   }
+}
+/* ¿Puede el jugador uid hacer la jugada k? Equipar botín vale para cualquiera; aprender, para el dueño del héroe. */
+function permitido(k, uid) {
+  if (!S || !S.online) return true;
+  if (k === "equipar") return S.players.some(p => p.uid === uid);
+  if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
+  const p = S.players[S.turno];
+  return !!p && p.uid === uid;
 }
 function enviarJugada(k, v) {
   if (!red.sala) return avisar("Sin conexión con la sala.");
@@ -4844,11 +5013,30 @@ function ganarXp(n) {
   return out;
 }
 function subirNivel(p, out) {
-  p.nivel++; p.almaBase += 2; p.alma = Math.min(maxAlma(p), p.alma + 2);
-  const bajo = Object.keys(STATS).reduce((a, k) => (p.base[k] < p.base[a] ? k : a), "raz");
-  if (p.base[bajo] < 5) p.base[bajo]++;
-  const t = `${p.nombre} sube a nivel ${p.nivel}${p.nivel === 3 ? " (habilidad ×2)" : ""}`;
+  p.nivel++; p.almaBase += 3; p.alma = Math.min(maxAlma(p), p.alma + 3);
+  if (p.nivel % 2 === 0) {
+    const bajo = Object.keys(STATS).reduce((a, k) => (p.base[k] < p.base[a] ? k : a), "raz");
+    if (p.base[bajo] < 5) p.base[bajo]++;
+  }
+  const t = `${p.nombre} sube a nivel ${p.nivel}`;
   log(t, "nivel"); out.push(t);
+  for (const id of APRENDE[p.clase][p.nivel] || []) {
+    if (p.habs.includes(id)) continue;
+    if (p.habs.length < 4) { p.habs.push(id); const a = `${p.nombre} aprende ${H(id).nombre}`; log(a, "nivel"); out.push(a); }
+    else S.aprender.push({ i: idx(p), hab: id });
+  }
+}
+/* Aprender una habilidad nueva olvidando otra (slot 0-3), o renunciar a ella (-1). */
+function aprender(slot) {
+  const a = S.aprender[0];
+  if (!a) return;
+  const p = S.players[a.i];
+  if (slot >= 0 && slot < p.habs.length) {
+    log(`${p.nombre} olvida ${H(p.habs[slot]).nombre} y aprende ${H(a.hab).nombre}.`, "nivel");
+    p.habs[slot] = a.hab;
+  } else log(`${p.nombre} decide no aprender ${H(a.hab).nombre}.`);
+  S.aprender.shift();
+  guardar(); render();
 }
 function aplicarFx(f = {}, actor) {
   const out = [];
@@ -4915,6 +5103,7 @@ function generarMapa() {
     const n = f === 5 ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0);
     const fila = [];
     for (let i = 0; i < n; i++) fila.push({ tipo: f === 1 || Math.random() < 0.5 ? "combate" : "evento", sig: [] });
+    if (f === 2 || (f === 4 && Math.random() < 0.5)) fila[Math.floor(Math.random() * n)].tipo = "tesoro";
     if (f === 3) fila[Math.floor(Math.random() * n)].tipo = "tienda";
     if (f === 5) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
     filas.push(fila);
@@ -4931,7 +5120,7 @@ function generarMapa() {
   filas[0][0].hecho = true;
   return { filas, fila: 0, col: 0 };
 }
-const NOMBRE_NODO = { combate: "Combate", evento: "Suceso", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
+const NOMBRE_NODO = { combate: "Combate", evento: "Suceso", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
 const VICTORIAS = ["Cae el último golpe. El camino queda libre.", "Recogéis el botín y seguís adelante.", "Victoria. Os curáis las heridas como podéis.", "El enemigo cae. Hay monedas entre los restos."];
 const VICTORIAS_JEFE = [
   "El trol cae al barranco. Al otro lado del puente empieza la mazmorra.",
@@ -4955,22 +5144,75 @@ function crearEscena(tipo) {
     const k = azarDe(A.enemigos.filter(x => x !== S.ultimoEnemigo));
     S.ultimoEnemigo = k;
     return { tipo: "combate", enemigo: k, fondo: azarDe(A.fondos), titulo: ENEMIGOS[k].nombre,
-      victoria: { t: azarDe(VICTORIAS), fx: { xp: 4 + S.acto * 2, oro: 8 + S.acto * 4, pocion: Math.random() < 0.35 ? 1 : 0 } } };
+      victoria: { t: azarDe(VICTORIAS), fx: { xp: 5 + S.acto * 2, oro: 8 + S.acto * 4, pocion: Math.random() < 0.35 ? 1 : 0 } } };
   }
+  if (tipo === "tesoro") return { tipo: "tesoro", fondo: azarDe(A.fondos), titulo: "Un cofre olvidado", texto: azarDe(COFRES) };
   if (tipo === "tienda") return { tipo: "tienda", tienda: A.tienda, fondo: azarDe(A.fondos), pnj: TIENDAS[A.tienda].pnj, titulo: TIENDAS[A.tienda].nombre };
   if (tipo === "hoguera") return Object.assign({ tipo: "prueba", fondo: azarDe(A.fondos) }, JSON.parse(JSON.stringify(HOGUERA)));
   return { tipo: "combate", esJefe: true, enemigo: A.jefe, fondo: A.fondoJefe, titulo: ENEMIGOS[A.jefe].nombre, texto: A.jefeTexto,
     victoria: { t: VICTORIAS_JEFE[S.acto], fx: { xp: 10 + S.acto * 3, oro: 25, superior: 1 } } };
 }
 
+const COFRES = [
+  "Medio enterrado entre raíces hay un cofre con remaches de hierro. La cerradura está oxidada.",
+  "Junto a un esqueleto con armadura descansa un cofre cerrado. Nadie ha vuelto a por él.",
+  "Un cofre de roble con runas talladas espera en un rincón, cubierto de polvo.",
+  "Tras una losa suelta aparece un pequeño cofre. Alguien lo escondió con prisa."
+];
+/* ---------- Botín ---------- */
+const PESO_RAREZA = { comun: 50, raro: 30, epico: 14, legendario: 6 };
+function sacarBotin(bueno) {
+  const pool = BOTIN[Math.max(0, S.acto)].filter(id => !bueno || rareza(id) !== "comun");
+  let t = pool.reduce((a, id) => a + PESO_RAREZA[rareza(id)], 0) * Math.random();
+  for (const id of pool) { t -= PESO_RAREZA[rareza(id)]; if (t <= 0) return id; }
+  return pool[pool.length - 1];
+}
+function abrirCofre() {
+  const sc = S.esc;
+  if (ocupado || !sc || sc.tipo !== "tesoro" || S.fase === "resultado") return;
+  if (S.acto >= 1 && Math.random() < 0.25) {
+    log("¡El cofre tenía dientes! Es un mímico.", "ko");
+    S.esc = { tipo: "combate", enemigo: "mimico", fondo: sc.fondo, titulo: ENEMIGOS.mimico.nombre, botinSeguro: true,
+      victoria: { t: "El mímico cae. Dentro de su panza hay de todo.", fx: { xp: 5 + S.acto * 2, oro: 12 } } };
+    return iniciarCombate(S.esc);
+  }
+  S.botin = [sacarBotin(false)];
+  if (S.acto >= 2 && Math.random() < 0.5) S.botin.push(sacarBotin(false));
+  const efectos = aplicarFx({ oro: 6 + S.acto * 4, pocion: Math.random() < 0.5 ? 1 : 0, xp: 2 });
+  S.fase = "resultado";
+  S.resultado = { ok: true, tipo: "cofre", texto: "La tapa cede con un crujido. ¡Hay algo dentro!", efectos };
+  log(`${S.players[S.turno].nombre} abre el cofre: ${S.botin.map(id => OBJETOS[id].nombre).join(", ")}.`, "ok");
+  guardar(); render();
+}
+/* Darle a un héroe un objeto del botín (se vende lo que llevaba). */
+function equipar(k, i) {
+  const id = S.botin[k], p = S.players[i];
+  if (!id || !p || ocupado) return;
+  const o = OBJETOS[id], viejo = p.equipo[o.tipo];
+  p.equipo[o.tipo] = id; S.botin.splice(k, 1);
+  let t = `${p.nombre} se equipa ${o.nombre}`;
+  if (viejo) { const v = Math.floor(OBJETOS[viejo].precio / 2); p.oro += v; t += ` y vende ${OBJETOS[viejo].nombre} (+${v} po)`; }
+  p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
+  fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.bronce });
+  log(t + ".", "ok"); avisar(t + ".");
+  guardar(); render();
+}
+function venderSobrante() {
+  if (!S.botin.length) return;
+  const total = S.botin.reduce((a, id) => a + Math.floor(OBJETOS[id].precio / 2), 0), cada = Math.max(1, Math.floor(total / S.players.length));
+  S.players.forEach(p => { p.oro += cada; });
+  log(`Vendéis lo que nadie quiere: +${cada} po cada uno.`, "ok");
+  S.botin = [];
+}
+
 /* ---------- Flujo de partida ---------- */
 function nuevaPartida(defs, codigo) {
   S = {
-    v: 4, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
+    v: 5, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
     players: defs.slice(0, MAX_HEROES).map(nuevoHeroe),
     zurron: { pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
     acto: -1, mapa: null, modo: "escena", esc: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
-    derrota: false, final: null, guardadoActo: null, log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null
+    derrota: false, final: null, guardadoActo: null, aprender: [], botin: [], log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null
   };
   log(`Comienza la aventura: ${S.players.map(p => `${p.nombre} (${nombreRazaClase(p)})`).join(", ")}.`);
   if (S.players.length === 1) { const p = S.players[0]; p.almaBase += 4; p.alma += 4; }
@@ -5010,6 +5252,7 @@ function elegirNodo(j) {
   log(`${S.players[S.turno].nombre} elige: ${NOMBRE_NODO[nodo.tipo]} · ${S.esc.titulo}`, "esc");
   if (S.esc.tipo === "combate") return iniciarCombate(S.esc);
   if (S.esc.tipo === "tienda") abrirTienda(S.esc);
+  S.botin = [];
   guardar(); render();
 }
 function elegirOpcion(i) {
@@ -5050,7 +5293,8 @@ function continuar() {
   if (ocupado) return;
   const sc = S.esc;
   if (sc && sc.tipo === "relato") return volverAlMapa();
-  if (!S.resultado) return;
+  if (!S.resultado || S.aprender.length) return;
+  venderSobrante();
   S.turno = siguienteVivo(S.turno + 1);
   if (sc && sc.esJefe) return siguienteActo();
   volverAlMapa();
@@ -5123,10 +5367,10 @@ function iniciarCombate(sc) {
   const c = S.combate = {
     enemigo: sc.enemigo, hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0), blando: n === 1, ronda: 1, orden: [], pos: 0,
     aturdido: false, escudo: false, maldito: false, anilloUsado: false, partido: false, quemado: false,
-    resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false
+    resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false, veneno: 0, atkMod: 0
   };
   if (!S.vistos.bestias.includes(sc.enemigo)) S.vistos.bestias.push(sc.enemigo);
-  S.players.forEach(p => { p.usos = usosHab(p); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
+  S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos; }); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
   const orden = S.players.map((p, i) => ({ t: "h", i, ini: d(20) + iniMod(p) }));
   orden.push({ t: "e", ini: d(20) + e.ini });
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
@@ -5187,45 +5431,67 @@ function accion(tipo, arg) {
   const c = S.combate, e = ENEMIGOS[c.enemigo], p = S.players[S.turno], yo = "h" + S.turno, cl = CLASES[p.clase];
   const arma = obj(p.equipo.arma) || {};
   const fin = () => { submenu = null; if (c.hp <= 0) return victoria(); avanzar(); prepararTurno(); };
-  if (tipo === "atacar" || tipo === "conjuro") {
-    const clase = tipo === "atacar" ? "fisica" : "arcana";
-    const st = tipo === "atacar" ? "ani" : stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
-    const mod = stat(p, st) + (arma.golpe || 0) + (clase === "fisica" && p.clase === "explorador" ? 2 : 0);
-    const bono = usarOlivo();
-    const { r, nota } = tiradaD20(p);
-    tirarDado(r, 20, () => {
-      const total = r + mod + bono, crit = r >= critMin(p);
-      const ok = crit || (r !== 1 && total >= e.ca);
-      let linea = lineaTirada(p.nombre, tipo === "atacar" ? "ataca" : "conjura", r, mod, bono, total, `CA ${e.ca}`, crit) + nota;
+  if (tipo === "hab") {
+    const id = p.habs[+arg], h = id && H(id);
+    if (!h || (h.usos && !(p.usosH[id] > 0))) return;
+    if (h.usos) p.usosH[id]--;
+    const m = statHab(p, h);
+    const efectosExtra = (dmg, partes) => {
+      if (h.veneno) { c.veneno = Math.max(c.veneno, h.veneno); partes.push("veneno"); }
+      if (h.debilita) { c.atkMod = Math.max(-4, c.atkMod - 2); partes.push("−2 a su ataque"); }
+      if (h.maldice) { c.maldito = true; partes.push("maldito"); }
+      if (h.drena && dmg > 0) { const cu = curar(p, Math.max(1, Math.floor(dmg / 2))); fx({ tipo: "cura", objetivo: yo }); partes.push(`te curas ${cu}`); }
+    };
+    if (h.efecto === "dano") {
+      const extraArma = h.tipo === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" && h.tipo === "arcana" ? 2 : 0);
+      const golpes = crit => {
+        const antes = c.hp, partes = [];
+        for (let k = 0; k < (h.golpes || 1) && c.hp > 0; k++)
+          partes.push(danarRival(tirar(h.dado[0] * (crit ? 2 : 1), h.dado[1], m + (h.bono || 0)) + extraArma, h.tipo, crit, h.noMuerto && e.nomuerto ? h.noMuerto : 1, h.tipo === "arcana" ? RP.fuego : undefined));
+        efectosExtra(antes - c.hp, partes);
+        return partes.join(" · ");
+      };
       fx({ tipo: "ataque", actor: yo });
-      if (ok) {
-        const extra = clase === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" ? 2 : 0);
-        linea += ` → ${danarRival(tirar(crit ? 2 : 1, 8, stat(p, st)) + extra, clase, crit)}`;
-        log(linea, "ok"); mostrarTirada(linea, true);
-      } else {
-        linea += " → falla";
-        fx({ tipo: "numero", objetivo: "e", texto: "FALLO", color: RP.hueso[3] });
-        log(linea, "ko"); mostrarTirada(linea, false);
+      if (!h.tirada) {
+        const t = `${p.nombre} usa ${h.nombre} → ${golpes(false)}`;
+        log(t, "ok"); mostrarTirada(t, true);
+        return fin();
       }
-      fin();
-    });
-    return;
-  }
-  if (tipo === "curar") {
-    const bono = usarOlivo();
-    const { r, nota } = tiradaD20(p);
-    tirarDado(r, 20, () => {
-      const o = masHerido(), mod = stat(p, "tem");
-      const ok = r >= critMin(p) || (r !== 1 && r + mod + bono >= 10);
-      let cura = ok ? Math.max(1, d(6) + mod) + (arma.cura || 0) : 1;
-      if (p.clase === "clerigo") cura *= 2;
-      const real = curar(o, cura), oi = idx(o);
-      const t = `${p.nombre} cura (SAB ${r} ${fmt(mod)} vs 10)${nota}: +${real} PG a ${o === p ? "sí mismo" : o.nombre}`;
-      fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
-      log(t, ok ? "ok" : "ko"); mostrarTirada(t, ok);
-      fin();
-    });
-    return;
+      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0);
+      const bono = usarOlivo();
+      const { r, nota } = tiradaD20(p);
+      tirarDado(r, 20, () => {
+        const total = r + mod + bono, crit = r >= Math.min(critMin(p), h.critico || 20);
+        const ok = crit || (r !== 1 && total >= e.ca);
+        let linea = lineaTirada(p.nombre, h.nombre, r, mod, bono, total, `CA ${e.ca}`, crit) + nota;
+        if (ok) { linea += ` → ${golpes(crit)}`; log(linea, "ok"); mostrarTirada(linea, true); }
+        else { linea += " → falla"; fx({ tipo: "numero", objetivo: "e", texto: "FALLO", color: RP.hueso[3] }); log(linea, "ko"); mostrarTirada(linea, false); }
+        fin();
+      });
+      return;
+    }
+    if (h.efecto === "cura") {
+      const base = Math.max(1, tirar(h.dado[0], h.dado[1], m) + (arma.cura || 0));
+      const n = p.clase === "clerigo" ? Math.ceil(base * 1.5) : base;
+      const objetivos = h.a === "grupo" ? S.players : h.a === "yo" ? [p] : [masHerido()];
+      const partes = objetivos.map(o => {
+        const real = curar(o, n), oi = idx(o);
+        fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
+        return `${o.nombre} +${real}`;
+      });
+      const t = `${p.nombre} usa ${h.nombre} → ${partes.join(", ")} PG`;
+      log(t, "ok"); mostrarTirada(t, true);
+      return fin();
+    }
+    fx({ tipo: "magia", objetivo: h.efecto === "escudo" ? yo : "e" });
+    if (h.efecto === "escudo") c.escudo = true;
+    if (h.efecto === "aturde") c.aturdido = true;
+    if (h.efecto === "maldice") c.maldito = true;
+    if (h.efecto === "debilita") c.atkMod = Math.max(-4, c.atkMod - 2);
+    if (h.efecto === "veneno") c.veneno = Math.max(c.veneno, h.turnos);
+    const t = `${p.nombre} usa ${h.nombre}: ${resumenHab(id, p).toLowerCase()}.`;
+    log(t, "ok"); mostrarTirada(t, true);
+    return fin();
   }
   if (tipo === "objeto") {
     if (!S.zurron[arg] || arg === "bendicion") return;
@@ -5246,32 +5512,6 @@ function accion(tipo, arg) {
     log(`${p.nombre} se vuelve invisible. ${e.nombre} no sabe a quién atacar.`, "ok");
     return fin();
   }
-  if (tipo === "habilidad") {
-    if (p.usos <= 0) return;
-    p.usos--;
-    fx({ tipo: "ataque", actor: yo });
-    switch (p.clase) {
-      case "mago": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "raz")) + 2, "arcana", false, 1, RP.fuego)}`, "ok"); break;
-      case "barbaro": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 8, stat(p, "ani")), "fisica", false)}`, "ok"); break;
-      case "clerigo": log(`${p.nombre}: ${cl.hab} → ${danarRival(tirar(2, 6, stat(p, "tem")), "sagrada", false, e.nomuerto ? 2 : 1, RP.bronce)}`, "ok"); break;
-      case "explorador": {
-        const a1 = danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false);
-        const a2 = c.hp > 0 ? danarRival(tirar(1, 6, stat(p, "ani")) + (arma.fis || 0), "fisica", false) : "ya no hace falta";
-        log(`${p.nombre}: ${cl.hab} → ${a1} y ${a2}`, "ok");
-        break;
-      }
-      case "guerrero": c.escudo = true; log(`${p.nombre}: ${cl.hab}. El próximo turno enemigo no hará daño.`, "ok"); break;
-      case "picaro": c.aturdido = true; log(`${p.nombre}: ${cl.hab}. ${e.nombre} os pierde de vista.`, "ok"); break;
-      case "bardo": {
-        const n = Math.max(1, tirar(1, 6, stat(p, "elo")) + (arma.cura || 0));
-        S.players.forEach((x, i) => { curar(x, n); fx({ tipo: "cura", objetivo: "h" + i }); });
-        log(`${p.nombre}: ${cl.hab}. Todo el grupo +${n} PG.`, "ok");
-        break;
-      }
-      case "brujo": c.maldito = true; fx({ tipo: "magia", objetivo: "e" }); log(`${p.nombre}: ${cl.hab}. ${e.nombre} recibirá +2 de cada golpe.`, "ok"); break;
-    }
-    return fin();
-  }
 }
 function heroeAlAzarVivo() { const l = vivos(); return l.length ? l[Math.floor(Math.random() * l.length)] : -1; }
 function turnoEnemigo() {
@@ -5280,7 +5520,16 @@ function turnoEnemigo() {
   ocupado = true; document.body.classList.add("ocupado");
   render();
   setTimeout(() => {
-    if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; c.quemado = false; }
+    const atk = e.atk + c.atkMod;
+    if (c.veneno > 0) {
+      c.veneno--;
+      const v = d(6);
+      c.hp = Math.max(0, c.hp - v);
+      fx({ tipo: "numero", objetivo: "e", texto: "-" + v, color: RP.hoja[4] });
+      log(`El veneno quema a ${e.nombre}: ${v} de daño.`, "ok");
+    }
+    if (c.hp <= 0) { /* el veneno lo ha rematado */ }
+    else if (c.aturdido) { log(`${e.nombre} pierde su turno.`, "ok"); c.aturdido = false; c.quemado = false; }
     else {
       const cada = n => c.ronda % n === 0;
       if (e.regenera) {
@@ -5300,17 +5549,17 @@ function turnoEnemigo() {
           const t = S.players[ti];
           if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); continue; }
           const r = d(20), def = ca(t);
-          const ok = r === 20 || (r !== 1 && r + e.atk >= def);
+          const ok = r === 20 || (r !== 1 && r + atk >= def);
           mostrarTirada.ultimo = r;
           if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), r);
           if (ok) {
             const dmg = Math.max(1, tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2]) - (c.blando ? 2 : 0));
-            let txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(e.atk)} vs CA ${def} → ${danarHeroe(ti, dmg, true)}`;
+            let txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(atk)} vs CA ${def} → ${danarHeroe(ti, dmg, true)}`;
             if (e.drena) { const cu = Math.max(1, Math.floor(dmg / 2)); c.hp = Math.min(c.hpMax, c.hp + cu); txt += `. Bebe y se cura ${cu}`; }
             if (e.roba && t.oro > 0) { const rob = Math.min(e.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
             log(txt, "ko"); mostrarTirada(txt, false);
           } else {
-            const txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(e.atk)} vs CA ${def} → falla`;
+            const txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(atk)} vs CA ${def} → falla`;
             fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] });
             log(txt, "ok"); mostrarTirada(txt, true);
           }
@@ -5347,6 +5596,9 @@ function victoria() {
   if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => curar(p, 3)); extra.push("Inspiración +3 PG"); }
   S.players.forEach(p => { if (p.clase === "brujo") { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   S.combate = null;
+  S.botin = [];
+  if (sc.esJefe || sc.botinSeguro || Math.random() < 0.5) S.botin.push(sacarBotin(sc.esJefe));
+  if (sc.esJefe && S.players.length >= 3) S.botin.push(sacarBotin(false));
   const efectos = aplicarFx(sc.victoria.fx).concat(extra);
   S.fase = "resultado";
   S.resultado = { ok: true, tipo: "victoria", enemigo: c.enemigo, linea: null, texto: sc.victoria.t, efectos };
@@ -5368,6 +5620,11 @@ function iconoNodo(tipo) {
     new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.azul, { relieve: 3 });
     const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.hueso[4]); } };
     PX.texto(pinta, "?", 4, 2, RP.hueso[4], null, 2);
+  } else if (tipo === "tesoro") {
+    new C(14, 14).rect(2, 3, 10, 3).pintar(g, RP.madera, { relieve: 1 });
+    new C(14, 14).rect(2, 6, 10, 6).pintar(g, RP.madera, { relieve: 2 });
+    new C(14, 14).rect(2, 6, 10, 1).rect(6, 3, 2, 9).pintar(g, RP.bronce, { plano: 3 });
+    g.set(6, 7, RP.bronce[4]).set(7, 7, RP.bronce[4]).set(6, 8, PX.CONTORNO).set(7, 8, PX.CONTORNO);
   } else if (tipo === "tienda") {
     new C(14, 14).ell(7, 8.5, 4.8, 4.2).pintar(g, RP.madera, { relieve: 2 });
     new C(14, 14).rect(5, 3, 5, 2).pintar(g, RP.madera, { plano: 1 });
@@ -5462,12 +5719,12 @@ function renderSeleccion() {
   escSel.mostrar({ fondo: "taberna", heroes: jugadores.map(j => ({ look: Object.assign({ raza: j.heroe.raza, clase: j.heroe.clase }, j.heroe.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: sel.online ? 0 : sel.actual });
   const nombre = $("#sel-nombre");
   if (document.activeElement !== nombre) nombre.value = h.nombre;
-  const cl = CLASES[h.clase], rz = RAZAS[h.raza];
-  $("#sel-clase").innerHTML = `<strong>${cl.nombre}</strong> <span class="etiqueta">${cl.rol}</span>
-    <p><b>${cl.hab}:</b> ${cl.habDesc}</p><p><b>${cl.pasiva}:</b> ${cl.pasivaDesc}</p>`;
-  $("#sel-raza").innerHTML = `<strong>${rz.nombre}</strong> <span class="etiqueta">${Object.keys(rz.mods).map(s => `${ABREV[s]}${fmt(rz.mods[s])}`).join(" ")}${rz.alma ? ` PG+${rz.alma}` : ""}</span>
+  const cl = CLASES[h.clase], rz = RAZAS[h.raza], p = nuevoHeroe(h);
+  $("#sel-clase").innerHTML = `<p class="sel-tit"><strong>${cl.nombre}</strong><span class="etiqueta">${cl.rol}</span></p>
+    <ul class="habs-ini">${p.habs.map(id => `<li><b>${H(id).nombre}</b><span>${resumenHab(id, p)}</span></li>`).join("")}</ul>
+    <p><b>${cl.pasiva}:</b> ${cl.pasivaDesc}</p>`;
+  $("#sel-raza").innerHTML = `<p class="sel-tit"><strong>${rz.nombre}</strong><span class="etiqueta">${Object.keys(rz.mods).map(s => `${ABREV[s]} ${fmt(rz.mods[s])}`).join(" · ")}${rz.alma ? ` · PG +${rz.alma}` : ""}</span></p>
     <p><b>${rz.pasiva}:</b> ${rz.pasivaDesc}</p>`;
-  const p = nuevoHeroe(h);
   $("#sel-stats").innerHTML = Object.keys(STATS).map(k => `<span><b>${fmt(p.base[k])}</b>${ABREV[k]}</span>`).join("") + `<span><b>${p.almaBase}</b>PG</span><span><b>${ca(p)}</b>CA</span>`;
   $("#sel-jugadores").innerHTML = jugadores.map((j, i) => `
     <button type="button" class="chip-jugador${(!sel.online && i === sel.actual) || (sel.online && j.id === miId) ? " sel" : ""}${j.listo || j.host ? " listo" : ""}" ${sel.online ? "disabled" : `data-ui="sel-heroe" data-i="${i}"`}>
@@ -5512,13 +5769,16 @@ function limitesJuego() {
 function renderJuego() {
   if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
   const enMapa = S.modo === "mapa" && !S.derrota && !S.final;
-  const enTienda = !enMapa && !S.final && !S.derrota && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
+  /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */
+  const vivo = !enMapa && !S.final && !S.derrota;
+  const enTienda = vivo && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
+  const enPanel = enTienda || (vivo && S.aprender.length > 0) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
-  $("#p-juego").classList.toggle("modo-tienda", enTienda);
+  $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
   if (!$("#dado").dataset.listo) { $("#dado").dataset.listo = "1"; ESCENARIO.dibujarDado($("#dado"), 20); }
   const acto = Math.max(0, S.acto);
-  $("#barra-titulo").innerHTML = `<b>${ROMANOS[acto]}</b> ${ACTOS[acto].nombre}`;
+  $("#barra-titulo").innerHTML = `<span class="progreso">${ACTOS.map((_, i) => `<i class="${i < acto ? "hecho" : i === acto ? "ahora" : ""}"></i>`).join("")}</span><span>Acto ${ROMANOS[acto]} · ${ACTOS[acto].nombre}</span>`;
   sincronizarEscenario();
   renderGrupo();
   if (enMapa) renderMapa(); else { $("#mapa").innerHTML = ""; renderEscena(); }
@@ -5549,9 +5809,23 @@ function renderGrupo() {
     return `<button type="button" class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
       <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
-      <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras">${p.alma}/${max} · Nv${p.nivel}</span></span></button>`;
+      <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
+      <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span></span></button>`;
   }).join("");
   pintarRetratos($("#grupo"));
+}
+function pctXp(p) {
+  const a = NIVELES[p.nivel - 1] || 0, b = NIVELES[p.nivel];
+  return b === undefined ? 100 : Math.max(0, Math.min(100, Math.round((100 * (p.xp - a)) / (b - a))));
+}
+function tarjetaBotin(id, k) {
+  const o = OBJETOS[id], r = rareza(id), puede = permitido("equipar", miId) && !esperandoHost;
+  return `<div class="objeto r-${r}"><p class="obj-cab"><strong>${o.nombre}</strong><span class="rareza">${RAREZAS[r]}</span></p>
+    <small>${RANURAS[o.tipo]} · ${o.desc}</small>
+    <div class="para"><span class="etiqueta">Dar a</span>${S.players.map((p, i) => {
+      const v = p.equipo[o.tipo], mejor = !v || OBJETOS[v].precio < o.precio;
+      return `<button type="button" class="chip-heroe${mejor ? " mejor" : ""}" data-juego="equipar" data-v="${k}:${i}" ${puede ? "" : "disabled"} title="${v ? `Lleva ${esc(OBJETOS[v].nombre)}` : "Sin objeto"}">${esc(p.nombre)}${mejor ? " ▲" : ""}</button>`;
+    }).join("")}</div></div>`;
 }
 const parrafo = t => `<p class="texto">${t}</p>`;
 function boton(attrs, titulo, chip, sub, off) {
@@ -5576,7 +5850,7 @@ function renderMapa() {
   pintarIconos($("#mapa"));
   requestAnimationFrame(dibujarLineas);
   $("#panel").innerHTML = `${quienLinea(p, "Elige el camino:")}
-    <p class="leyenda">${["combate", "evento", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
+    <p class="leyenda">${["combate", "evento", "tesoro", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
   pintarIconos($("#panel"));
 }
 function dibujarLineas() {
@@ -5611,13 +5885,29 @@ function renderEscena() {
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-juego="reintentar">Volver al inicio del acto</button>` : `<p class="espera">El anfitrión decide.</p>`}</div>`;
     return;
   }
+  if (S.aprender.length) {
+    const a = S.aprender[0], q = S.players[a.i], nueva = H(a.hab);
+    const mia = !S.online || q.uid === miId;
+    el.innerHTML = `<p class="sello ok">¡Nivel ${q.nivel}!</p><h2>${esc(q.nombre)} quiere aprender ${nueva.nombre}</h2>
+      <div class="hab-nueva"><p><b>${nueva.nombre}</b><span>${resumenHab(a.hab, q)}${nueva.usos ? ` · ${nueva.usos} usos` : " · sin límite"}</span></p><small>${nueva.desc}</small></div>
+      <p class="quien${mia ? "" : " espera"}">${mia ? "Solo caben 4 habilidades. ¿Cuál olvida?" : `${esc(q.nombre)} está eligiendo en su móvil…`}</p>
+      <div class="menu dos olvidar">${q.habs.map((id, k) => boton(`data-juego="aprender" data-v="${k}"`, H(id).nombre, "Olvidar", resumenHab(id, q), !mia)).join("")}</div>
+      ${mia ? `<button type="button" class="boton sec" data-juego="aprender" data-v="-1">No aprender ${nueva.nombre}</button>` : ""}`;
+    return;
+  }
   const cab = `<h2>${sc.titulo}</h2>`;
   if (S.fase === "resultado" && S.resultado) {
     const r = S.resultado;
-    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
+    const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "cofre" ? "¡Botín!" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
+    const sigue = sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa";
     el.innerHTML = `${cab}<p class="sello ${r.ok ? "ok" : "ko"}">${sello}</p>${parrafo(r.texto || "")}
       ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa"}</button>` : quienLinea(p, "")}</div>`;
+      ${S.botin.length ? `<div class="botin">${S.botin.map(tarjetaBotin).join("")}</div>` : ""}
+      <div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sigue}${S.botin.length ? " · vender el resto" : ""}</button>` : quienLinea(p, "")}</div>`;
+    return;
+  }
+  if (sc.tipo === "tesoro") {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decide")}<div class="pie">${mio ? `<button type="button" class="boton" data-juego="abrir">Abrir el cofre</button>` : ""}</div>`;
     return;
   }
   if (sc.tipo === "relato") {
@@ -5652,7 +5942,7 @@ function renderTienda(el, p, mio) {
       <strong>${o.nombre}</strong><small>${o.desc}</small><span class="chip">${equipado ? "Llevas" : `${pr} po`}</span></button>`;
   }).join("");
   const resto = S.tienda.cola.slice(S.tienda.pos + 1).map(i => S.players[i].nombre);
-  el.innerHTML = `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(t.pnj)}:${t.pnj}"></canvas><h2>${t.nombre}</h2></div>${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> · tiene <b>${p.oro} po</b>${p.clase === "picaro" ? " · −25 %" : ""}</p>` : quienLinea(p, "")}
+  el.innerHTML = `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(t.pnj)}:${t.pnj}"></canvas><div><h2>${t.nombre}</h2>${mio ? `<p class="quien">Compra <b>${esc(p.nombre)}</b> · tiene <b class="oro">${p.oro} po</b>${p.clase === "picaro" ? " · −25 %" : ""}</p>` : quienLinea(p, "")}</div></div>
     <div class="articulos">${items}</div>
     <div class="pie">${mio ? `<button type="button" class="boton" data-juego="terminar">${resto.length ? `Listo · le toca a ${esc(resto[0])}` : "Salir de la tienda"}</button>` : ""}</div>`;
   pintarRetratos(el);
@@ -5660,24 +5950,20 @@ function renderTienda(el, p, mio) {
 function renderCombate(el, sc, p, mio) {
   const c = S.combate;
   if (!c) { el.innerHTML = `<h2>${sc.titulo}</h2>`; return; }
-  const e = ENEMIGOS[c.enemigo], cl = CLASES[p.clase], arma = obj(p.equipo.arma) || {};
-  const refStat = stat(p, "raz") >= stat(p, "elo") ? "raz" : "elo";
-  const modG = stat(p, "ani") + (arma.golpe || 0) + (p.clase === "explorador" ? 2 : 0), modR = stat(p, refStat) + (arma.golpe || 0);
+  const e = ENEMIGOS[c.enemigo];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
-  const chips = [`CA ${e.ca}`, c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.maldito ? "Maldito" : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Escudos" : ""].filter(Boolean);
+  const chips = [`CA ${e.ca}`, c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.maldito ? "Maldito" : "", c.veneno ? `Veneno ${c.veneno}` : "", c.atkMod ? `Ataque ${c.atkMod}` : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Bloqueado" : ""].filter(Boolean);
   const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : ""}${a.t === "h" && S.players[a.i].alma <= 0 ? " caido" : ""}">${esc(a.t === "e" ? e.nombre.split(",")[0] : S.players[a.i].nombre)}</li>`).join("");
   let menu;
   if (c.enemigoActua) menu = `<p class="quien espera"><b>${e.nombre}</b> ataca…</p>`;
   else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${S.zurron[k]}`, "", false)).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
-  else menu = `${quienLinea(p, "Turno de")}<div class="menu dos acciones">
-    ${boton('data-juego="accion" data-v="atacar"', "Atacar", `d20${fmt(modG)}`, `1d8${fmt(stat(p, "ani"))} físico`, !mio)}
-    ${boton('data-juego="accion" data-v="conjuro"', "Conjuro", `d20${fmt(modR)}`, `1d8${fmt(stat(p, refStat))} arcano`, !mio)}
-    ${boton('data-juego="accion" data-v="habilidad"', cl.hab, `×${p.usos}`, "", !mio || p.usos <= 0)}
-    ${boton('data-juego="accion" data-v="curar"', "Curar", `SAB${fmt(stat(p, "tem"))}`, "Al más herido", !mio)}
-    ${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}
-    ${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
+  else menu = `${quienLinea(p, "Turno de")}<div class="menu dos acciones">${p.habs.map((id, k) => {
+      const h = H(id), quedan = h.usos ? p.usosH[id] || 0 : 0;
+      return boton(`data-juego="hab" data-v="${k}" data-tipo="${h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo"}"`, h.nombre, h.usos ? `${quedan}/${h.usos}` : "∞", resumenHab(id, p), !mio || (h.usos && quedan <= 0));
+    }).join("")}</div>
+    <div class="fila-extra">${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
   el.innerHTML = `<div class="rival-info"><button type="button" class="rival-nombre" data-ui="bestia" data-k="${c.enemigo}">${e.nombre}</button><span class="chips">${chips.map(x => `<span>${x}</span>`).join("")}</span></div>
-    ${c.ronda === 1 && sc.esJefe ? `<p class="rasgo">${sc.texto}</p>` : `<p class="rasgo">${e.rasgoDesc}</p>`}<ol class="orden">${orden}</ol>${menu}`;
+    <ol class="orden">${orden}</ol>${menu}`;
 }
 
 /* ---------- Ventanas ---------- */
@@ -5707,7 +5993,11 @@ function htmlFicha(p) {
     <div><h2>${esc(p.nombre)}</h2><p>${rz.nombre} · ${cl.nombre} · ${ALINEAMIENTOS[p.alin]}</p>
     <p class="cifras">Nv ${p.nivel} · PX ${p.xp}${sig !== undefined ? `/${sig}` : ""} · PG ${p.alma}/${max} · CA ${ca(p)} · ${p.oro} po</p>
     <p class="stats">${Object.keys(STATS).map(k => `<span><b>${fmt(stat(p, k))}</b>${ABREV[k]}</span>`).join("")}</p></div></div>
-    <dl class="habilidades"><dt>${cl.hab}</dt><dd>${cl.habDesc}</dd><dt>${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd><dt>${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd></dl>
+    <span class="barra-xp grande"><i style="width:${pctXp(p)}%"></i></span>
+    <h3>Habilidades (${p.habs.length}/4)</h3>
+    <ul class="lista-habs">${p.habs.map(id => `<li><p><b>${H(id).nombre}</b><span>${resumenHab(id, p)}${H(id).usos ? ` · ${H(id).usos} usos` : ""}</span></p><small>${H(id).desc}</small></li>`).join("")}</ul>
+    ${proximaHab(p) ? `<p class="proxima">Nivel ${proximaHab(p).nivel}: aprenderá <b>${proximaHab(p).ids.map(x => H(x).nombre).join(", ")}</b></p>` : ""}
+    <dl class="habilidades"><dt>${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd><dt>${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd></dl>
     <ul class="equipo">${Object.keys(RANURAS).map(k => `<li><span class="etiqueta">${RANURAS[k]}</span> ${p.equipo[k] ? OBJETOS[p.equipo[k]].nombre : "—"}</li>`).join("")}</ul>`;
 }
 function htmlMochila() {
@@ -5732,7 +6022,7 @@ function htmlCompendio(pestana, k) {
       <p><b>${e.rasgoDesc}</b> ${e.lore}</p></div></article>`;
   }).join("") || `<p class="espera">Aún no os habéis cruzado con ningún monstruo.</p>`;
   if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(x => { const r = RAZAS[x]; return `<article><h3>${r.nombre}</h3><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p>${r.lore}</p></article>`; }).join("");
-  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p><b>${c.hab}:</b> ${c.habDesc}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
+  if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p>${Object.keys(APRENDE[x]).map(l => `<b>Nv ${l}:</b> ${APRENDE[x][l].map(id => H(id).nombre).join(", ")}`).join(" · ")}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
   return `<h2>Compendio</h2><div class="pestanas">${Object.keys(tabs).map(t => `<button type="button" data-ui="pestana" data-p="${t}" aria-selected="${t === pestana}">${tabs[t]}</button>`).join("")}</div><div class="compendio">${cuerpo}</div>`;
 }
 function htmlAyuda() {
@@ -5740,6 +6030,8 @@ function htmlAyuda() {
     <li><b>En línea:</b> uno crea la partida y pasa el código de 4 letras. Cada amigo abre este mismo juego en claude.ai con su cuenta, pulsa «Unirse» y lo escribe. El móvil del anfitrión lleva la partida: que no lo cierre.</li>
     <li><b>Personaje:</b> 90 segundos para elegir clase, raza y aspecto. Al acabar el tiempo, empieza la aventura.</li>
     <li><b>Mapa:</b> en cada acto elegís camino entre combates, sucesos, una tienda y una hoguera. Al final espera el jefe. Son 4 actos: bosque, mazmorra, castillo y volcán.</li>
+    <li><b>Habilidades:</b> cada héroe lleva hasta 4, como los movimientos de un Pokémon. Al subir de nivel aprende otras; si ya tiene 4, elige cuál olvida. Las de usos limitados se recargan en cada combate.</li>
+    <li><b>Botín:</b> los cofres y los enemigos sueltan armas, armaduras y objetos mágicos. Pulsa el nombre del héroe que se lo queda (▲ = mejor que lo que lleva). Lo que nadie coge se vende.</li>
     <li><b>Tiradas:</b> d20 + atributo contra la CD (o la CA del enemigo). 20 es crítico y 1 es pifia.</li>
     <li><b>Turnos:</b> decide quien tiene el marco dorado. En combate manda la iniciativa.</li>
     <li><b>Si caéis todos,</b> volvéis al inicio del acto.</li></ul>`;
@@ -5753,6 +6045,10 @@ function ejecutar(k, v) {
     case "resp": return responder(+v);
     case "final": return elegirFinal(v);
     case "accion": return accion(v);
+    case "hab": return accion("hab", v);
+    case "abrir": return abrirCofre();
+    case "equipar": { const [k, i] = String(v).split(":"); return equipar(+k, +i); }
+    case "aprender": return aprender(+v);
     case "objeto": return accion("objeto", v);
     case "comprar": return comprar(v);
     case "terminar": return terminarCompras();
@@ -5775,7 +6071,7 @@ document.addEventListener("click", ev => {
   if (ds.juego) {
     if (!S || ocupado || esperandoHost) return;
     const k = ds.juego, v = ds.v;
-    if (k === "reintentar" ? S.online && !esHost() : !turnoMio()) return;
+    if (k === "reintentar" ? S.online && !esHost() : !permitido(k, miId)) return;
     if (S.online && !esHost()) return enviarJugada(k, v);
     return ejecutar(k, v);
   }
