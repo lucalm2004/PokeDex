@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Hoja de sprites</title>
+<style>body{margin:0;background:#2b2018;color:#f2e5d1;font:12px monospace}canvas{image-rendering:pixelated;display:block}
+.fila{display:flex;gap:4px;padding:4px;align-items:center}.et{width:80px}.celda{background:#6e5a48}.celda.b{background:#a08a70}</style></head>
+<body><div id="raiz"></div>
+<script src="../src/pixel.js"></script><script src="../src/heroes.js"></script>
+<script>
+const razas=Object.keys(HEROES.RAZAS), clases=["filosofo","guardian","sofista","rapsoda","atleta","oraculo","cazadora","hechicero"];
+const esc=+(new URLSearchParams(location.search).get('e')||4);
+const raiz=document.getElementById('raiz');
+const cab=document.createElement('div');cab.className='fila';cab.innerHTML='<span class="et"></span>'+razas.map(r=>`<span style="width:${36*esc}px">${r}</span>`).join('');raiz.appendChild(cab);
+clases.forEach((c,ci)=>{const f=document.createElement('div');f.className='fila';f.innerHTML=`<span class="et">${c}</span>`;
+ razas.forEach((r,ri)=>{const vis=HEROES.RAZAS[r];const g=HEROES.componer({raza:r,clase:c,piel:vis.pieles[(ci+ri)%vis.pieles.length],pelo:vis.pelos.length?vis.pelos[(ci*3+ri)%vis.pelos.length]:null,peinado:HEROES.PEINADOS[(ci+ri*2)%5],barba:(ci+ri)%3===0});
+ const cv=g.aCanvas(esc);cv.className='celda'+((ci+ri)%2?' b':'');f.appendChild(cv);});raiz.appendChild(f);});
+</script></body></html>

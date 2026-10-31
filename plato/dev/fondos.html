@@ -1,0 +1,55 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Fondos de escenario</title>
+<style>body{margin:0;background:#1a120c;color:#f2e5d1;font:12px monospace;padding:6px}
+#raiz{display:flex;flex-wrap:wrap;gap:10px}.fig{margin:0}.fig b{display:block;padding:2px 0 4px;font-weight:400;letter-spacing:1px}
+canvas{image-rendering:pixelated;display:block}.mal{color:#e2604a}</style></head>
+<body><div id="raiz"></div>
+<script src="../src/pixel.js"></script><script src="../src/heroes.js"></script><script src="../src/fondos.js"></script>
+<script>
+/* ?k=clave1,clave2 · ?e=escala · ?t=ms (imagen fija) · ?sin (sin héroes) · ?medir (cuenta fillRect por fotograma) */
+const q = new URLSearchParams(location.search);
+const esc = +(q.get("e") || 3), tFijo = q.has("t") ? +q.get("t") : null;
+const claves = q.get("k") ? q.get("k").split(",") : Object.keys(FONDOS);
+const figuras = [
+  [{ raza: "humano", clase: "guardian" }, 40, 100],
+  [{ raza: "elfo", clase: "filosofo", pelo: "rubio" }, 72, 94],
+  [{ raza: "tiefling", clase: "hechicero" }, 100, 102],
+  [{ raza: "semiorco", clase: "sofista", espejo: true }, 150, 98]
+].map(([a, x, y]) => ({ cv: HEROES.componer(a).aCanvas(1), x: x - (a.espejo ? 18 : 17), y: y - 34 }));
+const medidas = window.MEDIDAS = {};
+const escenas = claves.map(k => {
+  const f = FONDOS[k], g = new PX.Rejilla(192, 108);
+  const t0 = performance.now();
+  f.base(g);
+  const ms = performance.now() - t0;
+  const vacios = g.c.filter(c => !c).length;
+  const fig = document.createElement("figure"); fig.className = "fig";
+  const et = document.createElement("b");
+  et.textContent = k + (vacios ? ` · ${vacios} píxeles vacíos` : "");
+  if (vacios) et.className = "mal";
+  const cv = document.createElement("canvas"); cv.width = 192; cv.height = 108;
+  cv.style.width = 192 * esc + "px"; cv.style.height = 108 * esc + "px";
+  fig.append(et, cv); document.getElementById("raiz").appendChild(fig);
+  const ctx = cv.getContext("2d");
+  medidas[k] = { base: ms, vacios, rects: 0, maxRects: 0, anim: 0, maxAnim: 0, cuadros: 0 };
+  return { k, f, ctx, img: g.aCanvas(1) };
+});
+function cuadro(t) {
+  for (const e of escenas) {
+    const { ctx, f } = e, m = medidas[e.k];
+    ctx.drawImage(e.img, 0, 0);
+    if (f.anim) {
+      let n = 0;
+      const fr = ctx.fillRect;
+      if (q.has("medir")) ctx.fillRect = function (...a) { n++; return fr.apply(this, a); };
+      const t0 = performance.now();
+      f.anim(ctx, t);
+      const dt = performance.now() - t0;
+      ctx.fillRect = fr;
+      m.cuadros++; m.rects += n; m.maxRects = Math.max(m.maxRects, n); m.anim += dt; m.maxAnim = Math.max(m.maxAnim, dt);
+    }
+    if (!q.has("sin")) for (const s of figuras) ctx.drawImage(s.cv, s.x, s.y);
+  }
+}
+if (tFijo !== null) cuadro(tFijo);
+else { const t0 = performance.now(); cuadro(0); setInterval(() => cuadro(performance.now() - t0), 83); }
+</script></body></html>

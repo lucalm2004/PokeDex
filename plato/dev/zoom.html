@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#2b2018;display:flex;flex-wrap:wrap;gap:6px;padding:6px}canvas{image-rendering:pixelated;background:#8a7660}</style></head><body>
+<script src="../src/pixel.js"></script><script src="../src/heroes.js"></script>
+<script>
+const lista=JSON.parse(decodeURIComponent(location.hash.slice(1)||'[]'));
+const esc=10;
+lista.forEach(a=>{document.body.appendChild(HEROES.componer(a).aCanvas(esc));});
+</script></body></html>
