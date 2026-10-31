@@ -380,6 +380,41 @@ h1, h2, h3 { text-wrap: balance; }
   box-shadow: inset 0 0 0 1px var(--line-2), 0 12px 30px -10px #000;
 }
 
+/* Eficacia, vida e intención del enemigo */
+.ef { font-weight: 700; }
+.ef.alto { color: var(--ok); }
+.ef.bajo { color: var(--ko); }
+.opcion[data-ef="alto"] { box-shadow: inset 0 0 0 1px var(--ok); }
+.vida-rival { display: flex; align-items: center; gap: 8px; }
+.barra-rival { flex: 1; height: 8px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.barra-rival i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--ko), #ff9a6b); transition: width .35s; }
+.vida-rival b { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.intencion { margin: 0; font-size: 12px; line-height: 1.3; color: var(--muted); padding: 6px 10px; border-radius: 10px; background: rgba(255, 107, 129, .08); }
+.intencion span { color: var(--ko); font-weight: 600; }
+.intencion b { color: var(--text); font-weight: 600; }
+
+/* Celebración (nivel, botín épico) */
+.festejo {
+  position: fixed; z-index: 70; left: 50%; top: 38%; transform: translate(-50%, -50%); pointer-events: none; text-align: center;
+  padding: 16px 26px; border-radius: 20px; background: rgba(22, 26, 48, .94); white-space: nowrap; box-shadow: inset 0 0 0 2px var(--gold), 0 0 60px -10px var(--gold);
+  animation: festejo 1.9s ease-out forwards;
+}
+.festejo p { margin: 0; font-size: 28px; font-weight: 800; color: var(--gold); letter-spacing: -.01em; }
+.festejo small { display: block; margin-top: 2px; font-size: 14px; color: var(--text); }
+.festejo.r-epico { box-shadow: inset 0 0 0 2px var(--r-epico), 0 0 60px -10px var(--r-epico); }
+.festejo.r-epico p { color: var(--r-epico); }
+.festejo.r-legendario { box-shadow: inset 0 0 0 2px var(--r-legendario), 0 0 70px -6px var(--r-legendario); }
+.festejo.r-legendario p { color: var(--r-legendario); }
+@keyframes festejo { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.8); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 20% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -58%); } }
+
+/* Tutorial */
+.tuto { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.tuto li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); }
+.tuto canvas { padding: 6px; border-radius: 50%; background: var(--bg); box-sizing: content-box; }
+.tuto div { display: grid; gap: 2px; }
+.tuto b { font-size: 15px; }
+.tuto span { font-size: 13px; color: var(--muted); }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
@@ -402,6 +437,7 @@ h1, h2, h3 { text-wrap: balance; }
   .articulo small, .juego .rasgo, .objeto small, .olvidar small, .hab-nueva small { display: none; }
   .opcion { min-height: 40px; padding-block: 6px; }
   .orden { display: none; }
+  .intencion { padding: 4px 8px; }
   .panel h2 { font-size: 16px; }
   .hab-nueva { padding: 8px 10px; }
 }

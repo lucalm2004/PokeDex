@@ -218,7 +218,7 @@ function recibirPartida(m) {
   const t = S.dado;
   const lista = S.efectos && S.efectos.seq > efectosVistos ? S.efectos.lista : [];
   if (S.efectos) efectosVistos = S.efectos.seq;
-  const reproducir = () => { if (!primero && escJuego) lista.forEach((e, k) => setTimeout(() => escJuego && escJuego.efecto(e), k * 240)); };
+  const reproducir = () => { if (!primero && escJuego) lista.forEach((e, k) => setTimeout(() => efectoLocal(e), k * 240)); };
   if (t && !primero && t.seq > dadoVisto && !ocupado) {
     dadoVisto = t.seq; render();
     return tirarDado(t.n, t.caras || 20, () => { mostrarTirada(t.texto, t.ok, false); reproducir(); });
@@ -297,8 +297,63 @@ function siguienteVivo(desde) {
 }
 function masHerido() { return S.players.slice().sort((a, b) => a.alma / maxAlma(a) - b.alma / maxAlma(b))[0]; }
 function curar(p, n) { const antes = p.alma; p.alma = Math.min(maxAlma(p), p.alma + Math.max(0, n)); return p.alma - antes; }
+/* ---------- Sonido, vibración y celebraciones ---------- */
+const SONIDO = { on: leer("dym-sonido", "1") === "1", ctx: null };
+function audio() {
+  if (!SONIDO.on) return null;
+  try {
+    SONIDO.ctx = SONIDO.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (SONIDO.ctx.state === "suspended") SONIDO.ctx.resume();
+    return SONIDO.ctx;
+  } catch (e) { return null; }
+}
+function tono(f, dur, tipo = "square", vol = 0.05, cuando = 0, hasta) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + cuando, o = a.createOscillator(), g = a.createGain();
+  o.type = tipo; o.frequency.setValueAtTime(f, t);
+  if (hasta) o.frequency.exponentialRampToValueAtTime(hasta, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function vibrar(p) { if (SONIDO.on && navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
+const SONIDOS = {
+  dado: () => tono(700 + Math.random() * 500, 0.03, "square", 0.025),
+  golpe: () => tono(200, 0.12, "sawtooth", 0.06, 0, 60),
+  herido: () => { tono(150, 0.18, "sawtooth", 0.07, 0, 45); vibrar(45); },
+  magia: () => tono(480, 0.3, "triangle", 0.05, 0, 1300),
+  cura: () => { tono(520, 0.12, "sine", 0.07); tono(780, 0.2, "sine", 0.06, 0.1); },
+  fallo: () => tono(230, 0.1, "triangle", 0.04, 0, 150),
+  victoria: () => [523, 659, 784, 1047].forEach((f, k) => tono(f, 0.2, "square", 0.04, k * 0.11)),
+  nivel: () => { [392, 523, 659, 784, 1047].forEach((f, k) => tono(f, 0.22, "square", 0.04, k * 0.08)); vibrar([30, 40, 30]); },
+  botin: () => [880, 1175, 1568].forEach((f, k) => tono(f, 0.15, "triangle", 0.05, k * 0.07)),
+  derrota: () => [392, 330, 262, 196].forEach((f, k) => tono(f, 0.32, "triangle", 0.05, k * 0.18))
+};
+function sonar(k) { if (SONIDO.on && SONIDOS[k]) try { SONIDOS[k](); } catch (e) {} }
+function festejar(titulo, sub, clase = "") {
+  const el = $("#festejo");
+  if (!el) return;
+  el.className = "festejo " + clase;
+  el.innerHTML = `<p>${esc(titulo)}</p>${sub ? `<small>${esc(sub)}</small>` : ""}`;
+  el.hidden = false;
+  clearTimeout(festejar.t);
+  festejar.t = setTimeout(() => { el.hidden = true; }, 1900);
+}
+const EFECTOS_ESCENA = new Set(["numero", "golpe", "ataque", "magia", "cura", "muerte"]);
+/* Un efecto se ve en el escenario y además suena y, si toca, se celebra (también en los móviles de los demás). */
+function efectoLocal(e) {
+  if (escJuego && EFECTOS_ESCENA.has(e.tipo)) escJuego.efecto(e);
+  if (e.tipo === "golpe") sonar(e.objetivo === "e" ? "golpe" : "herido");
+  else if (e.tipo === "magia") sonar("magia");
+  else if (e.tipo === "cura") sonar("cura");
+  else if (e.tipo === "muerte") sonar("victoria");
+  else if (e.tipo === "numero" && e.texto === "FALLO") sonar("fallo");
+  else if (e.tipo === "nivel") { sonar("nivel"); festejar(e.texto, e.sub, "nivel"); }
+  else if (e.tipo === "botin") { sonar("botin"); if (e.rz === "epico" || e.rz === "legendario") festejar(e.texto, e.sub, "r-" + e.rz); }
+  else if (e.tipo === "derrota") sonar("derrota");
+}
 function fx(e) {
-  if (escJuego) escJuego.efecto(e);
+  efectoLocal(e);
   if (S && S.online) { S.efectos = S.efectos || { seq: 0, lista: [] }; S.efectos.lista.push(e); if (S.efectos.lista.length > 24) S.efectos.lista.shift(); }
 }
 const idx = p => S.players.indexOf(p);
@@ -321,6 +376,7 @@ function subirNivel(p, out) {
   }
   const t = `${p.nombre} sube a nivel ${p.nivel}`;
   log(t, "nivel"); out.push(t);
+  fx({ tipo: "nivel", texto: `¡Nivel ${p.nivel}!`, sub: `${p.nombre} · +3 PG máximos` });
   for (const id of APRENDE[p.clase][p.nivel] || []) {
     if (p.habs.includes(id)) continue;
     if (p.habs.length < 4) { p.habs.push(id); const a = `${p.nombre} aprende ${H(id).nombre}`; log(a, "nivel"); out.push(a); }
@@ -370,7 +426,7 @@ function tirarDado(final, caras, cb) {
   };
   if (reducido || !cv || cv.offsetParent === null) return terminar();
   let k = 0;
-  const iv = setInterval(() => { k++; ESCENARIO.dibujarDado(cv, d(caras), k % 2, (k % 3) - 1, k % 2 ? -1 : 0); }, 70);
+  const iv = setInterval(() => { k++; sonar("dado"); ESCENARIO.dibujarDado(cv, d(caras), k % 2, (k % 3) - 1, k % 2 ? -1 : 0); }, 70);
   setTimeout(() => { clearInterval(iv); terminar(); }, 700);
 }
 function mostrarTirada(texto, ok, enPartida = true) {
@@ -479,6 +535,7 @@ function abrirCofre() {
   }
   S.botin = [sacarBotin(false)];
   if (S.acto >= 2 && Math.random() < 0.5) S.botin.push(sacarBotin(false));
+  anunciarBotin();
   const efectos = aplicarFx({ oro: 6 + S.acto * 4, pocion: Math.random() < 0.5 ? 1 : 0, xp: 2 });
   S.fase = "resultado";
   S.resultado = { ok: true, tipo: "cofre", texto: "La tapa cede con un crujido. ¡Hay algo dentro!", efectos };
@@ -497,6 +554,10 @@ function equipar(k, i) {
   fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.bronce });
   log(t + ".", "ok"); avisar(t + ".");
   guardar(); render();
+}
+function anunciarBotin() {
+  const mejor = S.botin.slice().sort((a, b) => OBJETOS[b].precio - OBJETOS[a].precio)[0];
+  if (mejor) fx({ tipo: "botin", rz: rareza(mejor), texto: `¡Botín ${RAREZAS[rareza(mejor)].toLowerCase()}!`, sub: OBJETOS[mejor].nombre });
 }
 function venderSobrante() {
   if (!S.botin.length) return;
@@ -606,7 +667,9 @@ function reintentar() {
   g.log = S.log; g.guardadoActo = S.guardadoActo; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
   S = g;
   S.players.forEach(p => { p.alma = maxAlma(p); });
-  log("Solara os devuelve a la vida al inicio del acto.", "esc");
+  S.intentos = (S.intentos || 0) + 1;
+  S.zurron.pocion += 2; S.zurron.superior += 1;
+  log("Solara os devuelve a la vida al inicio del acto y os regala 2 pociones y 1 poción superior.", "esc");
   guardar(); render();
 }
 
@@ -664,11 +727,13 @@ function usarFuera(id, i) {
 /* ---------- Combate ---------- */
 function iniciarCombate(sc) {
   const e = ENEMIGOS[sc.enemigo], n = S.players.length;
-  const hp = Math.round(e.alma * (0.45 + 0.28 * n));
+  /* Los enemigos crecen con el nivel medio del grupo para que el reto no se pierda. */
+  const niv = Math.max(0, S.players.reduce((a, p) => a + p.nivel, 0) / n - 1 - 1.4 * Math.max(0, S.acto));
+  const hp = Math.round(e.alma * (0.45 + 0.28 * n) * (1 + 0.18 * niv));
   const c = S.combate = {
     enemigo: sc.enemigo, hp, hpMax: hp, ataques: e.ataques + (n >= 4 ? 1 : 0), blando: n === 1, ronda: 1, orden: [], pos: 0,
     aturdido: false, escudo: false, maldito: false, anilloUsado: false, partido: false, quemado: false,
-    resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false, veneno: 0, atkMod: 0
+    resiste: e.resiste, debil: e.debil, robado: {}, enemigoActua: false, veneno: 0, atkMod: Math.floor(niv / 3), atkBase: Math.floor(niv / 3), danoExtra: Math.floor(niv / 2)
   };
   if (!S.vistos.bestias.includes(sc.enemigo)) S.vistos.bestias.push(sc.enemigo);
   S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos; }); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
@@ -739,7 +804,7 @@ function accion(tipo, arg) {
     const m = statHab(p, h);
     const efectosExtra = (dmg, partes) => {
       if (h.veneno) { c.veneno = Math.max(c.veneno, h.veneno); partes.push("veneno"); }
-      if (h.debilita) { c.atkMod = Math.max(-4, c.atkMod - 2); partes.push("−2 a su ataque"); }
+      if (h.debilita) { c.atkMod = Math.max(c.atkBase - 4, c.atkMod - 2); partes.push("−2 a su ataque"); }
       if (h.maldice) { c.maldito = true; partes.push("maldito"); }
       if (h.drena && dmg > 0) { const cu = curar(p, Math.max(1, Math.floor(dmg / 2))); fx({ tipo: "cura", objetivo: yo }); partes.push(`te curas ${cu}`); }
     };
@@ -788,7 +853,7 @@ function accion(tipo, arg) {
     if (h.efecto === "escudo") c.escudo = true;
     if (h.efecto === "aturde") c.aturdido = true;
     if (h.efecto === "maldice") c.maldito = true;
-    if (h.efecto === "debilita") c.atkMod = Math.max(-4, c.atkMod - 2);
+    if (h.efecto === "debilita") c.atkMod = Math.max(c.atkBase - 4, c.atkMod - 2);
     if (h.efecto === "veneno") c.veneno = Math.max(c.veneno, h.turnos);
     const t = `${p.nombre} usa ${h.nombre}: ${resumenHab(id, p).toLowerCase()}.`;
     log(t, "ok"); mostrarTirada(t, true);
@@ -854,7 +919,7 @@ function turnoEnemigo() {
           mostrarTirada.ultimo = r;
           if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), r);
           if (ok) {
-            const dmg = Math.max(1, tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2]) - (c.blando ? 2 : 0));
+            const dmg = Math.max(1, tirar(e.dano[0] * (r === 20 ? 2 : 1), e.dano[1], e.dano[2] + (c.danoExtra || 0)) - (c.blando ? 2 : 0));
             let txt = `${e.nombre} → ${t.nombre}: ${r} ${fmt(atk)} vs CA ${def} → ${danarHeroe(ti, dmg, true)}`;
             if (e.drena) { const cu = Math.max(1, Math.floor(dmg / 2)); c.hp = Math.min(c.hpMax, c.hp + cu); txt += `. Bebe y se cura ${cu}`; }
             if (e.roba && t.oro > 0) { const rob = Math.min(e.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
@@ -866,7 +931,7 @@ function turnoEnemigo() {
           }
         }
         if (e.area && cada(e.area.cada)) {
-          const partes = vivos().map(i => { fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego }); return `${S.players[i].nombre} ${danarHeroe(i, d(e.area.dado), false).split(".")[0]}`; });
+          const partes = vivos().map(i => { fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego }); return `${S.players[i].nombre} ${danarHeroe(i, d(e.area.dado) + Math.floor((c.danoExtra || 0) / 2), false).split(".")[0]}`; });
           log(`${e.area.txt}: ${partes.join(", ")}.`, "ko");
         }
         if (e.estado && cada(e.estado.cada)) {
@@ -900,13 +965,14 @@ function victoria() {
   S.botin = [];
   if (sc.esJefe || sc.botinSeguro || Math.random() < 0.5) S.botin.push(sacarBotin(sc.esJefe));
   if (sc.esJefe && S.players.length >= 3) S.botin.push(sacarBotin(false));
+  anunciarBotin();
   const efectos = aplicarFx(sc.victoria.fx).concat(extra);
   S.fase = "resultado";
   S.resultado = { ok: true, tipo: "victoria", enemigo: c.enemigo, linea: null, texto: sc.victoria.t, efectos };
   log(`¡Victoria contra ${e.nombre}!`, "ok");
   guardar(); render();
 }
-function derrota() { S.derrota = true; log("Todo el grupo ha caído.", "ko"); guardar(); render(); }
+function derrota() { S.derrota = true; fx({ tipo: "derrota" }); log("Todo el grupo ha caído.", "ko"); guardar(); render(); }
 
 /* ---------- Iconos pixelados del mapa ---------- */
 const cacheIconos = {};
@@ -1069,6 +1135,7 @@ function limitesJuego() {
 }
 function renderJuego() {
   if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
+  if (leer("dym-tuto", null) === null && !modal) { escribir("dym-tuto", "1"); setTimeout(() => abrirModal({ tipo: "tuto" }), 300); }
   const enMapa = S.modo === "mapa" && !S.derrota && !S.final;
   /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */
   const vivo = !enMapa && !S.final && !S.derrota;
@@ -1182,7 +1249,7 @@ function renderEscena() {
     return;
   }
   if (S.derrota) {
-    el.innerHTML = `<h2 class="ko">Habéis caído</h2>${parrafo("Una sacerdotisa de Solara os encuentra y os devuelve a la vida.")}
+    el.innerHTML = `<h2 class="ko">Habéis caído</h2>${parrafo("Una sacerdotisa de Solara os encuentra y os devuelve a la vida. Volvéis al inicio del acto con 2 pociones y 1 poción superior de regalo.")}
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-juego="reintentar">Volver al inicio del acto</button>` : `<p class="espera">El anfitrión decide.</p>`}</div>`;
     return;
   }
@@ -1248,22 +1315,42 @@ function renderTienda(el, p, mio) {
     <div class="pie">${mio ? `<button type="button" class="boton" data-juego="terminar">${resto.length ? `Listo · le toca a ${esc(resto[0])}` : "Salir de la tienda"}</button>` : ""}</div>`;
   pintarRetratos(el);
 }
+/* Qué hará el enemigo en su próximo turno (para poder anticiparse). */
+function intencion(c, e) {
+  const ie = c.orden.findIndex(a => a.t === "e");
+  const ronda = c.pos <= ie ? c.ronda : c.ronda + 1;
+  const cada = n => ronda % n === 0;
+  if (c.aturdido) return "pierde el turno";
+  const n = c.ataques + (c.partido ? 1 : 0);
+  const partes = [c.escudo ? "su ataque está bloqueado" : `atacará ${n === 1 ? "1 vez" : n + " veces"}`];
+  if (e.area && cada(e.area.cada)) partes.push("<b>¡golpe a todo el grupo!</b>");
+  if (e.estado && cada(e.estado.cada)) partes.push("<b>intentará paralizar a alguien</b>");
+  if (e.cura && cada(e.cura.cada) && c.hp < c.hpMax) partes.push("se curará");
+  if (e.regenera) partes.push(c.quemado ? "no podrá regenerarse" : "se regenera (usa magia)");
+  if (e.furia && !c.partido) partes.push("con media vida, atacará más");
+  return partes.join(" · ");
+}
 function renderCombate(el, sc, p, mio) {
   const c = S.combate;
   if (!c) { el.innerHTML = `<h2>${sc.titulo}</h2>`; return; }
   const e = ENEMIGOS[c.enemigo];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
-  const chips = [`CA ${e.ca}`, c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.maldito ? "Maldito" : "", c.veneno ? `Veneno ${c.veneno}` : "", c.atkMod ? `Ataque ${c.atkMod}` : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Bloqueado" : ""].filter(Boolean);
+  const chips = [`CA ${e.ca}`, c.debil ? `Débil: ${TIPOS_DANO[c.debil]}` : "", c.resiste ? `Resiste ${TIPOS_DANO[c.resiste]}` : "", c.maldito ? "Maldito" : "", c.veneno ? `Veneno ${c.veneno}` : "", c.atkMod < c.atkBase ? `Ataque ${fmt(c.atkMod - c.atkBase)}` : "", c.aturdido ? "Sin turno" : "", c.escudo ? "Bloqueado" : ""].filter(Boolean);
   const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : ""}${a.t === "h" && S.players[a.i].alma <= 0 ? " caido" : ""}">${esc(a.t === "e" ? e.nombre.split(",")[0] : S.players[a.i].nombre)}</li>`).join("");
   let menu;
   if (c.enemigoActua) menu = `<p class="quien espera"><b>${e.nombre}</b> ataca…</p>`;
   else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${S.zurron[k]}`, "", false)).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
   else menu = `${quienLinea(p, "Turno de")}<div class="menu dos acciones">${p.habs.map((id, k) => {
       const h = H(id), quedan = h.usos ? p.usosH[id] || 0 : 0;
-      return boton(`data-juego="hab" data-v="${k}" data-tipo="${h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo"}"`, h.nombre, h.usos ? `${quedan}/${h.usos}` : "∞", resumenHab(id, p), !mio || (h.usos && quedan <= 0));
+      const ef = h.efecto !== "dano" ? "" : c.debil === h.tipo || (h.noMuerto && e.nomuerto) ? "alto" : c.resiste === h.tipo ? "bajo" : "";
+      const sub = resumenHab(id, p) + (ef === "alto" ? ` <b class="ef alto">¡Eficaz!</b>` : ef === "bajo" ? ` <b class="ef bajo">Poco eficaz</b>` : "");
+      return boton(`data-juego="hab" data-v="${k}" data-tipo="${h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo"}"${ef ? ` data-ef="${ef}"` : ""}`, h.nombre, h.usos ? `${quedan}/${h.usos}` : "∞", sub, !mio || (h.usos && quedan <= 0));
     }).join("")}</div>
     <div class="fila-extra">${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
+  const pctE = Math.round((100 * c.hp) / c.hpMax);
   el.innerHTML = `<div class="rival-info"><button type="button" class="rival-nombre" data-ui="bestia" data-k="${c.enemigo}">${e.nombre}</button><span class="chips">${chips.map(x => `<span>${x}</span>`).join("")}</span></div>
+    <div class="vida-rival"><span class="barra-rival"><i style="width:${pctE}%"></i></span><b>${c.hp}/${c.hpMax}</b></div>
+    <p class="intencion"><span>Su turno:</span> ${intencion(c, e)}</p>
     <ol class="orden">${orden}</ol>${menu}`;
 }
 
@@ -1279,10 +1366,16 @@ function renderModal() {
   if (modal.tipo === "compendio") html = htmlCompendio(modal.pestana || "bestiario", modal.k);
   if (modal.tipo === "cronica" && S) html = `<h2>Crónica</h2><ol class="cronica-larga">${S.log.slice().reverse().map(l => `<li class="${l.cls}">${esc(l.t)}</li>`).join("")}</ol>`;
   if (modal.tipo === "ayuda") html = htmlAyuda();
+  if (modal.tipo === "tuto") html = `<h2>Cómo se juega</h2><ol class="tuto">
+      <li><canvas data-icono="combate" data-tam="34"></canvas><div><b>Elige el camino</b><span>En el mapa, toca un círculo que brille. Arriba del todo espera el jefe.</span></div></li>
+      <li><canvas data-icono="evento" data-tam="34"></canvas><div><b>Toca una habilidad</b><span>En tu turno elige una de tus 4. «¡Eficaz!» hace el doble. Mira «Su turno» para saber qué hará el enemigo.</span></div></li>
+      <li><canvas data-icono="tesoro" data-tam="34"></canvas><div><b>Sube de nivel y coge botín</b><span>Aprenderás habilidades nuevas y encontrarás objetos en cofres y enemigos. Toca un nombre para dárselo.</span></div></li>
+    </ol><button type="button" class="boton" data-ui="cerrar">¡A jugar!</button>`;
   if (modal.tipo === "menu") html = `<h2>Menú</h2><div class="menu">
       ${S ? boton('data-ui="modal" data-m="cronica"', "Crónica", "", "Todo lo que ha pasado", false) : ""}
       ${boton('data-ui="modal" data-m="compendio"', "Compendio", "", "Bestiario, razas, clases y el mundo", false)}
       ${boton('data-ui="modal" data-m="ayuda"', "Cómo se juega", "", "", false)}
+      ${boton('data-ui="sonido"', `Sonido y vibración: ${SONIDO.on ? "sí" : "no"}`, "", "", false)}
       ${S && S.online ? boton('data-ui="salir"', "Salir de la partida", "", "Sigue para los demás", false) : S ? boton('data-ui="abandonar"', "Volver al inicio", "", "La partida queda guardada", false) : ""}</div>`;
   el.innerHTML = `<button type="button" class="cerrar" data-ui="cerrar" aria-label="Cerrar">×</button>${html}`;
   pintarRetratos(el);
@@ -1368,6 +1461,7 @@ document.addEventListener("click", ev => {
   if (ev.target.id === "capa") return cerrarModal();
   const b = ev.target.closest("button");
   if (!b || b.disabled) return;
+  audio();
   const ds = b.dataset;
   if (ds.juego) {
     if (!S || ocupado || esperandoHost) return;
@@ -1403,6 +1497,7 @@ document.addEventListener("click", ev => {
     case "objetos": submenu = "objetos"; return renderEscena();
     case "volver-menu": submenu = null; return renderEscena();
     case "cerrar": return cerrarModal();
+    case "sonido": SONIDO.on = !SONIDO.on; escribir("dym-sonido", SONIDO.on ? "1" : "0"); if (SONIDO.on) sonar("cura"); return renderModal();
     case "salir": cerrarModal(); return salirPartida();
     case "abandonar": cerrarModal(); S = null; vista = "inicio"; return render();
     case "otra": if (S && S.online) return volverASeleccion(); escribir(CLAVE, null); S = null; return empezarSeleccionLocal();
@@ -1425,7 +1520,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (location.hash === "#prueba") window.__dym = { estado: () => S };
+if (location.hash === "#prueba") window.__dym = { estado: () => S, H };
 render();
 conectar();
 })();

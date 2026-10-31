@@ -9,6 +9,8 @@ Juego de rol por turnos al estilo de Dungeons & Dragons, dibujado en pixel art (
 - **Selección de personaje:** 90 segundos para elegir clase, raza, nombre y aspecto, viendo las habilidades y atributos de cada combinación. 8 razas (humano, elfo, enano, mediano, semiorco, tiefling, dracónido, gnomo) y 8 clases (guerrero, bárbaro, pícaro, explorador, mago, brujo, clérigo, bardo), cada una con su habilidad activa y su pasiva.
 - **Niveles y habilidades:** hasta nivel 10. Cada héroe lleva como mucho 4 habilidades, como los movimientos de un Pokémon; al subir de nivel aprende otras y, si ya tiene 4, elige cuál olvida.
 - **Botín:** cofres en el mapa y enemigos que sueltan armas, armaduras y objetos mágicos de rareza común, rara, épica o legendaria. Se reparten tocando el nombre del héroe.
+- **Combate claro:** cada habilidad avisa si es «¡Eficaz!» o «Poco eficaz» contra el enemigo, que muestra su vida y qué hará en su próximo turno. Los enemigos crecen con el nivel del grupo.
+- **Sensaciones:** sonidos sintetizados, vibración en el móvil, celebraciones al subir de nivel o encontrar botín épico y un tutorial de 3 pasos la primera vez. El sonido se apaga desde el menú.
 - **Aventura:** 4 actos (el Camino del Bosque, la Mazmorra, el Castillo y el Volcán). En cada uno elegís camino en un mapa entre combates, sucesos con decisiones y acertijos, cofres, una tienda y una hoguera, hasta el jefe: el trol del puente, el liche Malakar, el vampiro Lord Varkhul y el dragón rojo Ignárax.
 
 ### Código
