@@ -987,7 +987,8 @@ function limitesJuego() {
   const tablero = $(".tablero"), izq = $(".izquierda");
   if (window.matchMedia("(max-width: 760px)").matches) return [tablero.clientWidth - 12, Math.max(120, window.innerHeight * 0.3)];
   const grupo = $("#grupo");
-  return [izq.clientWidth - 12, izq.clientHeight - grupo.offsetHeight - (window.innerHeight < 560 ? 76 : 150) - 32];
+  const bajo = window.innerHeight < 560;
+  return [izq.clientWidth - 12, izq.clientHeight - grupo.offsetHeight - (bajo ? $(".mesa").offsetHeight + 4 : 150) - (bajo ? 22 : 32)];
 }
 function renderCapitulos() {
   const actual = ESCENAS[S.escena].cap;

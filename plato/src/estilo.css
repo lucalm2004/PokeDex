@@ -357,7 +357,16 @@ h1, h2, h3, h4 { text-wrap: balance; }
   .arranque .boton { flex: 1 1 100%; }
 }
 @media (max-height: 560px) and (min-width: 761px) {
+  .juego { gap: 4px; padding-block: 4px 6px; }
+  .logo-mini { display: none; }
+  .grupo { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; padding-bottom: 2px; }
+  .heroe .retrato { --tam: 36; }
+  .cifras .dr { display: none; }
   .pie-izq { grid-template-columns: minmax(0, 1fr); flex: none; }
+  .mesa { padding: 2px 8px 2px 2px; gap: 8px; }
+  .dado { width: 40px; height: 40px; }
+  .libres { display: none; }
+  #dado-info { font-size: 13px; }
   .cronica { display: none; }
   .solo-movil { display: inline-block; }
   .barra { gap: 4px 10px; }

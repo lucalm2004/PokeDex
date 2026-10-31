@@ -7,7 +7,6 @@ const FONDOS = (() => {
   const W = 192, H = 108;
   const capa = () => new Capa(W, H);
   const lim = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
-  const suave = (a, b, v) => { const t = lim((v - a) / (b - a)); return t * t * (3 - 2 * t); };
   const M = R.madera, F = R.fuego, B = R.bronce, P = R.piedra, HU = R.hueso, HO = R.hoja, MA = R.mar, SO = R.sombra;
   const TE = R.tela.terracota, NE = R.tela.negro, AZ = R.tela.azul, GR = R.tela.granate, OC = R.tela.ocre;
 
@@ -206,7 +205,7 @@ const FONDOS = (() => {
     // techo: tablas y viguetas
     rellenar(g, 0, 0, W, 9, M, (x, y) => (y === 3 || y === 6 ? 0.2 : 1) + luz(x, y) * 0.6, 0.3);
     for (let x = 10; x < W; x += 24) {
-      capa().poly([[x - 3, 0], [x + 3, 0], [x + 2, 9], [x - 2, 9]]).pintar(g, M, { relieve: 1.5, luz: [-0.4, 0.6, 0.6], max: 2, separar: 0 });
+      capa().poly([[x - 3, 0], [x + 3, 0], [x + 2, 9], [x - 2, 9]]).pintar(g, M, { relieve: 1.5, luz: [-0.4, 0.6, 0.6], max: 2 });
     }
     // pared de revoque
     rellenar(g, 0, 13, W, 39, PM, (x, y) => 0.6 + luz(x, y) * 3 - (y < 17 ? 0.4 : 0), 0.18);
@@ -232,14 +231,13 @@ const FONDOS = (() => {
 
     hogar(g, luz);
     ventana(g);
-    estante(g, luz);
-    mesa(g, luz);
+    estante(g);
+    mesa(g);
     // ánforas junto a la pared derecha
     conBorde(g, M[0], tmp => {
       pintarAnfora(tmp, anfora(173, 71, 25, 0.1), TE, [-0.7, -0.6, 0.6], { alto: 25, sesgo: 0.05 });
       pintarAnfora(tmp, anfora(186, 71, 22, -0.18, 0.25), TE, [-0.7, -0.6, 0.6], { alto: 22, sesgo: -0.05 });
     });
-    for (let x = 166; x < 192; x++) if (x < 180 || x > 182) g.set(x, 72, M[0]).set(x, 73, (x & 1) ? M[0] : g.get(x, 73));
     manojo(g, 84, 18, 11, HO, R.tela.violeta);
     manojo(g, 91, 18, 9, R.tela.oliva, null);
     manojo(g, 97, 18, 12, HO, HU);
@@ -360,7 +358,7 @@ const FONDOS = (() => {
     for (let x = x0 - 2; x < x0 + w + 2; x++) g.set(x, y0 + h + 2, M[3]);
   }
 
-  function estante(g, luz) {
+  function estante(g) {
     const y = 34;
     capa().rect(109, y, 48, 2).pintar(g, M, { relieve: 1, separar: 1 });
     for (let x = 109; x < 157; x++) g.set(x, y, M[3]);
@@ -386,7 +384,7 @@ const FONDOS = (() => {
     });
   }
 
-  function mesa(g, luz) {
+  function mesa(g) {
     const y = 57;
     // patas y tablero
     capa().rect(114, y + 2, 2, 13).rect(147, y + 2, 2, 13).pintar(g, M, { relieve: 1, max: 2, separar: 1 });
@@ -438,9 +436,10 @@ const FONDOS = (() => {
         return v - Math.max(0, y - 98) * 0.04;
       }, 0.14);
     }
-    // sombras al pie de la pared y de los muebles
+    // sombras al pie de la pared, de la mesa y de las ánforas
     for (let x = 0; x < W; x++) g.set(x, 72, M[0]);
     for (let x = 112; x < 151; x++) if ((x & 1) === 0) g.set(x, 73, M[0]);
+    for (let x = 166; x < W; x++) if ((x & 1) === 0) g.set(x, 73, M[0]);
   }
 
   function tabernaAnim(ctx, t) {
@@ -986,12 +985,10 @@ const FONDOS = (() => {
     capa().rect(x - 1, y0, 7, 1).pintar(g, MM, { plano: 3 });
     capa().rect(x, y0 + 1, 5, 2).off(x, y0 + 2).off(x + 4, y0 + 2).pintar(g, MM, { plano: 2 });
     for (let y = y0 + 3; y < y1; y++) {
-      const ens = y > y1 - 10 ? 0 : 0;
-      for (let i = 0; i < 5 + ens; i++) g.set(x + i, y, MM[[4, 3, 3, 2, 1][i]], MM);
+      for (let i = 0; i < 5; i++) g.set(x + i, y, MM[[4, 3, 3, 2, 1][i]], MM);
       if (y % 2 === 0) g.set(x + 2, y, MM[2], MM);
     }
     for (let y = y0 + 3; y < y1; y++) g.set(x + 5, y, MM[0]);
-    for (let i = -1; i < 6; i++) g.set(x + i, y0 + 1 - 1 + 1, g.get(x + i, y0 + 1));
   }
 
   function agora(g) {
@@ -1062,6 +1059,8 @@ const FONDOS = (() => {
     // puesto de la izquierda: ánforas, cestas de higos y aceitunas
     for (const x of [2, 38]) capa().rect(x, 40, 2, 32).pintar(g, M, { relieve: 1, separar: 1 });
     toldo(g, 0, 42, 31, 40, TE, HU);
+    for (let y = 18; y < 31; y++) g.set(38, y, M[1]);
+    g.set(38, 17, B[3]);
     capa().rect(0, 58, 41, 14).pintar(g, M, { relieve: 1.5, sesgo: -0.1, separar: 1 });
     for (let x = 0; x < 41; x++) { g.set(x, 58, M[3]); if (x % 6 === 0) for (let y = 60; y < 72; y++) g.set(x, y, M[1]); }
     conBorde(g, M[0], tmp => {
@@ -1090,7 +1089,6 @@ const FONDOS = (() => {
 
   function agoraAnim(ctx, t) {
     // banderola en lo alto del poste del toldo
-    ctx.fillStyle = M[1]; ctx.fillRect(38, 18, 1, 13);
     for (let i = 0; i < 12; i++) {
       const y = 19 + Math.round(Math.sin(t / 180 - i * 0.6) * (i / 12) * 1.6);
       ctx.fillStyle = i < 6 ? GR[3] : GR[2];
@@ -1100,25 +1098,30 @@ const FONDOS = (() => {
     for (let x = 150; x < 192; x += 2) {
       if (Math.sin(t / 260 + x * 0.4) > 0.3) { ctx.fillStyle = ((Math.floor((x - 171 + 200) / 4) % 2) ? AZ : HU)[2]; ctx.fillRect(x, 46, 1, 1); }
     }
-    // paloma que picotea
-    const p = (t / 1000) % 9, x = Math.round(176 + Math.sin(p * 0.7) * 6), pica = Math.floor(t / 230) % 3 === 0;
-    ctx.fillStyle = P[3]; ctx.fillRect(x, 102, 4, 2);
-    ctx.fillStyle = P[4]; ctx.fillRect(x + 1, 101, 2, 1);
-    ctx.fillStyle = P[2]; ctx.fillRect(x - 1, 102, 1, 1);
-    ctx.fillStyle = P[3]; ctx.fillRect(x + 3 + (pica ? 1 : 0), pica ? 102 : 100, 2, 2);
-    ctx.fillStyle = MA[3]; ctx.fillRect(x + 3, 101, 1, 1);
-    ctx.fillStyle = TE[3]; ctx.fillRect(x + 1, 104, 1, 1); ctx.fillRect(x + 3, 104, 1, 1);
+    // paloma que pasea y picotea
+    const p = (t / 1000) % 12, x = Math.round(172 + Math.sin(p * 0.52) * 7), izq = Math.cos(p * 0.52) < 0;
+    const forma = Math.floor(t / 260) % 4 === 0 && Math.abs(Math.cos(p * 0.52)) < 0.6 ? PALOMA[1] : PALOMA[0];
+    for (const [c, dx, dy, w] of forma) { ctx.fillStyle = c; ctx.fillRect(izq ? x + 7 - dx - w : x + dx, 99 + dy, w, 1); }
   }
+  /* Paloma de 8×5 mirando a la derecha: T cola, B cuerpo, A ala, H cabeza, N cuello tornasolado, k pico, f patas. */
+  const PALOMA = [
+    ["     HH ", "    NHk ", "TTBBBBN ", " TBAAB  ", "   f f  "],
+    ["        ", "        ", "TTBBBBN ", " TBAABHH", "   f fHk"]
+  ].map(f => {
+    const col = { T: P[2], B: P[3], A: P[2], H: P[3], N: HO[3], k: HU[2], f: TE[3] }, tiras = [];
+    f.forEach((fila, y) => { for (let x = 0; x < fila.length; x++) if (fila[x] !== " ") tiras.push([col[fila[x]], x, y, 1]); });
+    return tiras;
+  });
 
   /* ---------- El puerto del Pireo ---------- */
   const CASCO = [NE[0], NE[1], NE[2], NE[3], NE[4]];
   const MAR_DIA = [MA[1], MA[2], MA[3], MA[4], AZ[4]];
-  const LINEA_AGUA = 58;
+  const LINEA_AGUA = 58, NORAYS = [26, 98, 158];
 
   function pireo(g) {
     g.rect(0, 0, W, H, MA[2]);
     rellenar(g, 0, 0, W, 40, [AZ[3], MA[4], AZ[4], HU[3]], (x, y) => Math.pow(y / 38, 1.2) * 3, 0.55);
-    // costa lejana y torre del espigón
+    // costa lejana
     for (let x = 0; x < W; x++) {
       const top = Math.round(36 + Math.sin(x * 0.04 + 2) * 2.5 + Math.sin(x * 0.13) * 1);
       for (let y = top; y < 42; y++) g.set(x, y, y === top ? AZ[4] : (tono(x, y, 3.4 - (y - top) * 0.15, 0.5) > 3 ? AZ[4] : MA[4]), MA);
@@ -1134,7 +1137,7 @@ const FONDOS = (() => {
     sillares(g, 0, 66, W, [3, 3], P, (x, y) => (y < 68 ? 3.4 : 2.6), { sem: 12, ancho: 16, bisel: 0.5, junta: 1.4, vari: 0.4 });
     for (let x = 0; x < W; x++) { g.set(x, 66, P[4]); g.set(x, 72, P[1]); }
     losas(g, 73, [3, 4, 5, 6, 7, 8, 10], 26, 96, -60, P, (x, y) => 2.6 + (y - 73) * 0.004, 14);
-    for (const x of [26, 98, 158]) {
+    for (const x of NORAYS) {
       capa().rect(x - 2, 60, 5, 7).ell(x, 60, 2.6, 1.4).pintar(g, P, { relieve: 2, separar: 1 });
       for (let k = -2; k <= 2; k++) g.set(x + k, 62, M[2]);
     }
@@ -1165,7 +1168,6 @@ const FONDOS = (() => {
     // proa de una nave guardada
     capa().poly([[34, 44], [44, 42], [46, 46], [44, 50], [34, 50]]).pintar(g, CASCO, { relieve: 1.5, max: 3 });
     g.set(45, 49, B[3]).set(46, 49, B[3]).set(44, 45, HU[3]);
-    for (let x = 0; x < 72; x++) g.set(x, 23 + Math.floor((x + 4) % 15 > 7 ? 0 : 0), g.get(x, 23));
   }
 
   function trirreme(g) {
@@ -1218,7 +1220,7 @@ const FONDOS = (() => {
     for (let i = 0; i < 22; i++) {
       const x = (i * 37 + 11) % W, y = 59 + ((i * 5) % 6);
       const v = Math.sin(t / 300 + i * 1.7);
-      if (v < 0.25) continue;
+      if (v < 0.25 || NORAYS.some(n => Math.abs(x - n) < 7)) continue;
       ctx.fillStyle = v > 0.75 ? HU[4] : AZ[4];
       ctx.fillRect(x + Math.round(Math.sin(t / 900 + i) * 2), y, v > 0.6 ? 3 : 2, 1);
     }
@@ -1406,7 +1408,7 @@ const FONDOS = (() => {
   const OLEAJE = [MA[0], MA[1], MA[2], MA[3], MA[4]];
   const OLAS = [[41, 2, 23, 0.1], [45, 3, 31, 0.6], [50, 5, 43, 0.3], [56, 7, 57, 0.8], [62, 8, 71, 0.45]];
   const perfil = u => Math.pow(0.5 + 0.5 * Math.cos(6.2832 * (u - 0.5)), 2.2);
-  const olaY = (k, x, fase = 0) => { const [b, A, L, f] = OLAS[k]; return b - A * perfil((((x / L + f + fase) % 1) + 1) % 1); };
+  const olaY = (k, x) => { const [b, A, L, f] = OLAS[k]; return b - A * perfil((((x / L + f) % 1) + 1) % 1); };
 
   function mar(g) {
     g.rect(0, 0, W, H, SO[1]);
@@ -1578,9 +1580,8 @@ const FONDOS = (() => {
     for (let y = 24; y < 62; y++) for (let x = 0; x < W; x++) {
       const r = radioCiudad(x, y);
       if (r > ANILLOS[0][0]) continue;
-      let i = ANILLOS.length - 1;
-      while (i > 0 && r <= ANILLOS[i][0]) { if (r > ANILLOS[i][0]) break; i--; }
-      for (i = 0; i < ANILLOS.length - 1 && r <= ANILLOS[i + 1][0]; i++);
+      let i = 0;
+      while (i < ANILLOS.length - 1 && r <= ANILLOS[i + 1][0]) i++;
       const [rad, tipo] = ANILLOS[i];
       if (tipo === "agua") g.set(x, y, (x * 3 + y * 5) % 13 === 0 ? MA[4] : MA[3]);
       else {
@@ -1760,8 +1761,8 @@ const FONDOS = (() => {
     for (let y = 72; y < H; y++) {
       const esc = (y - 20) / (H - 20);
       for (let x = 0; x < W; x++) {
-        const u = (x - 96) / esc, v_ = 400 / (y - 20);
-        const casilla = (Math.floor(u / 16) + Math.floor(v_ * 2.2)) & 1;
+        const u = (x - 96) / esc, prof = 400 / (y - 20);
+        const casilla = (Math.floor(u / 16) + Math.floor(prof * 2.2)) & 1;
         const ram = casilla ? OR : NE;
         let t = (casilla ? 1.2 : 2) + luzPalacio(x, 60) * 1.1 - (y - 72) * 0.012;
         g.set(x, y, ram[lim(tono(x, y, t, 0.12), 0, 4)], ram);
@@ -1856,15 +1857,17 @@ const FONDOS = (() => {
     g.pegar(tmp, ox, oy);
   }
   const cajaSolido = so => [Math.round(so.x) - LADO / 2, Math.round(so.y) - LADO / 2 - 2, Math.round(so.x) + LADO / 2, Math.round(so.y) + LADO / 2 + 2];
-  const ideasCache = { fondo: null, base: null, saltos: null };
+  const ideasCache = { fondo: null, base: null, saltos: null, destellos: [] };
 
   function ideas(g) {
     rellenar(g, 0, 0, W, 66, VACIO, (x, y) => 0.4 + Math.pow(y / 64, 1.6) * 4.6 + Math.max(0, 1 - Math.hypot(x - SOL_BIEN[0], y - SOL_BIEN[1]) / 60) * 1.4, 0.5);
-    // estrellas
+    // estrellas; algunas, lejos de los sólidos, titilarán
     const az = azar(61);
+    ideasCache.destellos = [];
     for (let i = 0; i < 70; i++) {
       const x = Math.floor(az() * W), y = Math.floor(az() * 60), k = az();
       if (Math.hypot(x - SOL_BIEN[0], y - SOL_BIEN[1]) < 20) continue;
+      if (ideasCache.destellos.length < 10 && Math.hypot(x - SOL_BIEN[0], y - SOL_BIEN[1]) > 28 && SOLIDOS.every(so => Math.hypot(x - so.x, y - so.y) > so.tam * 2.2 + 4)) ideasCache.destellos.push([x, y]);
       g.set(x, y, k < 0.6 ? MG[3] : k < 0.9 ? HU[3] : HU[4]);
       if (k > 0.94) { g.set(x - 1, y, MG[2]).set(x + 1, y, MG[2]).set(x, y - 1, MG[2]).set(x, y + 1, MG[2]); }
     }
@@ -1889,8 +1892,8 @@ const FONDOS = (() => {
         const i = Math.floor(X), j = Math.floor(Z);
         const linea = Math.floor(X1) !== i || Math.floor(Z1) !== j;
         const encendida = ((i * 7 + j * 13) % 11 + 11) % 11 === 0;
-        let col = (i + j) & 1 ? MG[1] : SO[2];
-        if (encendida) col = MG[2];
+        let col = (i + j) & 1 ? SO[2] : SO[1];
+        if (encendida) col = MG[1];
         if (linea) col = y > 92 ? MG[3] : MG[2];
         if (Math.floor(X1) !== i && Math.floor(Z1) !== j) col = MG[4];
         g.set(x, y, col);
@@ -1929,13 +1932,12 @@ const FONDOS = (() => {
       for (let r = base; r < base + extra; r++) ctx.fillRect(Math.round(sx + Math.cos(a) * r), Math.round(sy + Math.sin(a) * r), 1, 1);
     }
     // destellos de estrellas
-    for (let i = 0; i < 8; i++) {
+    ideasCache.destellos.forEach(([x, y], i) => {
       const v = Math.sin(t / 500 + i * 2.3);
-      if (v < 0.7) continue;
-      const x = (i * 47 + 13) % 140 + 4, y = (i * 23 + 5) % 50 + 4;
+      if (v < 0.7) return;
       ctx.fillStyle = HU[4]; ctx.fillRect(x, y, 1, 1);
       if (v > 0.93) { ctx.fillStyle = MG[3]; ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1); }
-    }
+    });
   }
 
   return {
