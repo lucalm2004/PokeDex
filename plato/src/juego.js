@@ -18,6 +18,8 @@ const fmt = n => (n >= 0 ? "+" : "−") + Math.abs(n);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const azarDe = a => a[Math.floor(Math.random() * a.length)];
 const reducido = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+/* Solo para pruebas automáticas: #prueba-rapido acelera las esperas. */
+const RAPIDO = /rapido/.test(location.hash);
 const CONSUMIBLES = ["pocion", "superior", "bendicion", "fuego", "sueno"];
 const leer = (k, def) => { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (e) { return def; } };
 const escribir = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
@@ -715,7 +717,7 @@ function tirarDado(final, caras, cb) {
     ocupado = false; document.body.classList.remove("ocupado");
     cb();
   };
-  if (reducido || !cv || cv.offsetParent === null) return terminar();
+  if (reducido || RAPIDO || !cv || cv.offsetParent === null) return terminar();
   let k = 0;
   const iv = setInterval(() => { k++; if (k % 2) sonar("dado"); ESCENARIO.dibujarDado(cv, d(caras), k % 2, (k % 3) - 1, k % 2 ? -1 : 0); }, 70);
   setTimeout(() => { clearInterval(iv); terminar(); }, 450);
@@ -1427,10 +1429,10 @@ function accion(tipo, arg) {
   }
 }
 function heroeAlAzarVivo() { const l = vivos(); return l.length ? l[Math.floor(Math.random() * l.length)] : -1; }
-const esperar = ms => new Promise(res => setTimeout(res, reducido ? Math.min(ms, 150) : ms));
+const esperar = ms => new Promise(res => setTimeout(res, RAPIDO ? 10 : reducido ? Math.min(ms, 150) : ms));
 /* Bloqueo activo: cuando un ataque va a dar, el dueño del héroe tiene un momento para tocar «¡Bloquea!» (mitad de daño). */
 let ventana = null;
-const DURACION_BLOQUEO = () => (S && S.online ? 1600 : 900);
+const DURACION_BLOQUEO = () => (RAPIDO ? 300 : S && S.online ? 1600 : 900);
 function ventanaBloqueo(ti) {
   const p = S.players[ti];
   if (!p || p.alma <= 0) return Promise.resolve(false);
@@ -2261,7 +2263,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (location.hash === "#prueba") window.__dym = { estado: () => S, H, render: () => render() };
+if (/^#prueba/.test(location.hash)) window.__dym = { estado: () => S, H, render: () => render() };
 render();
 conectar();
 })();

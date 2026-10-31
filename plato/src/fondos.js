@@ -1913,13 +1913,13 @@ const FONDOS = (() => {
       const i = y * W + x, k = tes.id[i], k2 = tes.id2[i];
       if (tes.grupo[k] === tes.grupo[k2] || tes.borde[i] > 0.4) continue;
       const par = hash(Math.min(k, k2), Math.max(k, k2), 5), zona = y > 84 && y < 104 && x > 12 && x < 180;
-      if (par > (zona ? 0.86 : 0.62)) g.set(x, y, par > 0.93 ? AZUR[2] : zona ? MG[1] : MG[2]);
+      if (par > (zona ? 0.86 : 0.62)) g.set(x, y, zona ? (par > 0.96 ? MG[2] : MG[1]) : par > 0.9 ? AZUR[2] : MG[2]);
     }
     for (let x = 0; x < W; x++) { g.set(x, 72, OBSIDIANA[0]); if (umbral(x, 73) < 0.6) g.set(x, 73, OBSIDIANA[4]); }
     // esquirlas de cristal en las esquinas del suelo
-    for (const [x, y, alto, lado] of [[4, 104, 9, 1], [11, 106, 5, 1], [186, 103, 10, -1], [178, 106, 6, -1], [40, 76, 4, 1], [150, 75, 5, -1]]) {
+    for (const [x, y, alto, lado] of [[5, 105, 11, 1], [10, 107, 6, 1], [1, 107, 5, -1], [186, 104, 12, -1], [180, 107, 7, -1], [190, 107, 5, 1], [40, 77, 5, 1], [44, 77, 3, 1], [150, 76, 6, -1]]) {
       conBorde(g, NADA[0], tmp => {
-        capa().poly([[x - 1.5, y], [x + lado * 1.5, y - alto], [x + 1.5, y]]).pintar(tmp, AZUR, { relieve: 1, min: 1, max: 3, luz: [-0.7, -0.5, 0.5] });
+        capa().poly([[x - 2.2, y], [x + lado * 1.2, y - alto], [x + 2.2, y]]).pintar(tmp, AZUR, { relieve: 1.5, min: 1, max: 3, luz: [-0.7, -0.5, 0.5] });
         tmp.set(x + lado, y - alto + 1, AZUR[4], AZUR);
       });
     }
@@ -1980,7 +1980,7 @@ const FONDOS = (() => {
   function nido(g) {
     g.rect(0, 0, W, H, ROCA_NIDO[0]);
     const tes = teselas(90, 33, 0, 0, W, 74, 1.4, 16);
-    roca(g, tes, ROCA_NIDO, (x, y) => 0.9 + luzNido(x, y) * 3.2 - Math.max(0, 12 - y) * 0.08, hacia_Abajo, { vari: 0.6, relieve: 1.3, bisel: 2.2, oscuro: 1.5 });
+    roca(g, tes, ROCA_NIDO, (x, y) => 1.5 + luzNido(x, y) * 3 - Math.max(0, 12 - y) * 0.06 - Math.max(0, 1 - Math.hypot((x - 100) / 40, (y - 48) / 34)) * 0.6, hacia_Abajo, { vari: 0.7, relieve: 1.4, bisel: 2.2, oscuro: 1.5 });
     // la boca del túnel por donde salen las arañas
     const tunel = capa().ell(100, 48, 22, 19).quitarRect(0, 70, W, 40);
     cada(tunel, (x, y) => { const d = Math.hypot((x - 100) / 22, (y - 48) / 19); g.set(x, y, ROCA_NIDO[lim(tono(x, y, d * 2.4 - 0.7, 0.8), 0, 2)], ROCA_NIDO); });
@@ -2006,10 +2006,10 @@ const FONDOS = (() => {
     }
     SETAS_NIDO.forEach(([x, y, ram]) => setas(g, x, y, ram));
     // telarañas gruesas en las esquinas de arriba y a ras de suelo
-    tela(g, 0, 0, 46, 0, Math.PI / 2, 8, 5, SEDA, 1);
-    tela(g, 191, 0, 40, Math.PI / 2, Math.PI, 7, 4, SEDA, 2);
-    tela(g, 0, 107, 22, -Math.PI / 2, 0, 5, 3, SEDA, 3);
-    tela(g, 191, 107, 20, Math.PI, Math.PI * 1.5, 5, 3, SEDA, 5);
+    tela(g, -2, -2, 48, 0.22, Math.PI / 2 - 0.22, 8, 5, SEDA, 1);
+    tela(g, 193, -2, 42, Math.PI / 2 + 0.22, Math.PI - 0.22, 7, 4, SEDA, 2);
+    tela(g, -2, 109, 24, -Math.PI / 2 + 0.15, -0.15, 5, 3, SEDA, 3);
+    tela(g, 193, 109, 22, Math.PI + 0.15, Math.PI * 1.5 - 0.15, 5, 3, SEDA, 5);
     // capullos colgados con presas envueltas
     capullo(g, 52, 0, 16, 13);
     capullo(g, 154, 0, 22, 11);
