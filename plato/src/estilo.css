@@ -415,6 +415,26 @@ h1, h2, h3 { text-wrap: balance; }
 .tuto b { font-size: 15px; }
 .tuto span { font-size: 13px; color: var(--muted); }
 
+/* Golpe certero */
+.precision { position: fixed; inset: 0; z-index: 65; display: grid; align-items: end; justify-items: center; padding: 0 16px max(90px, calc(env(safe-area-inset-bottom, 0px) + 90px)); background: rgba(6, 7, 16, .35); touch-action: none; cursor: pointer; }
+.prec-caja { width: min(480px, 100%); padding: 16px 16px 14px; border-radius: 20px; background: rgba(22, 26, 48, .96); box-shadow: inset 0 0 0 1px var(--line-2), 0 20px 40px -10px #000; display: grid; gap: 10px; text-align: center; animation: subir .15s ease-out; }
+.prec-tit { margin: 0; font-weight: 700; font-size: 17px; }
+.prec-barra { position: relative; height: 34px; border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.prec-bien, .prec-perfecto { position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); }
+.prec-bien { width: var(--bien, 38%); background: rgba(61, 220, 151, .18); }
+.prec-perfecto { width: var(--perf, 12%); background: linear-gradient(180deg, var(--gold), #ffa94d); box-shadow: 0 0 16px var(--gold); }
+.prec-marca { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; border-radius: 4px; background: #fff; box-shadow: 0 0 10px #fff; }
+.prec-res { margin: 0; min-height: 22px; font-weight: 800; font-size: 18px; }
+.precision[data-q="2"].hecho .prec-res { color: var(--gold); }
+.precision[data-q="1"].hecho .prec-res { color: var(--ok); }
+.precision[data-q="0"].hecho .prec-res { color: var(--muted); }
+.precision.hecho .prec-caja { animation: golpecito .3s; }
+.temblor { animation: temblor .32s linear; }
+.bendiciones .opcion { min-height: 62px; }
+.bendiciones .opcion small { font-size: 13px; }
+@keyframes temblor { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 1px); } }
+@keyframes golpecito { 40% { transform: scale(1.04); } }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
