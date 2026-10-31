@@ -1,6 +1,7 @@
 /* Dados y Mazmorras · héroes en pixel art.
    componer(aspecto) devuelve una Rejilla de 36×36 mirando a la derecha.
-   aspecto = { raza, clase, piel, pelo, tela, peinado, barba, objeto, extras, espejo, sinContorno } */
+   aspecto = { raza, clase, piel, pelo, tela, peinado, barba, gesto, objeto, extras, espejo, sinContorno }
+   gesto: "normal" (o ausente), "dolor", "alegre" o "furia". */
 const HEROES = (() => {
   "use strict";
   const { Rejilla, Capa, RAMPAS: R, CONTORNO } = PX;
@@ -50,7 +51,7 @@ const HEROES = (() => {
     c.on(t.cabX + 6, t.cabY + 1); // nariz
     c.pintar(g, piel, { relieve: 4 });
   }
-  function cabezaDraconido(g, t, piel) {
+  function cabezaDraconido(g, t, piel, gesto = "normal") {
     new Capa().rect(t.cabX - 3, t.cabY + 2, 5, t.torTop - t.cabY).pintar(g, piel, { relieve: 2, max: 2 });
     const c = new Capa().ell(t.cabX - 1, t.cabY, 4.6, 4.8);
     c.poly([[t.cabX + 1, t.cabY - 3], [t.cabX + 5, t.cabY - 2], [t.cabX + 7.5, t.cabY], [t.cabX + 7.5, t.cabY + 2], [t.cabX + 6, t.cabY + 4], [t.cabX + 1, t.cabY + 4.5]]);
@@ -59,13 +60,15 @@ const HEROES = (() => {
     cuernos.pintar(g, R.hueso, { relieve: 1, separar: true });
     for (let y = t.cabY - 3; y <= t.cabY + 4; y++) for (let x = t.cabX - 4; x <= t.cabX + 6; x++)
       if ((x + y * 2) % 4 === 0 && g.rampa(x, y) === piel && g.get(x, y) === piel[2]) g.set(x, y, piel[3], piel);
-    g.set(t.cabX + 2, t.cabY - 1, R.bronce[4], R.bronce).set(t.cabX + 3, t.cabY - 1, OJOS);
+    if (gesto === "normal") g.set(t.cabX + 2, t.cabY - 1, R.bronce[4], R.bronce).set(t.cabX + 3, t.cabY - 1, OJOS);
     g.set(t.cabX + 7, t.cabY, OJOS);
     for (let x = t.cabX + 2; x <= t.cabX + 7; x++) g.set(x, t.cabY + 2, piel[1], piel);
+    if (gesto !== "normal") hocicoGesto(g, t, piel, gesto);
   }
-  function cara(g, t, piel, raza, enSombra) {
+  function cara(g, t, piel, raza, enSombra, gesto = "normal") {
     const y = t.ojoY, x = t.cabX;
     const ceja = enSombra ? piel[0] : piel[1];
+    if (gesto !== "normal") return caraGesto(g, t, piel, raza, enSombra, gesto);
     if (raza === "tiefling") {
       g.set(x + 1, y, R.bronce[4]).set(x + 1, y + 1, R.fuego[2]).set(x + 4, y, R.bronce[4]).set(x + 4, y + 1, R.fuego[2]);
     } else {
@@ -79,6 +82,84 @@ const HEROES = (() => {
     g.set(x + 3, y + 3, piel[1], piel).set(x + 4, y + 3, piel[1], piel);
     if (raza === "semiorco") { g.set(x + 3, y + 2, R.hueso[4], R.hueso); g.set(x + 5, y + 3, R.hueso[4], R.hueso); }
     if (raza === "gnomo") { g.set(x + 6, y + 1, piel[3], piel).set(x + 6, y + 2, piel[2], piel).set(x + 7, y + 2, piel[2], piel).set(x + 5, y + 2, piel[1], piel); }
+  }
+
+  /* ---------- Gestos ---------- */
+  /* «dolor»: ojos apretados (> <), boca abierta en mueca y una gota de sudor.
+     «alegre»: ojos en arco (^ ^) y sonrisa ancha con los dientes.
+     «furia»: cejas fruncidas en V sobre ojos entornados y los dientes apretados.
+     Solo se pinta sobre la piel (y sobre la barba en la boca), así que yelmos, capuchas y máscaras se respetan. */
+  const GESTOS = ["normal", "dolor", "alegre", "furia"];
+  const BARBAS = Object.values(R.pelo);
+  const SUDOR = R.mar;
+  function caraGesto(g, t, piel, raza, enSombra, gesto) {
+    const y = t.ojoY, x = t.cabX;
+    const libre = (i, j) => g.rampa(i, j) === piel || (j >= y + 2 && BARBAS.includes(g.rampa(i, j)));
+    const marca = (col, ram, ...pts) => { for (const [i, j] of pts) if (libre(i, j)) g.set(i, j, col, ram); };
+    const oscuro = enSombra ? piel[0] : OJOS;
+    const ceja = enSombra ? piel[0] : piel[1];
+    const blanco = enSombra ? piel[2] : "#f4ead8";
+    const tief = raza === "tiefling";
+    if (gesto === "dolor") {
+      marca(oscuro, null, [x, y - 1], [x + 1, y], [x, y + 1], [x + 5, y - 1], [x + 4, y], [x + 5, y + 1]);
+      marca(raza === "semiorco" ? piel[0] : ceja, piel, [x + 2, y - 1], [x + 3, y - 1]);
+      if (raza === "semiorco") marca(piel[0], piel, [x + 1, y - 1], [x + 4, y - 1]);
+      marca(piel[1], piel, [x + 5, y + 2]);
+      marca(OJOS, null, [x + 2, y + 3], [x + 3, y + 3], [x + 4, y + 3], [x + 3, y + 4]);
+      marca(R.hueso[3], R.hueso, [x + 3, y + 3]);
+      marca(R.sangre[3], R.sangre, [x + 3, y + 4]);
+      if (raza === "semiorco") marca(R.hueso[4], R.hueso, [x + 2, y + 3]);
+      marca(SUDOR[4], SUDOR, [x - 1, y - 1]);
+      marca(SUDOR[3], SUDOR, [x - 1, y]);
+    } else if (gesto === "alegre") {
+      const arco = tief ? R.bronce[4] : oscuro;
+      marca(arco, null, [x, y + 1], [x + 1, y], [x + 2, y + 1], [x + 4, y], [x + 5, y + 1]);
+      if (raza === "semiorco") marca(piel[0], piel, [x, y - 1], [x + 1, y - 1], [x + 2, y - 1], [x + 3, y - 1], [x + 4, y - 1], [x + 5, y - 1]);
+      else marca(ceja, piel, [x + 1, y - 2], [x + 4, y - 2], [x + 5, y - 2]);
+      if (!enSombra) marca(R.piel.roja[4], R.piel.roja, [x + 1, y + 2]);
+      /* Boca de risa en «D»: el borde de arriba recto y ancho, la lengua debajo. */
+      const lengua = piel === R.piel.roja ? R.fuego : R.sangre;
+      marca(OJOS, null, [x + 2, y + 2], [x + 3, y + 2], [x + 4, y + 2], [x + 5, y + 2]);
+      marca(lengua[4], lengua, [x + 3, y + 3], [x + 4, y + 3]);
+    } else if (gesto === "furia") {
+      const pupila = tief ? R.bronce[4] : OJOS;
+      if (!tief) marca(blanco, null, [x, y + 1], [x + 3, y + 1]);
+      marca(pupila, null, [x + 1, y + 1], [x + 4, y + 1]);
+      const fruncido = enSombra ? piel[0] : raza === "semiorco" ? OJOS : piel[0];
+      marca(fruncido, piel, [x, y - 1], [x + 1, y], [x + 2, y], [x + 4, y], [x + 5, y - 1]);
+      marca(piel[1], piel, [x + 5, y + 2], [x + 3, y + 1]);
+      /* Dientes apretados; sobre una barba llevan un labio oscuro encima para que se lean. */
+      if (BARBAS.includes(g.rampa(x + 3, y + 3))) marca(OJOS, null, [x + 3, y + 2], [x + 4, y + 2]);
+      marca(OJOS, null, [x + 2, y + 3], [x + 5, y + 3]);
+      marca(R.hueso[4], R.hueso, [x + 3, y + 3], [x + 4, y + 3]);
+    }
+    if (raza === "semiorco") { g.set(x + 3, y + 2, R.hueso[4], R.hueso); g.set(x + 5, y + 3, R.hueso[4], R.hueso); }
+    if (raza === "gnomo") { g.set(x + 6, y + 1, piel[3], piel).set(x + 6, y + 2, piel[2], piel).set(x + 7, y + 2, piel[2], piel).set(x + 5, y + 2, piel[1], piel); }
+  }
+  /* El dracónido tiene hocico de reptil: un solo ojo de perfil y la boca a lo largo del morro. */
+  function hocicoGesto(g, t, piel, gesto) {
+    const x = t.cabX, y = t.cabY;
+    const marca = (col, ram, ...pts) => { for (const [i, j] of pts) if (g.rampa(i, j) === piel) g.set(i, j, col, ram); };
+    if (gesto === "dolor") {
+      /* Ojo apretado y las fauces abiertas en cuña, con un colmillo y la lengua. */
+      marca(OJOS, null, [x + 2, y - 2], [x + 3, y - 1], [x + 2, y]);
+      marca(OJOS, null, [x + 3, y + 2], [x + 4, y + 2], [x + 5, y + 2], [x + 7, y + 2], [x + 5, y + 3], [x + 6, y + 3]);
+      marca(R.hueso[4], R.hueso, [x + 6, y + 2]);
+      marca(R.sangre[3], R.sangre, [x + 4, y + 3]);
+      marca(SUDOR[4], SUDOR, [x, y - 2]);
+      marca(SUDOR[3], SUDOR, [x, y - 1]);
+    } else if (gesto === "alegre") {
+      /* Ojo en arco y la comisura que sube hacia la mejilla. */
+      marca(OJOS, null, [x + 1, y - 1], [x + 2, y - 2], [x + 3, y - 2], [x + 4, y - 1]);
+      marca(piel[0], piel, [x + 1, y + 1], [x + 2, y + 2], [x + 3, y + 2], [x + 4, y + 2], [x + 5, y + 2], [x + 6, y + 2], [x + 7, y + 2]);
+      marca(piel[4], piel, [x + 2, y + 1], [x + 3, y + 1]);
+    } else if (gesto === "furia") {
+      marca(piel[0], piel, [x + 1, y - 2], [x + 2, y - 2], [x + 3, y - 2], [x + 4, y - 1]);
+      marca(R.fuego[3], R.fuego, [x + 2, y - 1]);
+      marca(OJOS, null, [x + 3, y - 1]);
+      marca(OJOS, null, [x + 7, y], [x + 6, y]);
+      for (let i = x + 2; i <= x + 7; i++) marca(i % 2 ? R.hueso[4] : OJOS, i % 2 ? R.hueso : null, [i, y + 2]);
+    }
   }
   function oreja(g, t, piel, raza) {
     if (raza === "draconido") return;
@@ -443,6 +524,7 @@ const HEROES = (() => {
     const peinado = vis.sinPelo ? "rapado" : (a.peinado || "corto");
     const g = new Rejilla(36, 36);
     const tapaPelo = ["guerrero", "brujo", "picaro", "explorador", "clerigo"].includes(clase);
+    const gesto = GESTOS.includes(a.gesto) ? a.gesto : "normal";
 
     cola(g, t, piel, raza);
     espalda(g, t, clase, tela);
@@ -459,16 +541,20 @@ const HEROES = (() => {
     }
     vestir(g, t, clase, tela, piel);
     if (clase === "clerigo" || clase === "guerrero") malla(g, R.hierro, t.cx - 5, t.pierTop, t.cx + 5, t.suelo - 3);
-    if (raza === "draconido") cabezaDraconido(g, t, piel);
+    if (raza === "draconido") cabezaDraconido(g, t, piel, gesto);
     else cabeza(g, t, piel);
     if (!tapaPelo) pelo(g, t, ramPelo, peinado, raza);
     if (raza !== "draconido") oreja(g, t, piel, raza);
     if ((a.barba || vis.barba) && raza !== "draconido" && clase !== "picaro") barba(g, t, ramPelo, !!vis.barba);
     tocado(g, t, clase, tela);
     if (!["guerrero", "mago", "bardo"].includes(clase) || raza === "tiefling") cuernos(g, t, raza);
-    if (raza !== "draconido") cara(g, t, piel, raza, ["brujo", "picaro", "explorador"].includes(clase));
+    if (raza !== "draconido") cara(g, t, piel, raza, ["brujo", "picaro", "explorador"].includes(clase), gesto);
     if (clase === "picaro" && raza !== "draconido") new Capa().rect(t.cabX - 1, t.ojoY + 2, 7, 3).pintar(g, tela, { relieve: 1, max: 2, separar: true });
-    if (clase === "barbaro" && raza !== "draconido") g.set(t.cabX + 1, t.ojoY + 2, R.sangre[3], R.sangre).set(t.cabX + 4, t.ojoY + 2, R.sangre[3], R.sangre);
+    if (clase === "barbaro" && raza !== "draconido") {
+      /* Con un gesto, la pintura de guerra no tapa la boca. */
+      for (const [i, j] of [[t.cabX + 1, t.ojoY + 2], [t.cabX + 4, t.ojoY + 2]])
+        if (gesto === "normal" || g.rampa(i, j) === piel || g.rampa(i, j) === R.piel.roja) g.set(i, j, R.sangre[3], R.sangre);
+    }
     if (a.objeto && OBJETOS_EXTRA[a.objeto]) OBJETOS_EXTRA[a.objeto](g, t);
     else if (a.objeto !== "ninguno") objeto(g, t, clase, tela);
     brazo(g, t, piel, manga, true);
@@ -477,5 +563,5 @@ const HEROES = (() => {
     return a.espejo ? g.espejo() : g;
   }
 
-  return { RAZAS, TELA_CLASE, PEINADOS, TELAS, plantilla, componer, OBJETOS_EXTRA };
+  return { RAZAS, TELA_CLASE, PEINADOS, TELAS, GESTOS, plantilla, componer, OBJETOS_EXTRA };
 })();

@@ -179,6 +179,7 @@ const DATOS = (() => {
   }
 
   const OBJETOS = {
+    racion: { nombre: "Raciones de viaje", tipo: "consumible", precio: 6, desc: "Comida para acampar: descansar cura, levanta a los caídos y recarga el maná." },
     pocion: { nombre: "Poción de curación", tipo: "consumible", precio: 10, desc: "Cura 8 PG al que más lo necesite." },
     superior: { nombre: "Poción de curación superior", tipo: "consumible", precio: 30, desc: "Cura todos los PG y levanta a un caído." },
     bendicion: { nombre: "Pergamino de bendición", tipo: "consumible", precio: 8, desc: "+2 a la próxima tirada del grupo." },
@@ -213,6 +214,15 @@ const DATOS = (() => {
     escamas: { nombre: "Armadura de escamas de dragón", tipo: "armadura", precio: 150, ca: 4, alma: 6, rareza: "legendario", desc: "+4 a la CA y +6 PG máximos." },
     sortija: { nombre: "Sortija de protección", tipo: "talisman", precio: 30, ca: 1, desc: "+1 a la Clase de Armadura." },
     capa: { nombre: "Capa élfica", tipo: "talisman", precio: 55, ca: 1, ini: 2, desc: "+1 a la CA y +2 a la iniciativa." },
+    colmillo: { nombre: "Espada vampírica", tipo: "arma", precio: 70, golpe: 1, fis: 2, especial: "vampiro", desc: "+1 ataque y +2 físico. Te curas un 25 % del daño físico que haces." },
+    ponzona: { nombre: "Daga ponzoñosa", tipo: "arma", precio: 45, golpe: 2, fis: 1, especial: "veneno", desc: "+2 ataque. Tus golpes físicos envenenan (50 %)." },
+    llama: { nombre: "Hacha ígnea", tipo: "arma", precio: 65, fis: 3, especial: "fuego", desc: "+3 físico. Tus golpes físicos queman (40 %)." },
+    helado: { nombre: "Martillo de escarcha", tipo: "arma", precio: 80, golpe: 1, fis: 3, especial: "hielo", desc: "+3 físico. Tus golpes pueden congelar (20 %)." },
+    baculo_mana: { nombre: "Báculo de maná", tipo: "arma", precio: 60, arc: 2, especial: "mana", desc: "+2 mágico. Tus habilidades cuestan 1 PM menos." },
+    eco: { nombre: "Anillo del eco", tipo: "talisman", precio: 60, ca: 1, especial: "eco", desc: "+1 CA. Si te defiendes perfecto, contraatacas." },
+    capa_sombras: { nombre: "Capa de las sombras", tipo: "talisman", precio: 70, ini: 2, especial: "sombras", desc: "En la primera ronda de cada combate nadie te ataca." },
+    fenix: { nombre: "Amuleto del fénix", tipo: "talisman", precio: 95, especial: "fenix", desc: "Una vez por combate, si fueras a caer, te quedas con 1 PG." },
+    espinas: { nombre: "Armadura de espinas", tipo: "armadura", precio: 65, ca: 2, especial: "espinas", desc: "+2 CA. Quien te golpea recibe 2 de daño." },
     estelar: { nombre: "Hoja estelar", tipo: "arma", precio: 160, golpe: 3, fis: 5, arc: 3, rareza: "legendario", desc: "+3 para atacar, +5 físico y +3 mágico." },
     vacio: { nombre: "Corona del vacío", tipo: "talisman", precio: 150, stat: "elo", ca: 2, critico: 19, rareza: "legendario", desc: "+1 Carisma, +2 CA y críticos con 19." },
     corona: { nombre: "Corona del rey muerto", tipo: "talisman", precio: 100, stat: "raz", ca: 1, desc: "+1 a Inteligencia y +1 a la CA." }
@@ -220,11 +230,11 @@ const DATOS = (() => {
   const RAREZAS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" };
   const rareza = id => OBJETOS[id].rareza || (OBJETOS[id].precio > 80 ? "epico" : OBJETOS[id].precio > 35 ? "raro" : "comun");
   const BOTIN = [
-    ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita"],
-    ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro"],
-    ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas"],
-    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"],
-    ["flamigera", "escamas", "estelar", "vacio", "vorpal", "baculo", "piedra", "corona"]
+    ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita", "ponzona", "eco"],
+    ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro", "colmillo", "llama", "baculo_mana", "espinas"],
+    ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas", "helado", "capa_sombras", "fenix", "colmillo"],
+    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas", "fenix", "helado", "espinas"],
+    ["flamigera", "escamas", "estelar", "vacio", "vorpal", "baculo", "piedra", "corona", "fenix", "capa_sombras"]
   ];
   const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
@@ -232,22 +242,22 @@ const DATOS = (() => {
     villa: {
       nombre: "El bazar de Brunilda", pnj: "mercader",
       saludo: "«¿Aventureros? Entonces necesitáis de todo. Y yo tengo de todo.»",
-      objetos: ["pocion", "bendicion", "posada", "espada", "hacha", "varita", "cuero", "diadema", "broche"]
+      objetos: ["racion", "pocion", "bendicion", "posada", "espada", "hacha", "varita", "cuero", "diadema", "broche"]
     },
     gnomo: {
       nombre: "El carromato de Fizwick", pnj: "gnomo", precios: { pocion: 8 },
       saludo: "«¡Pociones recién hervidas! Solo explota una de cada diez.»",
-      objetos: ["pocion", "superior", "sueno", "bendicion", "laud", "amuleto", "broche"]
+      objetos: ["racion", "pocion", "superior", "sueno", "bendicion", "laud", "amuleto", "broche"]
     },
     forja: {
       nombre: "La forja de Durgan", pnj: "herrero",
       saludo: "«Acero enano. Si se rompe, os devuelvo el dinero. No se rompe.»",
-      objetos: ["pocion", "fuego", "posada", "arco", "espada", "malla", "guanteletes", "botas"]
+      objetos: ["racion", "pocion", "fuego", "posada", "arco", "espada", "malla", "guanteletes", "botas"]
     },
     planar: {
       nombre: "El Mercader de los Planos", pnj: "planar",
       saludo: "«Vendo en todos los planos de existencia. Aquí, por suerte para vosotros, acepto oro.»",
-      objetos: ["superior", "fuego", "sueno", "vorpal", "baculo", "mithril", "piedra"]
+      objetos: ["racion", "superior", "fuego", "sueno", "vorpal", "baculo", "mithril", "piedra"]
     }
   };
 

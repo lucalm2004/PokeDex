@@ -22,6 +22,11 @@ Juego de rol por turnos al estilo de Dungeons & Dragons, dibujado en pixel art (
 - **Votaciones:** en línea, el camino y las decisiones se votan entre todos.
 - **Mapas más grandes:** 6 filas con hasta 4 caminos, altares malditos y casillas misterio; 46 sucesos y lore ampliado.
 - **Final con premios:** más daño, mejor golpe, sanador, el muro… y la tabla de cada héroe.
+- **Minijuegos:** cada tipo de ataque tiene su minijuego (barra, diana, runas, anillo) y cada tipo de ataque enemigo su defensa (bloquear, esquivar, disipar). Se ven el d20 y los dados de daño; en los sucesos tira todo el grupo.
+- **Ataques en equipo:** según la clase y la raza de los dos héroes, o con la mascota.
+- **Maná, comida y descanso:** las habilidades fuertes gastan maná; acampar gasta comida, cura, levanta a los caídos y recarga el maná.
+- **Caminos con pistas e historia continuada:** el mapa no dice qué hay; sucesos por el camino y una historia con decisiones que vuelven en cada acto (Ascua, la Compañía del Colmillo, los Hijos de la Ceniza).
+- **Mascotas, objetos especiales y caras:** siete mascotas que se consiguen con decisiones, armas con efectos (vampírica, ponzoñosa, ígnea, de escarcha…) y héroes que ponen cara de dolor, alegría o furia.
 - **Golpe certero:** al atacar, una marca recorre una barra; tocar en el centro da +2 o, si es perfecto, +5 a la tirada (o más daño en los ataques seguros).
 - **Bendiciones:** tras cada jefe o élite el grupo elige 1 de 3 mejoras permanentes (más daño, más vida, emboscadas, curas tras la victoria…).
 - **Élites:** combates marcados en rojo en el mapa, más duros, con botín raro asegurado y una bendición.

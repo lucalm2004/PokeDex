@@ -8,6 +8,7 @@ const ESCENARIO = (() => {
   /* Pies de cada héroe en el escenario (x centro, y suelo) y del rival. */
   const HUECOS = [[62, 101], [34, 97], [92, 97], [48, 88], [78, 88], [18, 89]];
   const POS_RIVAL = [150, 99];
+  const POS_MASCOTA = [106, 104];
   /* Con varios enemigos se reparten a la derecha (el principal, delante). */
   const POS_RIVALES = [[[150, 99]], [[138, 101], [170, 93]], [[132, 102], [162, 97], [180, 89]]];
 
@@ -52,6 +53,7 @@ const ESCENARIO = (() => {
     return v;
   }
   const spriteHeroe = look => sprite("h:" + JSON.stringify(look), () => HEROES.componer(look));
+  const spriteMascota = clave => sprite("m:" + clave, () => (typeof MASCOTAS !== "undefined" && MASCOTAS[clave] ? MASCOTAS[clave]() : null));
   const spriteRival = (tipo, clave) => sprite(tipo + ":" + clave, () => {
     const tabla = tipo === "pnj" ? (typeof PNJ !== "undefined" ? PNJ : null) : (typeof MONSTRUOS !== "undefined" ? MONSTRUOS : null);
     return tabla && tabla[clave] ? tabla[clave]() : null;
@@ -133,6 +135,7 @@ const ESCENARIO = (() => {
     const posRivales = () => POS_RIVALES[Math.min(3, Math.max(1, (vista.rivales || []).length)) - 1];
     function posicion(obj) {
       const o = String(obj || "e");
+      if (o === "m") return POS_MASCOTA;
       if (o[0] === "e") { const k = o === "e" ? 0 : +o.slice(1); return posRivales()[k] || POS_RIVAL; }
       const i = +o.slice(1);
       return HUECOS[i] || HUECOS[0];
@@ -195,11 +198,18 @@ const ESCENARIO = (() => {
         const [fx, fy] = HUECOS[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });
       });
+      if (vista.mascota && typeof MASCOTAS !== "undefined" && MASCOTAS[vista.mascota]) actores.push({ id: "m", mascota: vista.mascota, fx: POS_MASCOTA[0], fy: POS_MASCOTA[1] });
       const pr = posRivales();
       (vista.rivales || []).forEach((rv, k) => { if (rv && pr[k]) actores.push({ id: "e" + k, k, rival: rv, fx: pr[k][0], fy: pr[k][1] }); });
       actores.sort((a, c) => a.fy - c.fy);
       for (const a of actores) {
         const [dx, dy, blanco] = desplazamiento(a.id, ahora);
+        if (a.mascota) {
+          const v = spriteMascota(a.mascota), bob = reducido ? 0 : Math.floor((ahora / 420) % 2);
+          sombraSuelo(a.fx, a.fy - 1, 12);
+          b.drawImage(blanco ? v.blanco : v.normal, a.fx - 18 + dx, a.fy - 35 + bob + dy);
+          continue;
+        }
         if (a.h) {
           const v = spriteHeroe(a.h.look);
           if (a.h.caido) {

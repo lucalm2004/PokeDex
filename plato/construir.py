@@ -8,7 +8,7 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parent
 SRC = RAIZ / "src"
-ORDEN = ["pixel.js", "heroes.js", "monstruos.js", "fondos.js", "datos.js", "contenido.js", "escenario.js", "juego.js"]
+ORDEN = ["pixel.js", "heroes.js", "monstruos.js", "fondos.js", "datos.js", "contenido.js", "historia.js", "escenario.js", "juego.js"]
 
 
 def leer(nombre):

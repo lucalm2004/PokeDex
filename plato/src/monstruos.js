@@ -1,7 +1,8 @@
-/* Dados y Mazmorras · monstruos y personajes no jugadores en pixel art.
+/* Dados y Mazmorras · monstruos, personajes no jugadores y mascotas en pixel art.
    Cada entrada de MONSTRUOS (enemigos) y de PNJ devuelve una Rejilla nueva de 36×36, con contorno
-   y mirando a la izquierda, hacia los héroes. Los PNJ con cuerpo humano salen de HEROES.componer. */
-const { MONSTRUOS, PNJ } = (() => {
+   y mirando a la izquierda, hacia los héroes. Los PNJ con cuerpo humano salen de HEROES.componer.
+   Las MASCOTAS son pequeñas y miran a la derecha, porque van con los héroes. */
+const { MONSTRUOS, PNJ, MASCOTAS } = (() => {
   "use strict";
   const { Rejilla, Capa, RAMPAS: R } = PX;
   const NEGRO = R.pelo.negro, HUESO = R.hueso;
@@ -813,8 +814,192 @@ const { MONSTRUOS, PNJ } = (() => {
     })
   };
 
+  /* ---------- Mascotas ---------- */
+  /* Bichos pequeños (de 12 a 18 píxeles de alto) que acompañan a los héroes: de pie abajo en el centro,
+     con las patas en la fila 34, y mirando a la derecha como ellos, con la luz por arriba a la izquierda. */
+  const OJO_VIVO = (g, x, y, ram = NEGRO) => { pon(g, ram, 0, [x, y], [x, y + 1]); pon(g, HUESO, 4, [x, y]); };
+
+  /* Lobezno: cabezón y orejudo, de tres cuartos, con el hocico y el pecho claros y la cola tupida levantada. */
+  function lobezno() {
+    const g = new Rejilla(), G = R.piel.gris, P = R.piel.clara;
+    new Capa().curva(13, 28.5, 8, 28, 8.5, 22.5, 3.6, 2.4).pintar(g, G, { relieve: 1.5, max: 3 });
+    pon(g, G, 4, [8, 22], [9, 22], [8, 23]);
+    new Capa().rect(13, 31, 2, 4).rect(20, 31, 2, 4).pintar(g, G, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(16, 29.4, 5, 3.3);
+    cuerpo.pintar(g, G, { relieve: 3, separar: true });
+    pon(g, G, 2, [14, 27], [17, 27], [12, 28]);
+    new Capa().rect(11, 31, 2, 4).rect(18, 31, 2, 4).pintar(g, G, { relieve: 1, max: 3, separar: true });
+    pon(g, G, 4, [11, 34], [18, 34]);
+    pon(g, G, 1, [12, 34], [19, 34]);
+    const cab = new Capa().ell(22, 24.6, 4.6, 4).poly([[24, 24.5], [27.6, 25.4], [27.6, 27.4], [24, 28.4]]);
+    cab.poly([[17.2, 23.4], [18.4, 16.6], [22.8, 21.4]]).poly([[22.4, 21.2], [26, 16.6], [27, 23.4]]);
+    cab.pintar(g, G, { relieve: 3, separar: true });
+    /* El rosa de dentro de las orejas lleva la rampa gris, para que el contorno siga siendo gris. */
+    for (const [i, j] of [[19, 19], [19, 20], [20, 20], [25, 19], [24, 20], [25, 20]]) g.set(i, j, P[2], G);
+    /* Pechera y antifaz claros, como los lobos de verdad. */
+    new Capa().ell(21, 29, 2.2, 2.4).recortar(cuerpo.copia().unir(cab)).pintar(g, G, { relieve: 1, min: 3 });
+    new Capa().ell(25, 26.6, 2.6, 1.6).ell(20, 26.4, 1.4, 1).recortar(cab).pintar(g, G, { plano: 4 });
+    OJO_VIVO(g, 21, 24);
+    OJO_VIVO(g, 24, 24);
+    pon(g, G, 1, [20, 23], [25, 23]);
+    pon(g, NEGRO, 0, [27, 25], [26, 25], [27, 26]);
+    pon(g, G, 1, [25, 27], [26, 27]);
+    pon(g, R.piel.roja, 4, [26, 28]);
+    pon(g, R.piel.roja, 3, [25, 28]);
+    return g.contorno();
+  }
+
+  /* Búho: bola de plumas parda con el disco de la cara blanco, ojos ámbar muy grandes y orejitas de pluma. */
+  function buho() {
+    const g = new Rejilla(), C = R.pelo.castano, B = R.tela.blanco, A = R.bronce;
+    new Capa().poly([[12.5, 31], [9.5, 34.5], [13.5, 34.5], [15, 32]]).pintar(g, C, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(17.5, 28.4, 5.2, 5.6);
+    cuerpo.poly([[13, 22], [13.6, 17.6], [16.4, 21]]).poly([[19.4, 20.6], [22.6, 17.4], [22.6, 22]]);
+    cuerpo.pintar(g, C, { relieve: 3.5, separar: true });
+    const pecho = new Capa().ell(19, 30, 3.2, 3.6).recortar(cuerpo);
+    pecho.pintar(g, B, { relieve: 1.5, min: 2, max: 3 });
+    for (const [i, j] of [[18, 28], [20, 28], [19, 30], [21, 30], [18, 32], [20, 32]]) pon(g, C, 2, [i, j]);
+    new Capa().ell(19.2, 23.2, 3.9, 2.9).recortar(cuerpo).pintar(g, B, { relieve: 1.5, min: 3 });
+    pon(g, C, 1, [16, 21], [17, 21], [21, 21], [22, 21]);
+    for (const ex of [17.4, 21]) new Capa().ell(ex, 23, 1.3, 1.3).pintar(g, A, { relieve: 1, min: 3 });
+    pon(g, NEGRO, 0, [18, 23], [21, 23], [18, 24], [21, 24]);
+    pon(g, HUESO, 4, [17, 22], [20, 22]);
+    pon(g, A, 2, [19, 25], [19, 26]);
+    pon(g, A, 3, [19, 24]);
+    const ala = new Capa().ell(14.6, 28.6, 2.8, 4.6).poly([[12.6, 31], [14, 34], [16.6, 31]]);
+    ala.pintar(g, C, { relieve: 2, max: 3, separar: true });
+    for (const [i, j] of [[14, 27], [15, 29], [14, 31], [13, 29]]) pon(g, C, 1, [i, j]);
+    pon(g, C, 4, [13, 25], [14, 25]);
+    pon(g, A, 3, [17, 34], [18, 34], [20, 34], [21, 34]);
+    pon(g, A, 1, [19, 34]);
+    return g.contorno();
+  }
+
+  /* Diablillo familiar: cabezón y redondo, con cuernitos, alas de murciélago diminutas y la cola en flecha. */
+  function diablilloMascota() {
+    const g = new Rejilla(), Rj = R.piel.roja, S = R.sangre;
+    alaMembrana(g, [16.5, 25.5], [12.5, 19.5], [[10.5, 17], [7.5, 20.5], [8.5, 24.5]], [13.5, 27], S, { relieve: 1.5, max: 2, separar: true }, Rj, { min: 2, max: 3 });
+    new Capa().curva(16, 32.5, 11, 34.5, 9, 31.5, 1.6, 1.2).pintar(g, Rj, { relieve: 1, max: 3 });
+    new Capa().poly([[6.6, 31.4], [8.4, 28.4], [10.6, 30.6], [8.6, 30.8]]).pintar(g, Rj, { relieve: 1, min: 2, max: 3 });
+    new Capa().rect(16, 32, 2, 3).rect(19, 32, 2, 3).pintar(g, Rj, { relieve: 1, max: 2 });
+    pon(g, NEGRO, 1, [16, 34], [17, 34], [19, 34], [20, 34]);
+    const cuerpo = new Capa().ell(18, 29.8, 3.2, 3);
+    cuerpo.pintar(g, Rj, { relieve: 2.5, separar: true });
+    pon(g, Rj, 4, [19, 30]);
+    const cab = new Capa().ell(19.4, 23.4, 4.6, 4.1).poly([[15, 22], [12.6, 20.4], [15.4, 24.6]]);
+    cab.pintar(g, Rj, { relieve: 3, separar: true });
+    new Capa().curva(16.6, 20, 15.8, 18.2, 17.2, 17.2, 1.8, 1).curva(21, 19.6, 21.6, 17.6, 23.2, 17.4, 1.8, 1).pintar(g, HUESO, { relieve: 1, min: 2, separar: true });
+    for (const ex of [18.5, 22]) new Capa().rect(ex - 0.5, 22, 2, 2).pintar(g, R.bronce, { plano: 4 });
+    pon(g, NEGRO, 0, [19, 22], [19, 23], [22, 22], [22, 23]);
+    pon(g, HUESO, 4, [18, 22], [21, 22]);
+    pon(g, NEGRO, 0, [20, 26], [21, 26], [22, 25], [19, 25]);
+    pon(g, HUESO, 4, [21, 26]);
+    pon(g, R.piel.roja, 4, [17, 25], [23, 24]);
+    new Capa().linea(20, 28, 23, 27, 2).pintar(g, Rj, { relieve: 1, separar: true });
+    return g.contorno();
+  }
+
+  /* Gato negro sentado: orejas de punta, ojos amarillos de pupila rasgada y la cola enroscada delante. */
+  function gato() {
+    const g = new Rejilla(), N = R.tela.negro, A = R.bronce;
+    new Capa().curva(13, 33, 7.5, 33.5, 8.5, 26.5, 2.4, 1.6).pintar(g, N, { relieve: 1.5, max: 3 });
+    const cuerpo = new Capa().ell(16, 29.6, 4.4, 4.9).ell(19, 28, 2.8, 3.8);
+    cuerpo.pintar(g, N, { relieve: 3, separar: true });
+    new Capa().rect(18, 29, 2, 6).rect(20.5, 29, 2, 6).pintar(g, N, { relieve: 1, max: 3, separar: true });
+    pon(g, N, 1, [20, 30], [20, 32]);
+    const cab = new Capa().ell(20, 22, 4, 3.4).poly([[16.4, 21], [16.6, 16.2], [19.6, 19]]).poly([[21, 19], [23.6, 16.2], [23.8, 21]]);
+    cab.pintar(g, N, { relieve: 3, separar: true });
+    pon(g, R.piel.clara, 1, [17, 18], [17, 19], [22, 18], [22, 19]);
+    for (const ex of [18, 21.5]) new Capa().rect(Math.round(ex), 21, 2, 2).pintar(g, A, { plano: 4 });
+    pon(g, A, 3, [18, 22], [21, 22]);
+    pon(g, NEGRO, 0, [19, 21], [19, 22], [22, 21], [22, 22]);
+    pon(g, R.piel.roja, 4, [23, 23]);
+    pon(g, N, 4, [22, 24], [23, 24]);
+    bordeLuz(g, N);
+    g.contorno();
+    for (const [x0, y0, x1, y1] of [[25, 23, 27, 22], [25, 24, 27, 25]]) hilo(g, x0, y0, x1, y1, HUESO[2]);
+    return g;
+  }
+
+  /* Dragoncito rojo: cabeza grande, cuernos romos, alitas de cría sobre el lomo, pecho ocre a franjas y una voluta de humo. */
+  function dragoncito() {
+    const g = new Rejilla(), Rj = R.piel.roja, S = R.sangre, O = R.tela.ocre;
+    alaMembrana(g, [15, 26.5], [12, 20.5], [[9.5, 20], [8.5, 23]], [12, 26.5], S, { relieve: 1.5, max: 1 }, Rj, { min: 1, max: 2 });
+    new Capa().curva(13, 31.5, 8.5, 34, 6, 30.5, 2.6, 1.2).pintar(g, Rj, { relieve: 1.5, max: 3 });
+    new Capa().poly([[4.2, 30.4], [5.8, 27.4], [7.8, 29.8], [5.8, 31.4]]).pintar(g, Rj, { relieve: 1, min: 2, max: 3 });
+    new Capa().rect(13, 31, 3, 4).rect(19, 31, 3, 4).pintar(g, Rj, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(16.6, 29.6, 4.8, 3.4).ell(20, 27.5, 2.6, 2.6);
+    cuerpo.pintar(g, Rj, { relieve: 3, separar: true });
+    for (const [i, j] of [[13, 27], [16, 26.5]]) new Capa().poly([[i - 1, j + 0.5], [i + 0.5, j - 1.6], [i + 1.2, j + 0.5]]).pintar(g, O, { relieve: 1, min: 2, separar: true });
+    const pecho = new Capa().ell(20.6, 29.4, 2.2, 3.2).recortar(cuerpo);
+    pecho.pintar(g, O, { relieve: 1.5, min: 2, max: 3 });
+    for (const j of [27, 29, 31]) for (let i = 18; i <= 23; i++) if (pecho.tiene(i, j)) pon(g, O, 1, [i, j]);
+    new Capa().rect(11, 32, 3, 3).rect(17, 32, 3, 3).pintar(g, Rj, { relieve: 1, max: 3, separar: true });
+    pon(g, HUESO, 4, [11, 34], [13, 34], [17, 34], [19, 34]);
+    const cab = new Capa().ell(22, 23.4, 3.8, 3.4).poly([[23.5, 21.6], [27.8, 23], [27.8, 25.6], [23.5, 26.8]]);
+    cab.pintar(g, Rj, { relieve: 3, separar: true });
+    new Capa().curva(20, 20.6, 18.6, 19.4, 17.6, 17.8, 2, 1.2).curva(22.4, 20, 22, 18, 21, 16.8, 2, 1.2).pintar(g, HUESO, { relieve: 1, min: 2, separar: true });
+    new Capa().rect(22, 22, 2, 2).pintar(g, R.bronce, { plano: 4 });
+    pon(g, NEGRO, 0, [23, 22], [23, 23]);
+    pon(g, HUESO, 4, [22, 22]);
+    pon(g, Rj, 1, [21, 21], [22, 21], [23, 21]);
+    pon(g, NEGRO, 0, [27, 23]);
+    for (let i = 24; i <= 27; i++) pon(g, Rj, 1, [i, 25]);
+    pon(g, HUESO, 4, [26, 26]);
+    pon(g, O, 3, [24, 26], [25, 26]);
+    alaMembrana(g, [17, 26], [15, 19.5], [[12, 18.5], [11, 21.5]], [14.5, 25.5], S, { relieve: 1.5, max: 2, separar: true }, Rj, { min: 2, max: 3 });
+    g.contorno();
+    for (const [i, j, k] of [[28, 21, 3], [29, 20, 4], [29, 19, 3], [30, 18, 2]]) if (!g.get(i, j)) pon(g, R.piedra, k, [i, j]);
+    return g;
+  }
+
+  /* Babosa: un cubo gelatinoso en miniatura y simpático, translúcido, con ojitos y una moneda tragada. */
+  function babosa() {
+    const g = new Rejilla(), E = R.piel.esmeralda, Hj = R.hoja;
+    const frente = new Capa().rect(10, 24, 12, 10).off(10, 24).off(21, 24).off(10, 33);
+    const arriba = new Capa().poly([[10, 24], [13, 21], [25, 21], [22, 24]]).restar(frente).off(13, 21).off(25, 21);
+    const lado = new Capa().poly([[21.5, 24], [25.5, 20.5], [25.5, 30.5], [21.5, 34.5]]).restar(frente).restar(arriba).off(25, 30);
+    const charco = new Capa().ell(17.5, 34, 8.6, 0.9).restar(frente).restar(lado);
+    tramar(g, frente, E, 2, 3, (x, y) => 0.8 - (x - 10 + y - 24) / 24);
+    tramar(g, arriba, E, 3, 4, x => 0.75 - (x - 10) / 18);
+    tramar(g, lado, E, 1, 2, (x, y) => 0.7 - (y - 21) / 14);
+    charco.pintar(g, E, { plano: 2 });
+    new Capa().rect(12, 30, 2, 1).pintar(g, R.bronce, { plano: 3 });
+    pon(g, R.bronce, 4, [12, 29]);
+    pon(g, HUESO, 2, [15, 32], [19, 31]);
+    for (let i = 11; i <= 21; i++) pon(g, Hj, 4, [i, 24]);
+    for (let j = 25; j <= 32; j++) pon(g, Hj, 3, [10, j]);
+    pon(g, HUESO, 4, [11, 25], [12, 25], [11, 26], [14, 22], [15, 22]);
+    for (const ex of [15, 19]) {
+      new Capa().rect(ex, 26, 2, 3).pintar(g, HUESO, { plano: 4 });
+      pon(g, NEGRO, 0, [ex + 1, 27], [ex + 1, 28]);
+    }
+    pon(g, E, 0, [16, 30], [17, 31], [18, 31], [19, 30]);
+    pon(g, R.piel.roja, 4, [14, 29], [21, 29]);
+    return g.contorno(E[0]);
+  }
+
+  /* Espíritu: fuego fatuo cian que flota; una gota de luz con la llama echada hacia atrás, el núcleo blanco y dos ojitos. */
+  const FATUO = ["#0d3842", "#1a6f7c", "#3fb4bf", "#93ebe8", "#e8fffb"];
+  function espiritu() {
+    const g = new Rejilla(), F = FATUO;
+    const cuerpo = new Capa().ell(19.5, 25, 4.4, 4.1).curva(17, 23, 13.5, 21.5, 11.5, 15.5, 5.4, 1);
+    cuerpo.curva(16.5, 25, 13, 25.5, 11, 23.5, 3, 1);
+    cuerpo.pintar(g, F, { relieve: 3, min: 2 });
+    new Capa().ell(20, 25.4, 2.8, 2.6).pintar(g, F, { relieve: 1.5, min: 3 });
+    pon(g, F, 4, [18, 24], [19, 24], [18, 25], [19, 23], [20, 23]);
+    pon(g, F, 0, [20, 25], [23, 25], [20, 26], [23, 26]);
+    pon(g, F, 3, [14, 20], [13, 18], [13, 24]);
+    g.contorno(F[0]);
+    for (const [i, j, k] of [[25, 20, 3], [9, 22, 3], [26, 28, 3], [10, 28, 2], [17, 17, 3], [15, 32, 2], [24, 32, 2]]) if (!g.get(i, j)) pon(g, F, k, [i, j]);
+    for (let i = 17; i <= 22; i++) pon(g, F, i === 17 || i === 22 ? 1 : 2, [i, 34]);
+    destello(g, 24, 22, F);
+    return g;
+  }
+
   return {
     MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon, lobo, armadura, vampiro, kobold, elemental, diablillo, arana, sombra, devorador },
-    PNJ: PNJS
+    PNJ: PNJS,
+    MASCOTAS: { lobezno, buho, diablillo: diablilloMascota, gato, dragoncito, babosa, espiritu }
   };
 })();
