@@ -118,7 +118,7 @@ const DATOS = (() => {
     furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], usos: 2, desc: "Golpe seguro y brutal." },
     humo: { nombre: "Bomba de humo", efecto: "aturde", usos: 1, desc: "El enemigo pierde su próximo turno." },
     flechas: { nombre: "Lluvia de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 2, usos: 2, desc: "Dos disparos seguros." },
-    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, usos: 2, desc: "Explosión segura de fuego." },
+    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, area: true, usos: 2, desc: "Explosión segura que alcanza a todos los enemigos." },
     maleficio: { nombre: "Maleficio", efecto: "maldice", usos: 1, desc: "El enemigo recibe +2 de cada golpe todo el combate." },
     luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, usos: 2, desc: "Daño seguro. Doble contra no muertos." },
     cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
@@ -133,22 +133,22 @@ const DATOS = (() => {
     danza: { nombre: "Danza de cuchillas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 3, tirada: true, usos: 1, desc: "Tres cuchilladas con tirada." },
     marca: { nombre: "Marca del cazador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], maldice: true, usos: 1, desc: "Disparo seguro que maldice al enemigo (+2 daño)." },
     balsamo: { nombre: "Bálsamo silvestre", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 2, desc: "Cura al aliado más herido." },
-    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 6], usos: 1, desc: "Lluvia segura de flechas." },
+    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], area: true, usos: 1, desc: "Lluvia segura sobre todos los enemigos." },
     escudoMag: { nombre: "Escudo mágico", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
     escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     sueno: { nombre: "Sueño", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], usos: 1, desc: "El conjuro más destructivo del mago." },
+    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], area: true, usos: 1, desc: "Cae sobre todos los enemigos." },
     drenar: { nombre: "Toque vampírico", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, drena: true, usos: 2, desc: "Daño y te curas la mitad." },
     miedo: { nombre: "Susurro aterrador", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
-    plaga: { nombre: "Nube de veneno", efecto: "veneno", turnos: 4, usos: 1, desc: "Envenena al enemigo 4 turnos." },
+    plaga: { nombre: "Nube de veneno", efecto: "veneno", turnos: 4, area: true, usos: 1, desc: "Envenena 4 turnos a todos los enemigos." },
     infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], usos: 1, desc: "Llamas del abismo, sin fallo." },
     plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
     escudoFe: { nombre: "Escudo de fe", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
     orden: { nombre: "Orden divina", efecto: "aturde", usos: 1, desc: "El enemigo obedece y pierde su turno." },
-    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [4, 6], noMuerto: 2, usos: 1, desc: "Luz que fulmina. Doble contra no muertos." },
+    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [3, 6], noMuerto: 2, area: true, usos: 1, desc: "Luz sobre todos los enemigos. Doble contra no muertos." },
     burla: { nombre: "Burla cruel", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     cuna: { nombre: "Canción de cuna", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 8], usos: 1, desc: "Una onda de sonido que no falla." }
+    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, usos: 1, desc: "Una onda de sonido que golpea a todos." }
   };
   /* Qué aprende cada clase y a qué nivel. */
   const APRENDE = {
@@ -374,10 +374,26 @@ const DATOS = (() => {
 
   /* Sucesos: tipo "prueba" (opciones con tirada o sin ella) o "enigma" (acertijo). acto: índice o null (cualquiera). */
   const EVENTOS = [
+    /* Consecuencias: solo aparecen si antes se tomó cierta decisión (requiere = marca guardada). */
+    { id: "mercader2", requiere: "mercader", actos: [1, 2], tipo: "prueba", pnj: "mercader", titulo: "Brunilda os reconoce",
+      texto: "«¡Mis salvadores!» La mercader del carro volcado ha montado un puesto aquí. Insiste en pagaros la deuda.",
+      opciones: [
+        { txt: "Aceptar su regalo", stat: null, ok: { t: "Os da una poción superior y algo de su mejor género.", fx: { superior: 1, botin: true, xp: 3 } } },
+        { txt: "Pedirle que guarde el favor", stat: "elo", cd: 10, ok: { t: "Sonríe y os llena las alforjas de pociones.", fx: { pocion: 3, xp: 4 } }, ko: { t: "Se ofende un poco, pero os da una poción.", fx: { pocion: 1 } } }] },
+    { id: "enano2", requiere: "enano", actos: [2, 3], tipo: "prueba", pnj: "herrero", titulo: "Thrain cumple su palabra",
+      texto: "El enano que liberasteis en la mazmorra os esperaba. «Una deuda es una deuda.» Ha forjado algo para vosotros.",
+      opciones: [
+        { txt: "Aceptar la pieza", stat: null, ok: { t: "Es una obra maestra enana. Y desde hoy luchará a vuestro lado cuando pueda.", fx: { botin: true, xp: 5, marca: "aliado" } } }] },
+    { id: "castigo", requiere: "sacrilegio", actos: [2, 3], tipo: "prueba", titulo: "La ira de Solara",
+      texto: "Una luz cegadora os rodea. Solara no ha olvidado las ofrendas robadas en el bosque.",
+      opciones: [
+        { txt: "Pedir perdón de rodillas", stat: "tem", cd: 13, ok: { t: "La luz se suaviza. Estáis perdonados.", fx: { xp: 5, almaTodos: 4, quita: "sacrilegio" } }, ko: { t: "La luz quema. Solara os marca.", fx: { maxTodos: -2, quita: "sacrilegio" } } },
+        { txt: "Devolver el doble de plata", stat: null, ok: { t: "Pagáis. La luz se apaga en silencio.", fx: { oro: -20, quita: "sacrilegio" } } }] },
+
     { id: "mercader", acto: 0, tipo: "prueba", pnj: "mercader", titulo: "Un carro volcado",
       texto: "Una mercader herida pide ayuda junto a su carro.",
       opciones: [
-        { txt: "Curarle las heridas", stat: "tem", cd: 11, ok: { t: "Os da las gracias con una bolsa de monedas.", fx: { oro: 10, xp: 3, moral: 1 } }, ko: { t: "No sabéis vendarla bien, pero agradece el intento.", fx: { xp: 1 } } },
+        { txt: "Curarle las heridas", stat: "tem", cd: 11, ok: { t: "Se llama Brunilda y promete no olvidarlo. Os da una bolsa de monedas.", fx: { oro: 10, xp: 3, moral: 1, marca: "mercader" } }, ko: { t: "No sabéis vendarla bien, pero agradece el intento.", fx: { xp: 1 } } },
         { txt: "Registrar el carro mientras se distrae", stat: null, ok: { t: "Encontráis monedas y una poción. Ella os mira con rencor.", fx: { oro: 15, pocion: 1, moral: -1 } } },
         { txt: "Seguir el camino", stat: null, ok: { t: "Otro aventurero la ayudará. O no.", fx: {} } }] },
     { id: "santuario", acto: 0, tipo: "prueba", titulo: "Un santuario en el bosque",
@@ -385,7 +401,7 @@ const DATOS = (() => {
       opciones: [
         { txt: "Rezar a Solara", stat: "tem", cd: 12, ok: { t: "Una luz cálida os cierra las heridas.", fx: { almaTodos: 4, xp: 2 } }, ko: { t: "Solara no contesta hoy.", fx: { xp: 1 } } },
         { txt: "Limpiar el altar", stat: "ani", cd: 10, ok: { t: "Debajo del musgo aparece un pergamino de bendición.", fx: { bendicion: 1, xp: 3 } }, ko: { t: "Os cortáis con las espinas.", fx: { alma: -1 } } },
-        { txt: "Llevarse las ofrendas", stat: null, ok: { t: "Plata fácil. El viento se vuelve frío a vuestro paso.", fx: { oro: 12, alma: -2, moral: -1 } } }] },
+        { txt: "Llevarse las ofrendas", stat: null, ok: { t: "Plata fácil. El viento se vuelve frío a vuestro paso. Solara lo ha visto.", fx: { oro: 12, alma: -2, moral: -1, marca: "sacrilegio" } } }] },
     { id: "peaje", acto: 0, tipo: "prueba", titulo: "Peaje de bandidos",
       texto: "Unos bandidos cierran el camino: «Cinco monedas cada uno».",
       opciones: [
@@ -407,8 +423,8 @@ const DATOS = (() => {
     { id: "prisionero", acto: 1, tipo: "prueba", titulo: "El prisionero",
       texto: "Un enano encadenado suplica que lo liberéis antes de que vuelvan los esqueletos.",
       opciones: [
-        { txt: "Romper las cadenas", stat: "ani", cd: 12, ok: { t: "Libre, os da la poción que escondía.", fx: { pocion: 1, xp: 3, moral: 1 } }, ko: { t: "Las cadenas no ceden y os destrozáis las manos.", fx: { alma: -2 } } },
-        { txt: "Forzar la cerradura", stat: "raz", cd: 12, ok: { t: "Clic. Os paga con su oro escondido.", fx: { oro: 12, xp: 3, moral: 1 } }, ko: { t: "Se rompe la ganzúa.", fx: { xp: 1 } } },
+        { txt: "Romper las cadenas", stat: "ani", cd: 12, ok: { t: "Libre, Thrain os da la poción que escondía y jura devolveros el favor.", fx: { pocion: 1, xp: 3, moral: 1, marca: "enano" } }, ko: { t: "Las cadenas no ceden y os destrozáis las manos.", fx: { alma: -2 } } },
+        { txt: "Forzar la cerradura", stat: "raz", cd: 12, ok: { t: "Clic. Thrain os paga con su oro escondido y jura devolveros el favor.", fx: { oro: 12, xp: 3, moral: 1, marca: "enano" } }, ko: { t: "Se rompe la ganzúa.", fx: { xp: 1 } } },
         { txt: "Dejarlo allí", stat: null, ok: { t: "Sus gritos os siguen por el pasillo.", fx: { moral: -1 } } }] },
     { id: "cofre", acto: 1, tipo: "prueba", titulo: "Un cofre con runas",
       texto: "Un cofre cerrado, cubierto de runas que brillan al acercaros.",

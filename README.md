@@ -10,6 +10,13 @@ Juego de rol por turnos al estilo de Dungeons & Dragons, dibujado en pixel art (
 - **Niveles y habilidades:** hasta nivel 10. Cada héroe lleva como mucho 4 habilidades, como los movimientos de un Pokémon; al subir de nivel aprende otras y, si ya tiene 4, elige cuál olvida.
 - **Botín:** cofres en el mapa y enemigos que sueltan armas, armaduras y objetos mágicos de rareza común, rara, épica o legendaria. Se reparten tocando el nombre del héroe.
 - **Combate claro:** cada habilidad avisa si es «¡Eficaz!» o «Poco eficaz» contra el enemigo, que muestra su vida y qué hará en su próximo turno. Los enemigos crecen con el nivel del grupo.
+- **Dificultad:** Aventurero, Héroe o Pesadilla (en Pesadilla los caídos no se levantan al ganar).
+- **Varios enemigos a la vez:** se toca uno para apuntarle; algunas habilidades golpean a todos. Si un héroe aturde, envenena, maldice o debilita y otro remata, es un combo (×1,5).
+- **Bloqueo activo:** cuando un ataque va a dar, aparece «¡BLOQUEA!» en el móvil del dueño del héroe; a tiempo, recibe la mitad de daño.
+- **Jefes con fases:** a media vida cambian (el trol se enfurece, el liche invoca esqueletos, el vampiro llama a sus lobos, el dragón alza el vuelo).
+- **Runas y logros:** 12 logros y un altar donde gastar runas en ventajas para las siguientes partidas.
+- **Decisiones con memoria:** ayudar a la mercader, liberar al enano o saquear el santuario tiene consecuencias en actos posteriores.
+- **Música y animaciones:** chiptune generado para cada acto y los jefes; flechas, tajos, orbes y rayos según la clase.
 - **Golpe certero:** al atacar, una marca recorre una barra; tocar en el centro da +2 o, si es perfecto, +5 a la tirada (o más daño en los ataques seguros).
 - **Bendiciones:** tras cada jefe o élite el grupo elige 1 de 3 mejoras permanentes (más daño, más vida, emboscadas, curas tras la victoria…).
 - **Élites:** combates marcados en rojo en el mapa, más duros, con botín raro asegurado y una bendición.

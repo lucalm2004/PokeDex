@@ -8,6 +8,8 @@ const ESCENARIO = (() => {
   /* Pies de cada héroe en el escenario (x centro, y suelo) y del rival. */
   const HUECOS = [[62, 101], [34, 97], [92, 97], [48, 88], [78, 88], [18, 89]];
   const POS_RIVAL = [150, 99];
+  /* Con varios enemigos se reparten a la derecha (el principal, delante). */
+  const POS_RIVALES = [[[150, 99]], [[138, 101], [170, 93]], [[132, 102], [162, 97], [180, 89]]];
 
   const cacheFondo = new Map();
   const cacheSprite = new Map();
@@ -128,25 +130,30 @@ const ESCENARIO = (() => {
     window.addEventListener("resize", ajustar);
     ajustar();
 
+    const posRivales = () => POS_RIVALES[Math.min(3, Math.max(1, (vista.rivales || []).length)) - 1];
     function posicion(obj) {
-      if (obj === "e") return POS_RIVAL;
-      const i = +String(obj).slice(1);
+      const o = String(obj || "e");
+      if (o[0] === "e") { const k = o === "e" ? 0 : +o.slice(1); return posRivales()[k] || POS_RIVAL; }
+      const i = +o.slice(1);
       return HUECOS[i] || HUECOS[0];
     }
     function mostrar(v) {
       if (v.fondo && v.fondo !== vista.fondo) efectos.length = 0;
+      if ("rival" in v && !("rivales" in v)) v = Object.assign({}, v, { rivales: v.rival ? [v.rival] : [] });
       vista = Object.assign({}, vista, v);
     }
     function efecto(e) {
       if (reducido && e.tipo !== "numero") return;
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800 }[e.tipo] || 500 }, e));
+      if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
+      if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800, proyectil: 300, tajo: 260, destello: 380 }[e.tipo] || 500 }, e));
     }
     function desplazamiento(id, ahora) {
       let dx = 0, dy = 0, blanco = false;
       for (const e of efectos) {
         const p = (ahora - e.t0) / e.dur;
         if (p < 0 || p > 1) continue;
-        if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 10) * (id === "e" ? -1 : 1);
+        if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 10) * (id[0] === "e" ? -1 : 1);
         if (e.tipo === "golpe" && e.objetivo === id) { blanco = p < 0.45; dx += p < 0.8 ? (Math.floor(p * 12) % 2 ? 1 : -1) : 0; }
       }
       return [dx, dy, blanco];
@@ -180,8 +187,8 @@ const ESCENARIO = (() => {
         const [fx, fy] = HUECOS[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });
       });
-      const rv = vista.rival;
-      if (rv && !rv.oculto) actores.push({ id: "e", rival: rv, fx: POS_RIVAL[0], fy: POS_RIVAL[1] });
+      const pr = posRivales();
+      (vista.rivales || []).forEach((rv, k) => { if (rv && pr[k]) actores.push({ id: "e" + k, k, rival: rv, fx: pr[k][0], fy: pr[k][1] }); });
       actores.sort((a, c) => a.fy - c.fy);
       for (const a of actores) {
         const [dx, dy, blanco] = desplazamiento(a.id, ahora);
@@ -206,11 +213,11 @@ const ESCENARIO = (() => {
           let ix = a.fx - 18 + dx, iy = a.fy - 35 + dy;
           if (!reducido && r.flota) iy += Math.round(Math.sin(ahora / 400) * 2) - 3;
           else if (!reducido) iy += Math.floor((ahora / 640) % 2);
-          const muerte = efectos.find(e => e.tipo === "muerte" && e.objetivo === "e");
+          const muerte = efectos.find(e => e.tipo === "muerte" && e.objetivo === a.id);
           if (r.derrotado && !muerte) continue;
           if (muerte) {
             const p = (ahora - muerte.t0) / muerte.dur;
-            if (p > 1) { r.oculto = true; continue; }
+            if (p > 1) continue;
             if (Math.floor(p * 10) % 2) continue;
           }
           if (r.tipo === "enemigo") sombraSuelo(a.fx, a.fy - 1, 22);
@@ -219,6 +226,8 @@ const ESCENARIO = (() => {
             barra(a.fx - 15, a.fy - 41, 30, r.hp, r.max, R.sangre[4]);
             if (r.maldito) PX.texto(b, "!", a.fx + 18, a.fy - 43, R.magia[3]);
             if (r.aturdido) PX.texto(b, "ZZ", a.fx - 22, a.fy - 43, R.mar[4]);
+            if (r.veneno) PX.texto(b, "*", a.fx + 18, a.fy - 36, R.hoja[4]);
+            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, a.fy - 50 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
           }
         }
       }
@@ -234,6 +243,22 @@ const ESCENARIO = (() => {
           const ancho = PX.anchoTexto(e.texto, esc);
           if (p < 0.85 || Math.floor(p * 20) % 2) PX.texto(b, e.texto, Math.round(x - ancho / 2), y - 30 - sube - (e.fila || 0) * 7, e.color || "#fff7ea", PX.CONTORNO, esc);
         }
+        if (e.tipo === "proyectil") {
+          const [ox, oy] = posicion(e.actor), q = Math.min(1, p * 1.15);
+          const px = Math.round(ox + (x - ox) * q), py = Math.round(oy - 20 + (y - oy) * q - Math.sin(q * Math.PI) * (e.forma === "flecha" ? 6 : 3));
+          const col = e.forma === "luz" ? R.bronce : e.forma === "flecha" ? R.madera : (e.rampa || R.magia);
+          if (e.forma === "flecha") { b.fillStyle = col[3]; b.fillRect(px - 4, py, 6, 1); b.fillStyle = R.hueso[4]; b.fillRect(px + 2, py - 1, 2, 3); }
+          else if (e.forma === "luz") { b.fillStyle = col[4]; for (let t = 0; t < 7; t++) b.fillRect(Math.round(ox + (x - ox) * q * (t / 6)), Math.round(oy - 20 + (y - oy) * q * (t / 6)), 2, 1); b.fillRect(px - 1, py - 1, 3, 3); }
+          else { b.fillStyle = col[2]; b.fillRect(px - 2, py - 2, 5, 5); b.fillStyle = col[4]; b.fillRect(px - 1, py - 1, 3, 3); b.fillStyle = "#fff7ea"; b.fillRect(px, py, 1, 1); }
+        }
+        if (e.tipo === "tajo") {
+          b.fillStyle = "#fff7ea";
+          const n = Math.round(p * 14);
+          for (let t = 0; t < n; t++) b.fillRect(x - 8 + t, y - 30 + t, 2, 1);
+          b.fillStyle = e.color || R.bronce[4];
+          for (let t = 0; t < n - 3; t++) b.fillRect(x - 7 + t, y - 31 + t, 1, 1);
+        }
+        if (e.tipo === "destello" && Math.floor(p * 6) % 2 === 0) { b.fillStyle = e.color || "rgba(255,247,234,0.55)"; b.fillRect(0, 0, W, H); }
         if (e.tipo === "magia" || e.tipo === "cura") {
           const col = e.tipo === "cura" ? R.hoja : (e.rampa || R.magia);
           for (let n = 0; n < 9; n++) {

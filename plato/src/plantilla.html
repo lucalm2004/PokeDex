@@ -67,6 +67,8 @@
     <button type="button" data-ui="sel-sig" data-c="tela">Ropa</button>
   </div>
   <p class="sel-stats" id="sel-stats"></p>
+  <div class="sel-dif" id="sel-dif" aria-label="Dificultad"></div>
+  <p class="sel-dif-desc" id="sel-dif-desc"></p>
   <button type="button" class="boton grande ancho" id="sel-listo" data-ui="sel-listo">¡A la aventura!</button>
 </section>
 
@@ -90,6 +92,7 @@
 
 <p id="aviso" class="aviso" role="status" hidden></p>
 <div id="festejo" class="festejo" role="status" hidden></div>
+<button type="button" id="bloqueo" class="bloqueo" data-juego="bloquear" hidden><span>¡BLOQUEA!</span><small></small><i aria-hidden="true"></i></button>
 <div id="precision" class="precision" hidden>
   <div class="prec-caja"><p class="prec-tit">¡Toca en el centro!</p>
     <div class="prec-barra"><span class="prec-bien"></span><span class="prec-perfecto"></span><i class="prec-marca"></i></div>

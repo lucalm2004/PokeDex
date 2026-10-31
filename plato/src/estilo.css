@@ -435,12 +435,75 @@ h1, h2, h3 { text-wrap: balance; }
 @keyframes temblor { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 1px); } }
 @keyframes golpecito { 40% { transform: scale(1.04); } }
 
+/* Varios enemigos: lista con vida y objetivo */
+.rivales { display: grid; gap: 5px; }
+.riv { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; align-items: center; gap: 8px; padding: 0; border: 0; background: none; color: var(--text); text-align: left; }
+.riv .rn { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.riv b { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
+.riv .barra-rival { flex: none; }
+.rivales:not(.varios) .riv { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n b" "v v"; row-gap: 6px; }
+.rivales:not(.varios) .rn { grid-area: n; font-size: 17px; }
+.rivales:not(.varios) .riv b { grid-area: b; }
+.rivales:not(.varios) .barra-rival { grid-area: v; }
+.rivales.varios { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.rivales.varios .riv { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n b" "v v"; row-gap: 4px; padding: 6px 8px; border-radius: 10px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.rivales.varios .rn { grid-area: n; }
+.rivales.varios .riv b { grid-area: b; min-width: 0; font-size: 11px; }
+.rivales.varios .barra-rival { grid-area: v; height: 6px; }
+.rivales.varios .riv .rn { font-size: 13px; font-weight: 600; }
+.rivales.varios .riv.sel { box-shadow: inset 0 0 0 2px var(--ko); background: rgba(255, 107, 129, .1); }
+.rivales.varios .riv.sel .rn::before { content: "◎ "; color: var(--ko); }
+.riv.actua { box-shadow: inset 0 0 0 2px var(--gold) !important; }
+.riv.muerto { opacity: .35; text-decoration: line-through; }
+.info { border: 0; background: none; color: var(--faint); font-size: 15px; padding: 0 2px; }
+.ef.area { color: var(--apoyo); }
+
+/* Bloqueo activo */
+.bloqueo {
+  --dur: 900ms;
+  position: fixed; z-index: 66; left: 50%; bottom: max(110px, calc(env(safe-area-inset-bottom, 0px) + 110px)); transform: translateX(-50%);
+  width: 150px; height: 150px; border: 0; border-radius: 50%; display: grid; place-content: center; gap: 2px; text-align: center;
+  background: radial-gradient(circle at 50% 40%, #5ec8ff, #2f6fe0); color: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, .25), 0 0 40px rgba(94, 200, 255, .7);
+  animation: aparece .12s ease-out; touch-action: manipulation;
+}
+.bloqueo span { font-weight: 800; font-size: 22px; letter-spacing: .02em; }
+.bloqueo small { font-size: 12px; font-weight: 600; opacity: .9; }
+.bloqueo i { position: absolute; inset: -8px; border-radius: 50%; border: 4px solid #fff; animation: encoge var(--dur) linear forwards; pointer-events: none; }
+.bloqueo:active { transform: translateX(-50%) scale(.94); }
+@keyframes encoge { from { transform: scale(1.25); opacity: 1; } to { transform: scale(.82); opacity: .2; } }
+@keyframes aparece { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
+
+/* Dificultad */
+.sel-dif { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.sel-dif button { border: 0; padding: 8px 2px; border-radius: 9px; background: transparent; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sel-dif button.sel { background: var(--accent-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.sel-dif button:disabled { cursor: default; }
+.sel-dif button:disabled:not(.sel) { opacity: .45; }
+.sel-dif-desc { margin: -2px 0 0; font-size: 12px; color: var(--faint); text-align: center; }
+
+/* Altar de runas y logros */
+.altar { width: 100%; font-size: 13px; color: var(--gold) !important; }
+.runas-total { font-size: 15px; color: var(--muted); }
+.runas-total b { font-size: 30px; font-weight: 800; color: var(--gold); margin-right: 4px; }
+.logros { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.logros li { display: grid; gap: 1px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); color: var(--faint); }
+.logros li b { font-size: 14px; color: var(--muted); }
+.logros li span { font-size: 12px; }
+.logros li.ok b { color: var(--gold); }
+.logros li.ok { box-shadow: inset 0 0 0 1px rgba(255, 201, 92, .4); }
+.festejo.fase { box-shadow: inset 0 0 0 2px var(--ko), 0 0 70px -6px var(--ko); }
+.festejo.fase p { color: var(--ko); }
+.festejo.logro { box-shadow: inset 0 0 0 2px var(--gold), 0 0 60px -6px var(--gold); }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
 @keyframes subir { from { transform: translateY(20px); opacity: 0; } }
 
 /* ---------- Móviles bajitos ---------- */
+@media (max-height: 760px) {
+  .juego .orden { display: none; }
+}
 @media (max-height: 640px) {
   .pantalla { gap: 6px; }
   .sel-info p { font-size: 12px; }
@@ -458,6 +521,8 @@ h1, h2, h3 { text-wrap: balance; }
   .opcion { min-height: 40px; padding-block: 6px; }
   .orden { display: none; }
   .intencion { padding: 4px 8px; }
+  .sel-dif-desc { display: none; }
+  .sel-dif button { padding: 6px 2px; }
   .panel h2 { font-size: 16px; }
   .hab-nueva { padding: 8px 10px; }
 }
