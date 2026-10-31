@@ -573,6 +573,41 @@ h1, h2, h3 { text-wrap: balance; }
 .tabla-stats td { text-align: right; padding: 4px; border-top: 1px solid var(--line); color: var(--muted); }
 .tabla-stats td:first-child, .tabla-stats th:first-child { text-align: left; color: var(--text); font-weight: 600; }
 
+/* Tirada grande: el d20 rueda, cae y enseña el resultado */
+.tirada {
+  position: fixed; z-index: 64; left: 50%; top: max(86px, calc(env(safe-area-inset-top, 0px) + 86px)); transform: translateX(-50%);
+  display: grid; justify-items: center; gap: 4px; pointer-events: none; width: min(330px, calc(100% - 32px));
+}
+.tirada canvas { width: 96px; height: 96px; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .55)); }
+.tirada.rodando canvas { animation: rodar .76s cubic-bezier(.3, .1, .4, 1) both; }
+.tirada.caida canvas { animation: caer .35s ease-out; }
+.t-res { display: grid; justify-items: center; gap: 1px; padding: 8px 16px 10px; border-radius: 16px; background: rgba(11, 13, 26, .9); box-shadow: inset 0 0 0 1px var(--line-2), 0 12px 30px -10px #000; opacity: 0; transform: translateY(-6px) scale(.9); }
+.tirada.caida .t-res { animation: resultado .3s .05s ease-out forwards; }
+.t-res p { margin: 0; text-align: center; }
+.t-quien { font-size: 11px; font-weight: 600; color: var(--muted); }
+.t-calc { font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.t-calc span { color: var(--accent); }
+.t-calc b { font-size: 19px; font-weight: 800; }
+.t-veredicto { font-size: 22px; font-weight: 800; letter-spacing: .02em; line-height: 1.1; }
+.t-veredicto.ok { color: var(--ok); }
+.t-veredicto.ko { color: var(--muted); }
+.t-veredicto.crit { color: var(--gold); text-shadow: 0 0 16px rgba(255, 201, 92, .7); }
+.t-veredicto.pifia { color: var(--ko); }
+.tirada[data-res="crit"] canvas { filter: drop-shadow(0 0 18px rgba(255, 201, 92, .9)); }
+.tirada[data-res="crit"] .t-res { box-shadow: inset 0 0 0 2px var(--gold), 0 0 40px -8px var(--gold); }
+.tirada[data-res="pifia"] .t-res { box-shadow: inset 0 0 0 2px var(--ko); }
+.tirada[data-res="ok"] .t-res { box-shadow: inset 0 0 0 1px var(--ok); }
+@keyframes rodar {
+  0% { transform: translate(140px, 120px) rotate(0) scale(.5); opacity: 0; }
+  15% { opacity: 1; }
+  45% { transform: translate(30px, -36px) rotate(400deg) scale(1.05); }
+  70% { transform: translate(-14px, 8px) rotate(640deg) scale(.95); }
+  85% { transform: translate(6px, -8px) rotate(700deg) scale(1.02); }
+  100% { transform: translate(0, 0) rotate(720deg) scale(1); }
+}
+@keyframes caer { 0% { transform: scale(1.25); } 60% { transform: scale(.92); } 100% { transform: scale(1); } }
+@keyframes resultado { to { opacity: 1; transform: none; } }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }

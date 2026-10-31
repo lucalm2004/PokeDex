@@ -373,7 +373,7 @@ function recibirPartida(m) {
   const reproducir = () => { if (!primero && escJuego) lista.forEach((e, k) => setTimeout(() => efectoLocal(e), k * 240)); };
   if (t && !primero && t.seq > dadoVisto && !ocupado) {
     dadoVisto = t.seq; render();
-    return tirarDado(t.n, t.caras || 20, () => { mostrarTirada(t.texto, t.ok, false); reproducir(); });
+    return tirarDado(t.n, t.caras || 20, () => { mostrarTirada(t.texto, t.ok, false); reproducir(); }, t.det || undefined);
   }
   if (t) { dadoVisto = t.seq; ESCENARIO.dibujarDado($("#dado"), t.n); mostrarTirada(t.texto, t.ok, false); }
   render(); reproducir();
@@ -709,18 +709,64 @@ function aplicarFx(f = {}, actor) {
 }
 
 /* ---------- Dados ---------- */
-function tirarDado(final, caras, cb) {
+/* El d20 rueda en grande por la pantalla, cae y enseña el resultado (en todos los móviles). */
+let tiradaN = 0;
+function veredicto(final, det) {
+  if (det.crit) return ["¡CRÍTICO!", "crit"];
+  if (final === 1) return ["¡PIFIA!", "pifia"];
+  if (det.ok) return [det.tipo === "prueba" ? "¡ÉXITO!" : "¡IMPACTO!", "ok"];
+  return [det.tipo === "prueba" ? "FRACASO" : "FALLO", "ko"];
+}
+function mostrarResultadoTirada(final, det) {
+  const el = $("#tirada");
+  if (!el || !det) return;
+  const [txt, cls] = veredicto(final, det);
+  el.querySelector(".t-quien").textContent = [det.quien, det.accion].filter(Boolean).join(" · ");
+  el.querySelector(".t-calc").innerHTML = `${final} <span>${fmt(det.mod)}</span> = <b>${det.total}</b> vs ${esc(det.contra)}`;
+  const v = el.querySelector(".t-veredicto");
+  v.textContent = txt; v.className = "t-veredicto " + cls;
+  el.dataset.res = cls;
+  el.classList.add("caida");
+  sonar(cls === "crit" ? "perfecto" : cls === "ok" ? "bien" : "fallo");
+  if (cls === "crit") { vibrar([30, 40, 60]); temblar(); } else if (cls === "pifia") vibrar(80);
+}
+function tirarDado(final, caras, cb, det) {
   const cv = $("#dado");
   ocupado = true; document.body.classList.add("ocupado");
+  mostrarTirada.det = det ? Object.assign({ n: final }, det) : null;
   const terminar = () => {
     if (cv) ESCENARIO.dibujarDado(cv, final);
     ocupado = false; document.body.classList.remove("ocupado");
     cb();
   };
-  if (reducido || RAPIDO || !cv || cv.offsetParent === null) return terminar();
+  const el = $("#tirada"), grande = $("#dado-grande");
+  const animar = !reducido && !RAPIDO && el && grande && det && vista === "juego";
+  if (!animar) {
+    if (reducido || RAPIDO || !cv || cv.offsetParent === null) return terminar();
+    let k = 0;
+    const iv = setInterval(() => { k++; if (k % 2) sonar("dado"); ESCENARIO.dibujarDado(cv, d(caras), k % 2, (k % 3) - 1, k % 2 ? -1 : 0); }, 70);
+    setTimeout(() => { clearInterval(iv); terminar(); }, 450);
+    return;
+  }
+  const n = ++tiradaN;
+  el.className = "tirada rodando"; delete el.dataset.res; el.hidden = false;
+  el.querySelector(".t-veredicto").textContent = ""; el.querySelector(".t-calc").textContent = ""; el.querySelector(".t-quien").textContent = "";
   let k = 0;
-  const iv = setInterval(() => { k++; if (k % 2) sonar("dado"); ESCENARIO.dibujarDado(cv, d(caras), k % 2, (k % 3) - 1, k % 2 ? -1 : 0); }, 70);
-  setTimeout(() => { clearInterval(iv); terminar(); }, 450);
+  const iv = setInterval(() => {
+    k++;
+    if (k % 2) sonar("dado");
+    const x = d(caras);
+    ESCENARIO.dibujarDado(grande, x, k % 2, (k % 3) - 1, k % 2 ? -1 : 0);
+    if (cv) ESCENARIO.dibujarDado(cv, x, k % 2);
+  }, 55);
+  setTimeout(() => {
+    clearInterval(iv);
+    ESCENARIO.dibujarDado(grande, final);
+    el.classList.remove("rodando");
+    mostrarResultadoTirada(final, det);
+    setTimeout(terminar, 260);
+    setTimeout(() => { if (tiradaN === n) el.hidden = true; }, 1700);
+  }, 760);
 }
 function mostrarTirada(texto, ok, enPartida = true) {
   const info = $("#dado-info");
@@ -728,7 +774,8 @@ function mostrarTirada(texto, ok, enPartida = true) {
   info.className = ok === true ? "ok" : ok === false ? "ko" : "";
   if (enPartida && S) {
     const seq = ((S.dado && S.dado.seq) || 0) + 1;
-    S.dado = { seq, n: mostrarTirada.ultimo || 20, caras: 20, texto, ok };
+    S.dado = { seq, n: mostrarTirada.ultimo || 20, caras: 20, texto, ok, det: mostrarTirada.det || null };
+    mostrarTirada.det = null;
     dadoVisto = seq;
   }
 }
@@ -956,13 +1003,14 @@ function elegirOpcion(i) {
   const mod = stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0);
   const bono = usarOlivo();
   const { r, nota } = tiradaD20(p);
+  const total0 = r + mod + bono, crit0 = r >= critMin(p);
   tirarDado(r, 20, () => {
     const total = r + mod + bono, crit = r >= critMin(p);
     const ok = crit || (r !== 1 && total >= op.cd);
     const linea = lineaTirada(p.nombre, ABREV[op.stat], r, mod, bono, total, `CD ${op.cd}`, crit) + nota;
     mostrarTirada(linea, ok);
     resolver(op.ok, op.ko, ok, linea, crit);
-  });
+  }, { tipo: "prueba", quien: p.nombre, accion: STATS[op.stat], mod: mod + bono, total: total0, contra: `CD ${op.cd}`, crit: crit0, ok: crit0 || (r !== 1 && total0 >= op.cd) });
 }
 function respuestaTachada(sc) {
   if (!S.players.some(p => p.raza === "gnomo")) return -1;
@@ -1367,6 +1415,8 @@ function accion(tipo, arg) {
       const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0) - (p.est.debil ? 2 : 0);
       const bono = usarOlivo() + (q === 2 ? 5 : q === 1 ? 2 : 0);
       const { r, nota } = tiradaD20(p);
+      const total0 = r + mod + bono, crit0 = r >= Math.min(critMin(p), h.critico || 20);
+      const det = { tipo: "ataque", quien: p.nombre, accion: h.nombre, mod: mod + bono, total: total0, contra: `CA ${e0.ca}`, crit: crit0, ok: crit0 || (r !== 1 && total0 >= e0.ca) };
       tirarDado(r, 20, () => {
         const total = r + mod + bono, crit = r >= Math.min(critMin(p), h.critico || 20);
         const ok = crit || (r !== 1 && total >= e0.ca);
@@ -1375,7 +1425,7 @@ function accion(tipo, arg) {
         if (ok) { linea += ` → ${golpes(crit)}`; log(linea, "ok"); mostrarTirada(linea, true); }
         else { linea += " → falla"; fx({ tipo: "numero", objetivo: "e" + t, texto: "FALLO", color: RP.hueso[3] }); log(linea, "ko"); mostrarTirada(linea, false); }
         fin();
-      });
+      }, det);
       return;
     }
     if (h.efecto === "cura") {
