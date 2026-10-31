@@ -500,6 +500,160 @@ const { MONSTRUOS, PNJ } = (() => {
     return g;
   }
 
+  /* Diablillo: pequeño y cabezón, alas de murciélago a la espalda, cola acabada en flecha y un tridente. */
+  function diablillo() {
+    const g = new Rejilla(), Rj = R.piel.roja, S = R.sangre, N = NEGRO, F = R.hierro;
+    /* Ala pequeña: membrana con el borde de salida festoneado y varillas finas desde la muñeca. */
+    const ala = (pts, muneca, puntas, op, tonoHueso) => {
+      new Capa().poly(pts).pintar(g, S, op);
+      const h = new Capa().linea(pts[0][0], pts[0][1], muneca[0], muneca[1], 1);
+      puntas.forEach(([x, y]) => h.linea(muneca[0], muneca[1], x, y, 1));
+      h.pintar(g, S, { plano: tonoHueso });
+    };
+    ala([[19, 20], [21, 9], [25, 5], [28.5, 8], [26, 10], [27.5, 13.5], [24.5, 13], [22, 17]], [21, 9], [[25, 5], [28.5, 8], [27.5, 13.5]], { relieve: 1.5, max: 0, profundo: true }, 1);
+    ala([[20, 22], [24, 11], [29, 8], [33.5, 13], [30.5, 14.5], [32.5, 19.5], [28.5, 18], [26, 21], [23, 23]], [24, 11], [[29, 8], [33.5, 13], [32.5, 19.5]], { relieve: 2, max: 1, separar: 0 }, 3);
+    new Capa().curva(21, 29, 31, 34, 30, 27, 2, 1).pintar(g, Rj, { relieve: 1, max: 3, separar: true });
+    new Capa().poly([[26.8, 27.5], [30, 22], [33.2, 27.5], [30, 26.2]]).pintar(g, Rj, { relieve: 1, min: 2, max: 3, separar: true });
+    new Capa().linea(20, 29, 22, 31, 2).linea(22, 31, 21, 33, 2).pintar(g, Rj, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(18.5, 26, 3.4, 3.6);
+    cuerpo.pintar(g, Rj, { relieve: 2.5, min: 2, separar: true });
+    new Capa().linea(17, 28, 15, 31, 2).linea(15, 31, 16, 33, 2).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
+    for (const x of [14, 20]) new Capa().rect(x, 33, 3, 2).pintar(g, N, { relieve: 1, min: 2, separar: true });
+    new Capa().rect(8, 12, 1, 23).pintar(g, R.madera, { relieve: 1, max: 2 });
+    new Capa().rect(6, 12, 5, 1).rect(6, 9, 1, 3).rect(8, 8, 1, 4).rect(10, 9, 1, 3).pintar(g, F, { relieve: 1, min: 2 });
+    pon(g, F, 4, [6, 9], [8, 8], [10, 9]);
+    const cab = new Capa().ell(15.5, 18, 4.3, 3.9).poly([[13, 19], [11, 22.5], [16, 21.5]]).poly([[18.5, 16.5], [23.5, 14.5], [19, 19.5]]);
+    cab.pintar(g, Rj, { relieve: 3, min: 2, separar: true });
+    new Capa().curva(13.5, 15, 11.5, 13, 12, 10.5, 2, 1).curva(17.5, 14.5, 18.5, 12, 20.5, 11, 2, 1).pintar(g, HUESO, { relieve: 1, min: 2, separar: true });
+    pon(g, R.bronce, 4, [12, 17], [15, 17]);
+    pon(g, N, 0, [11, 16], [12, 16], [15, 16], [16, 15], [13, 17], [16, 17]);
+    pon(g, N, 0, [11, 20], [12, 21], [13, 21], [14, 21], [15, 21], [16, 20]);
+    pon(g, HUESO, 4, [12, 20], [15, 20]);
+    pon(g, Rj, 1, [17, 19], [18, 18]);
+    new Capa().linea(17, 24, 12, 25, 2).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
+    new Capa().ell(9, 24.5, 1.4, 1.3).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
+    pon(g, Rj, 4, [13, 15], [20, 24]);
+    return g.contorno();
+  }
+
+  /* Araña gigante de las cuevas: patas acodadas bien altas, ojos en racimo y un reloj de arena rojo en el lomo. */
+  function arana() {
+    const g = new Rejilla(), S = R.sombra, Sg = R.sangre, F = R.fuego;
+    const pata = (pts, op) => {
+      const c = new Capa();
+      for (let i = 0; i + 1 < pts.length; i++) c.linea(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], i === 0 ? 2 : 1);
+      c.pintar(g, S, { relieve: 1, ...op });
+    };
+    for (const p of [[[12, 23], [7, 12], [3, 29]], [[14, 23], [13, 12], [12, 31]], [[17, 23], [25, 21], [28, 31]], [[18, 22], [33, 19], [35, 29]]]) pata(p, { max: 1 });
+    const abdomen = new Capa().ell(26, 14, 7.6, 7);
+    abdomen.pintar(g, S, { relieve: 4, separar: true });
+    new Capa().poly([[23.5, 9], [28.5, 9], [26, 12.5], [28.5, 16], [23.5, 16], [26, 12.5]]).recortar(abdomen).pintar(g, Sg, { relieve: 1, min: 3 });
+    for (const [i, j] of [[21, 12], [30, 10], [31, 15], [22, 17], [27, 19], [32, 18], [20, 15]]) pon(g, S, 4, [i, j]);
+    const torax = new Capa().ell(14, 23.5, 5, 3.6).ell(10.5, 23, 2.8, 2.6);
+    torax.pintar(g, S, { relieve: 2.5, separar: true });
+    for (const p of [[[12, 25], [5, 15], [1, 33]], [[14, 26], [10, 18], [7, 34]], [[16, 26], [21, 20], [24, 34]], [[17, 25], [29, 22], [32, 34]]]) pata(p, { max: 3, separar: true });
+    new Capa().curva(9, 25, 7, 27, 8.5, 29, 2, 1).curva(11, 26, 10, 28, 11, 30, 2, 1).pintar(g, S, { relieve: 1, max: 2, separar: true });
+    pon(g, HUESO, 2, [8, 29], [11, 30]);
+    pon(g, F, 4, [10, 22]);
+    pon(g, Sg, 4, [9, 22], [11, 22]);
+    pon(g, F, 4, [9, 21], [11, 21]);
+    pon(g, Sg, 3, [8, 23], [12, 21], [13, 22], [10, 20]);
+    bordeLuz(g, S);
+    return g.contorno();
+  }
+
+  /* Sombra: un espectro de humo violeta con la capucha vacía y dos ojos pálidos; flota, así que acaba en jirones. */
+  function sombra() {
+    const g = new Rejilla(), S = R.sombra, Mg = R.magia, E = ESPECTRO;
+    new Capa().linea(23, 14, 27, 19, 2).linea(27, 19, 29, 24, 2).pintar(g, S, { relieve: 1, max: 2 });
+    abanico(new Capa(), 29, 24, [[-1, 3], [0.5, 3], [2, 2]]).pintar(g, E, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(18, 8.5, 4.6, 5).poly([[13, 9], [23, 9], [27, 18], [28, 26], [25, 33], [15, 34.5], [10, 29], [11, 18]]);
+    [[12, 27, 1.4], [15.5, 29.5, 1.2], [19, 26.5, 1.5], [22.5, 30, 1.2], [26, 27, 1.5]].forEach(([x, y, a]) => cuerpo.restar(muesca(x, y, 35.5, a)));
+    cuerpo.pintar(g, S, { relieve: 3, separar: true });
+    /* El humo se va apagando hacia abajo en vetas onduladas, no en cuadrícula. */
+    for (let y = 16; y < 36; y++) for (let x = 0; x < 36; x++) {
+      if (!cuerpo.tiene(x, y)) continue;
+      const veta = Math.sin(x * 1.3 + Math.sin(y * 0.45) * 2.2), f = (y - 16) / 18;
+      const k = S.indexOf(g.get(x, y));
+      if (veta < f * 1.6 - 0.6 && PX.umbral(x, y) < 0.3 + f) pon(g, S, Math.max(0, k - 1 - (f > 0.6 ? 1 : 0)), [x, y]);
+      else if (veta > 0.82 && f < 0.85) pon(g, Mg, 1, [x, y]);
+    }
+    new Capa().ell(16, 10, 2.8, 3.2).pintar(g, S, { plano: 0 });
+    new Capa().linea(13, 6, 18, 3.5, 1).linea(13, 6, 12.5, 13, 1).recortar(cuerpo).pintar(g, Mg, { plano: 3 });
+    pon(g, Mg, 2, [14, 14], [18, 13], [19, 4], [20, 4]);
+    pon(g, E, 4, [15, 9], [17, 9], [15, 10], [17, 10]);
+    pon(g, E, 2, [15, 11], [17, 11]);
+    new Capa().linea(14, 14, 9, 17, 2).linea(9, 17, 5, 15, 2).pintar(g, S, { relieve: 1, max: 3, separar: true });
+    abanico(new Capa(), 4.5, 15, [[-3, -2], [-3.5, 0.5], [-2.5, 2.5]]).pintar(g, E, { relieve: 1, min: 2, max: 3 });
+    bordeLuz(g, S);
+    g.contorno(S[0]);
+    for (const [x0, y0, x1, y1] of [[13, 32, 11, 35], [18, 33, 19, 35], [24, 32, 27, 35], [10, 28, 7, 31], [28, 24, 31, 27]]) hilo(g, x0, y0, x1, y1, S[3]);
+    for (const [i, j, k] of [[8, 33, 2], [30, 31, 3], [26, 6, 3], [8, 9, 2], [31, 19, 2], [5, 25, 3]]) if (!g.get(i, j)) pon(g, Mg, k, [i, j]);
+    return g;
+  }
+
+  /* Nhazgul, el Devorador de Estrellas: una masa de vacío con estrellas dentro, un ojo enorme,
+     corona de cuernos y tentáculos. Borde violeta por la luz y cian por el otro lado. */
+  const VACIO = ["#040208", "#0b0616", "#170d2c", "#2a1748", "#432670"];
+  const CIAN = ["#08222a", "#0f4a56", "#1c8590", "#47c6c8", "#b6fff2"];
+  function devorador() {
+    const g = new Rejilla(), V = VACIO, Mg = R.magia, C = CIAN, az = PX.azar(23);
+    const tentaculos = (op, ...l) => { const c = new Capa(); l.forEach(a => c.curva(...a)); c.pintar(g, V, { relieve: 2, ...op }); return c; };
+    /* Ventosas que brillan en la cara de abajo de cada tentáculo. */
+    const ventosas = (c, ram) => { for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) if (c.tiene(x, y) && !c.tiene(x, y + 1) && c.tiene(x - 1, y) && (x + y) % 3 === 0) pon(g, ram, 3, [x, y - 1]); };
+    ventosas(tentaculos({ max: 2 }, [27, 22, 35, 25, 34, 14, 5, 1.5], [24, 27, 29, 35, 35, 32, 5, 1.5]), C);
+    const cuernos = new Capa();
+    for (const [x0, y0, cx, cy, x1, y1, gr] of [[11, 11, 5, 7, 5, 1, 4], [16, 8, 13.5, 3, 14.5, 0, 3.5], [21, 7, 22, 2, 25, 0, 4], [26, 9, 30, 5, 32, 0, 3.5], [29, 13, 34, 12, 35, 6, 3.5]]) cuernos.curva(x0, y0, cx, cy, x1, y1, gr, 1);
+    cuernos.pintar(g, Mg, { relieve: 1.5, max: 3, separar: true });
+    for (const [x, y] of [[5, 1], [14, 0], [25, 0], [32, 0], [35, 6], [5, 2], [32, 1]]) pon(g, C, 4, [x, y]);
+    for (const [x, y] of [[8, 6], [15, 4], [22, 3], [29, 5], [32, 10]]) pon(g, Mg, 1, [x, y]);
+    const cuerpo = new Capa().ell(19.5, 17.5, 12.5, 11).ell(14, 21, 8, 7);
+    cuerpo.pintar(g, V, { relieve: 6, separar: true });
+    /* Una nebulosa en espiral y estrellas sueltas dentro del vacío. */
+    for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) {
+      if (!cuerpo.tiene(x, y)) continue;
+      const a = Math.atan2(y - 18, x - 22), d = Math.hypot(x - 22, y - 18), v = Math.sin(a * 2 + d * 0.45);
+      if (v > 0.5 && PX.umbral(x, y) < (v - 0.5) * 2) pon(g, Mg, v > 0.9 && d > 4 ? 2 : 1, [x, y]);
+    }
+    for (let i = 0; i < 60; i++) {
+      const x = Math.floor(az() * 36), y = Math.floor(az() * 36), r = az();
+      if (cuerpo.tiene(x, y) && cuerpo.tiene(x + 1, y) && cuerpo.tiene(x, y + 1) && cuerpo.tiene(x - 1, y)) pon(g, r > 0.8 ? HUESO : r > 0.4 ? C : Mg, r > 0.92 ? 4 : 3, [x, y]);
+    }
+    /* El ojo: párpado de vacío, globo cian, iris violeta y pupila rasgada. */
+    const ojo = new Capa().ell(13.5, 15.5, 5.6, 4.4);
+    new Capa().ell(13.5, 15.5, 6.8, 5.6).pintar(g, V, { plano: 0 });
+    for (let a = 3.5; a < 6.0; a += 0.12) pon(g, Mg, 3, [Math.round(13.5 + Math.cos(a) * 6.6), Math.round(15.5 + Math.sin(a) * 5.4)]);
+    ojo.pintar(g, C, { relieve: 3, min: 2 });
+    new Capa().ell(12.5, 15.5, 3, 3.2).recortar(ojo).pintar(g, Mg, { relieve: 2, min: 2 });
+    new Capa().rect(12, 12.5, 1, 7).recortar(ojo).pintar(g, V, { plano: 0 });
+    pon(g, V, 0, [11, 15], [11, 16], [13, 15], [13, 16]);
+    pon(g, HUESO, 4, [10, 13], [11, 13], [15, 13]);
+    pon(g, Mg, 4, [14, 17]);
+    /* Las fauces, con un resplandor de estrellas tragadas al fondo. */
+    const boca = new Capa().poly([[8.5, 24], [25, 22], [23, 28.5], [12, 29.5]]);
+    boca.pintar(g, V, { plano: 0 });
+    for (let y = 22; y < 31; y++) for (let x = 8; x < 26; x++) if (boca.tiene(x, y)) {
+      const f = 1 - Math.hypot((x - 17) / 7, (y - 26.5) / 2.6);
+      if (f > 0 && PX.umbral(x, y) < f * 1.4) pon(g, C, f > 0.55 ? 3 : f > 0.25 ? 2 : 1, [x, y]);
+    }
+    for (let x = 10; x <= 23; x += 2) {
+      const ya = Math.round(24 - (x - 9) * 0.12);
+      pon(g, HUESO, 4, [x, ya]); pon(g, HUESO, 2, [x, ya + 1]);
+      if (x < 22) pon(g, HUESO, 3, [x + 1, 28 + (x < 13 ? 1 : 0)]);
+    }
+    const delante = tentaculos({ separar: true }, [11, 26, 4, 25, 2, 33, 5, 2], [16, 28, 14, 34, 8, 35, 5, 2], [21, 28, 23, 33, 28, 35, 4.5, 1.5], [9, 19, 2, 16, 1, 24, 4, 1.5]);
+    ventosas(delante, Mg);
+    for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) {
+      if (g.rampa(x, y) !== V) continue;
+      if (!g.get(x - 1, y) || !g.get(x, y - 1)) pon(g, Mg, 2, [x, y]);
+      else if (cuerpo.tiene(x, y) && (!g.get(x + 1, y) || !g.get(x, y + 1))) pon(g, C, 2, [x, y]);
+    }
+    g.contorno(V[0]);
+    for (const [i, j, ram, k] of [[2, 9, C, 4], [1, 13, Mg, 3], [35, 22, C, 3], [5, 29, Mg, 4], [10, 2, Mg, 3], [30, 31, C, 4], [27, 1, C, 3], [0, 28, C, 3]]) if (!g.get(i, j)) pon(g, ram, k, [i, j]);
+    destello(g, 2, 5, C); destello(g, 33, 28, Mg);
+    return g;
+  }
+
   /* ---------- Personajes no jugadores ---------- */
   /* PNJ con cuerpo de héroe, mirando a la izquierda. «encima» pinta antes del contorno y «brillo» después
      (destellos sin borde). Las dos reciben las coordenadas del héroe, que mira a la derecha. */
@@ -660,7 +814,7 @@ const { MONSTRUOS, PNJ } = (() => {
   };
 
   return {
-    MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon, lobo, armadura, vampiro, kobold, elemental },
+    MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon, lobo, armadura, vampiro, kobold, elemental, diablillo, arana, sombra, devorador },
     PNJ: PNJS
   };
 })();

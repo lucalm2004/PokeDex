@@ -495,6 +495,84 @@ h1, h2, h3 { text-wrap: balance; }
 .festejo.fase p { color: var(--ko); }
 .festejo.logro { box-shadow: inset 0 0 0 2px var(--gold), 0 0 60px -6px var(--gold); }
 
+/* ---------- Animación y pulido ---------- */
+#caja-juego { position: relative; }
+.anuncio {
+  position: absolute; left: 50%; top: 10px; z-index: 2; margin: 0; transform: translate(-50%, -6px); opacity: 0; pointer-events: none;
+  display: grid; justify-items: center; gap: 0; padding: 6px 14px 7px; border-radius: 999px; white-space: nowrap;
+  background: rgba(11, 13, 26, .86); box-shadow: inset 0 0 0 1px var(--tono, var(--accent)), 0 6px 20px -6px var(--tono, var(--accent));
+  --tono: var(--accent);
+}
+.anuncio.ver { animation: anuncio 1.5s ease-out forwards; }
+.anuncio b { font-size: 15px; font-weight: 800; color: var(--tono); letter-spacing: .01em; }
+.anuncio small { font-size: 11px; color: var(--muted); }
+.anuncio.t-fisica { --tono: var(--fisica); } .anuncio.t-arcana { --tono: var(--arcana); } .anuncio.t-sagrada { --tono: var(--sagrada); }
+.anuncio.t-cura { --tono: var(--cura); } .anuncio.t-apoyo { --tono: var(--apoyo); } .anuncio.t-ko { --tono: var(--ko); } .anuncio.t-turno { --tono: var(--gold); }
+@keyframes anuncio { 0% { opacity: 0; transform: translate(-50%, -10px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.04); } 20% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -4px); } }
+
+/* Reacciones de los retratos */
+.heroe.g-herido { animation: g-herido .5s; }
+.heroe.g-herido .retrato { filter: drop-shadow(0 0 4px var(--ko)) saturate(1.4); }
+.heroe.g-curado { animation: g-curado .6s; }
+.heroe.g-victoria .retrato { animation: g-salto .6s ease-out; }
+.heroe.grave:not(.caido) { animation: g-grave 1.4s ease-in-out infinite; }
+.heroe.caido .retrato { filter: grayscale(1); transform: rotate(-12deg); }
+.heroe .retrato { transition: transform .3s, filter .3s; }
+@keyframes g-herido { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); background: rgba(255, 107, 129, .25); } 40% { transform: translateX(4px); } 60% { transform: translateX(-2px); } }
+@keyframes g-curado { 50% { box-shadow: inset 0 0 0 2px var(--ok), 0 0 18px -4px var(--ok); } }
+@keyframes g-salto { 40% { transform: translateY(-6px) scale(1.08); } }
+@keyframes g-grave { 50% { box-shadow: inset 0 0 0 1px var(--ko), 0 0 14px -6px var(--ko); } }
+
+/* Estados (chips) */
+.est { font-style: normal; color: var(--c) !important; box-shadow: inset 0 0 0 1px var(--c); }
+.ests { display: flex; gap: 2px; flex-wrap: wrap; }
+.ests i { font-style: normal; font-size: 9px; font-weight: 700; line-height: 1; padding: 2px 4px; border-radius: 6px; color: var(--c); box-shadow: inset 0 0 0 1px var(--c); text-transform: uppercase; }
+
+/* Votaciones */
+.votacion { margin: 0; font-size: 13px; color: var(--muted); }
+.votacion b { color: var(--gold); }
+.nodo { position: relative; }
+.nodo .votos { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--gold); color: var(--bg); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.nodo.votado { box-shadow: inset 0 0 0 3px var(--gold), 0 0 18px -4px var(--gold) !important; }
+.opcion[data-votado] { box-shadow: inset 0 0 0 2px var(--gold); }
+
+/* Mapa más grande: nodos algo menores y leyenda compacta */
+.nodo { width: 40px; height: 40px; }
+.nodo.jefe { width: 52px; height: 52px; }
+.nodo.n-elite { box-shadow: inset 0 0 0 1px rgba(255, 107, 129, .6); }
+.nodo.n-altar { box-shadow: inset 0 0 0 1px rgba(255, 107, 129, .45); }
+.nodo.n-misterio { box-shadow: inset 0 0 0 1px rgba(194, 123, 255, .6); }
+.nodo.n-tesoro { box-shadow: inset 0 0 0 1px rgba(255, 201, 92, .5); }
+.nodo.libre.n-elite, .nodo.libre.n-altar { box-shadow: inset 0 0 0 2px var(--ko), 0 0 18px -4px var(--ko); }
+.leyenda { gap: 4px 9px; font-size: 11px; }
+.lineas line.usada { stroke: var(--accent); stroke-width: 3; opacity: .55; }
+
+/* Pantalla nueva del panel */
+.panel.entra > * { animation: entra .32s ease-out both; }
+.panel.entra > *:nth-child(2) { animation-delay: .04s; }
+.panel.entra > *:nth-child(3) { animation-delay: .08s; }
+.panel.entra > *:nth-child(4) { animation-delay: .12s; }
+.panel.entra > *:nth-child(n+5) { animation-delay: .16s; }
+.panel.entra .acciones .opcion { animation: entra .3s ease-out both; }
+.panel.entra .acciones .opcion:nth-child(2) { animation-delay: .05s; }
+.panel.entra .acciones .opcion:nth-child(3) { animation-delay: .1s; }
+.panel.entra .acciones .opcion:nth-child(4) { animation-delay: .15s; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+.opcion { transition: transform .1s, background .15s, box-shadow .15s; }
+.opcion:active:not(:disabled) { transform: scale(.97); }
+.barra-alma i, .barra-rival i { transition: width .45s cubic-bezier(.2, .8, .2, 1); }
+
+/* Premios del final */
+.premios { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.premios li { display: grid; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); box-shadow: inset 0 0 0 1px rgba(255, 201, 92, .25); }
+.premios span { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.premios b { font-size: 15px; }
+.premios i { font-style: normal; font-size: 11px; color: var(--muted); }
+.tabla-stats { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.tabla-stats th { font-size: 10px; font-weight: 600; color: var(--faint); text-align: right; padding: 2px 4px; }
+.tabla-stats td { text-align: right; padding: 4px; border-top: 1px solid var(--line); color: var(--muted); }
+.tabla-stats td:first-child, .tabla-stats th:first-child { text-align: left; color: var(--text); font-weight: 600; }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
@@ -508,8 +586,9 @@ h1, h2, h3 { text-wrap: balance; }
   .pantalla { gap: 6px; }
   .sel-info p { font-size: 12px; }
   .lema, .intro { display: none; }
-  .nodo { width: 38px; height: 38px; }
-  .nodo.jefe { width: 48px; height: 48px; }
+  .nodo { width: 34px; height: 34px; }
+  .nodo.jefe { width: 44px; height: 44px; }
+  .tabla-stats { display: none; }
   .boton.grande { padding: 12px 16px; }
   .panel { padding: 10px 12px; gap: 8px; }
 }

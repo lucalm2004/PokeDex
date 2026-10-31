@@ -78,7 +78,9 @@ const LOGROS = {
   legendario: { nombre: "Tesoro de leyenda", desc: "Encuentra un objeto legendario." },
   nivel10: { nombre: "Leyenda viva", desc: "Llega a nivel 10." },
   pesadilla: { nombre: "Sin miedo", desc: "Termina la aventura en Pesadilla." },
-  mimico: { nombre: "¿Era un cofre?", desc: "Derrota a un mímico." }
+  mimico: { nombre: "¿Era un cofre?", desc: "Derrota a un mímico." },
+  devorador: { nombre: "Apagaestrellas", desc: "Vence a Nhazgul, el Devorador de Estrellas, en el Abismo." },
+  estados: { nombre: "Alquimista del dolor", desc: "Ten a un enemigo con 3 estados a la vez." }
 };
 const MEJORAS = {
   alforjas: { nombre: "Alforjas", desc: "+1 poción al empezar.", coste: 6, max: 3 },
@@ -124,6 +126,7 @@ const PISTAS = {
   1: { bpm: 78, raiz: 45, modo: [0, 1, 3, 5, 7, 8, 10], acordes: [0, 1, 0, 6], semilla: 11 },
   2: { bpm: 88, raiz: 48, modo: [0, 2, 3, 5, 7, 8, 11], acordes: [0, 5, 4, 0], semilla: 5 },
   3: { bpm: 100, raiz: 46, modo: [0, 1, 4, 5, 7, 8, 10], acordes: [0, 1, 0, 6], semilla: 13 },
+  4: { bpm: 70, raiz: 43, modo: [0, 1, 3, 5, 6, 8, 10], acordes: [0, 6, 5, 1], semilla: 23 },
   jefe: { bpm: 138, raiz: 45, modo: [0, 1, 3, 5, 7, 8, 10], acordes: [0, 1, 5, 4], semilla: 17 }
 };
 function melodia(P) {
@@ -199,7 +202,7 @@ function nuevoHeroe(def) {
   return {
     nombre: String(def.nombre || "").trim().slice(0, 16) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
     look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, oro: 15,
-    equipo: { arma: null, armadura: null, talisman: null }, habs: APRENDE[clase][1].slice(), usosH: {}, est: { aturdido: 0, cegado: 0 }, fl: {}
+    equipo: { arma: null, armadura: null, talisman: null }, habs: APRENDE[clase][1].slice(), usosH: {}, est: {}, fl: {}
   };
 }
 const lookDe = p => Object.assign({ raza: p.raza, clase: p.clase }, p.look);
@@ -218,9 +221,10 @@ const ABR_TIPO = { fisica: "físico", arcana: "mágico", sagrada: "sagrado" };
 function resumenHab(id, p) {
   const h = H(id), m = h.stat ? statHab(p, h) : 0;
   const dados = h.dado ? `${h.golpes ? h.golpes + "×" : ""}${h.dado[0]}d${h.dado[1]}${fmt(m + (h.bono || 0))}` : "";
-  if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}`;
-  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}`;
-  return { escudo: "Bloquea un ataque", aturde: "Pierde un turno", maldice: "+2 daño recibido", debilita: "−2 a su ataque", veneno: `Veneno ${h.turnos} turnos` }[h.efecto];
+  const extras = [h.veneno ? "envenena" : "", h.debilita ? "debilita" : "", h.maldice ? "maldice" : "", h.aplica ? `${ESTADOS[h.aplica[0]].verbo}${h.aplica[2] < 1 ? ` ${Math.round(h.aplica[2] * 100)} %` : ""}` : ""].filter(Boolean);
+  if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}${h.area ? " · a todos" : ""}${extras.length ? " · " + extras.join(" · ") : ""}`;
+  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}${h.regen ? " · regenera" : ""}`;
+  return { escudo: "Bloquea un ataque", aturde: "Paraliza 1 turno", maldice: "Maldice: +2 daño recibido", debilita: "Debilita: −2 a su ataque", veneno: `Envenena ${h.turnos} turnos` }[h.efecto] + (h.area ? " · a todos" : "");
 }
 function statHab(p, h) { return h.stat ? stat(p, h.stat) : 0; }
 /* Próxima habilidad que aprenderá el héroe. */
@@ -417,9 +421,63 @@ function permitido(k, uid) {
   if (k === "equipar") return S.players.some(p => p.uid === uid);
   if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
   if (k === "bloquear") return !!S.bloqueo && S.players[S.bloqueo.i].uid === uid;
+  if (k === "votar") return S.players.some(p => p.uid === uid);
   const p = S.players[S.turno];
   return !!p && p.uid === uid;
 }
+/* Votaciones: en línea, el camino y las decisiones las vota el grupo (15 s; si hay empate, manda quien tiene el turno). */
+const VOTABLES = new Set(["nodo", "op", "resp", "final"]);
+const hayVotacion = () => !!(S && S.online && S.players.length > 1);
+const contextoVoto = () => `${S.modo}:${S.mapa ? S.mapa.fila : ""}:${S.esc ? S.esc.titulo : ""}:${S.fase}`;
+function votantes() {
+  const conectados = new Set([miId, ...red.peers.map(p => p.presence && p.presence.id).filter(Boolean)]);
+  return [...new Set(S.players.map(p => p.uid))].filter(u => conectados.has(u));
+}
+function votar(uid, k, v) {
+  if (!VOTABLES.has(k) || !S.players.some(p => p.uid === uid)) return;
+  const ctx = contextoVoto();
+  if (!S.votacion || S.votacion.ctx !== ctx || S.votacion.k !== k) S.votacion = { k, ctx, votos: {}, fin: Date.now() + 15000 };
+  S.votacion.votos[uid] = String(v);
+  if (votantes().every(u => S.votacion.votos[u] !== undefined)) return cerrarVotacion();
+  guardar(); render();
+  clearTimeout(votar.t);
+  votar.t = setTimeout(cerrarVotacion, Math.max(0, S.votacion.fin - Date.now()) + 60);
+}
+function cerrarVotacion() {
+  const vt = S && S.votacion;
+  if (!vt || ocupado) return;
+  clearTimeout(votar.t);
+  S.votacion = null;
+  if (vt.ctx !== contextoVoto()) { guardar(); return render(); }
+  const cuenta = {};
+  Object.values(vt.votos).forEach(v => { cuenta[v] = (cuenta[v] || 0) + 1; });
+  const max = Math.max(...Object.values(cuenta));
+  const empatados = Object.keys(cuenta).filter(v => cuenta[v] === max);
+  const delTurno = vt.votos[S.players[S.turno].uid];
+  const gana = empatados.includes(delTurno) ? delTurno : empatados[0];
+  log(`El grupo vota (${Object.keys(vt.votos).length} votos).`, "esc");
+  ejecutar(vt.k, gana);
+}
+/* Votos que lleva cada opción y si es la mía. */
+function votosDe(k, v) {
+  const vt = S && S.votacion;
+  if (!vt || vt.k !== k) return { n: 0, mio: false };
+  const vals = Object.entries(vt.votos);
+  return { n: vals.filter(([, x]) => x === String(v)).length, mio: vt.votos[miId] === String(v) };
+}
+function lineaVotacion() {
+  const vt = S && S.votacion;
+  if (!hayVotacion()) return "";
+  const n = vt ? Object.keys(vt.votos).length : 0, total = votantes().length;
+  return `<p class="votacion"><b>Votación</b> · ${n}/${total} votos${vt ? ` · <span class="cuenta-voto">${Math.max(0, Math.ceil((vt.fin - Date.now()) / 1000))} s</span>` : " · toca una opción para votar"}</p>`;
+}
+setInterval(() => {
+  if (!S || !S.votacion) return;
+  const c = document.querySelector(".cuenta-voto");
+  if (c) c.textContent = `${Math.max(0, Math.ceil((S.votacion.fin - Date.now()) / 1000))} s`;
+  if (esHost() && Date.now() > S.votacion.fin + 500) cerrarVotacion();
+}, 500);
+
 /* El bloqueo no espera respuesta: va directo y sin bloquear la pantalla. */
 function enviarBloqueo() {
   if (!red.sala) return;
@@ -533,8 +591,33 @@ function festejar(titulo, sub, clase = "") {
 }
 const EFECTOS_ESCENA = new Set(["numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
 /* Un efecto se ve en el escenario y además suena y, si toca, se celebra (también en los móviles de los demás). */
+/* Rótulo sobre el escenario con el nombre del ataque y quién lo hace. */
+function anunciar(e) {
+  const el = $("#anuncio");
+  if (!el) return;
+  el.className = "anuncio t-" + (e.tono || "apoyo");
+  el.innerHTML = `<b>${esc(e.texto)}</b>${e.sub ? `<small>${esc(e.sub)}</small>` : ""}`;
+  el.hidden = false;
+  void el.offsetWidth; el.classList.add("ver");
+  clearTimeout(anunciar.t);
+  anunciar.t = setTimeout(() => { el.hidden = true; }, 1500);
+}
+/* Los retratos del grupo reaccionan: se sacuden al recibir daño, brillan al curarse y saltan al ganar. */
+const GESTOS = {};
+function gesto(i, clase) {
+  const chips = document.querySelectorAll("#grupo .heroe");
+  (i === "*" ? [...chips.keys()] : [i]).forEach(k => {
+    GESTOS[k] = { clase, hasta: performance.now() + 650 };
+    const ch = chips[k];
+    if (ch) { ch.classList.remove("g-herido", "g-curado", "g-victoria"); void ch.offsetWidth; ch.classList.add(clase); }
+  });
+}
 function efectoLocal(e) {
-  if (escJuego && EFECTOS_ESCENA.has(e.tipo)) escJuego.efecto(e);
+  if (escJuego && (EFECTOS_ESCENA.has(e.tipo) || e.tipo === "salto")) escJuego.efecto(e);
+  if (e.tipo === "anuncio") anunciar(e);
+  if (e.tipo === "golpe" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-herido");
+  if (e.tipo === "cura" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-curado");
+  if (e.tipo === "salto" || e.tipo === "victoria") gesto("*", "g-victoria");
   if (e.tipo === "golpe") sonar(e.objetivo === "e" ? "golpe" : "herido");
   else if (e.tipo === "magia") sonar("magia");
   else if (e.tipo === "cura") sonar("cura");
@@ -613,6 +696,7 @@ function aplicarFx(f = {}, actor) {
   if (f.marca) S.memoria[f.marca] = true;
   if (f.quita) delete S.memoria[f.quita];
   if (f.botin) { S.botin.push(sacarBotin(true)); anunciarBotin(); out.push("¡Un objeto!"); }
+  if (f.bendicionB) { ofrecerBendiciones(); out.push("¡Bendición!"); }
   if (f.moral && actor) {
     const antes = actor.alin;
     actor.alin = D.moverMoral(actor.alin, f.moral);
@@ -662,15 +746,21 @@ function lineaTirada(quien, accion, r, mod, bono, total, contra, crit) {
 
 /* ---------- Mapa de caminos ---------- */
 function generarMapa() {
+  /* 6 filas de caminos entre la salida y el jefe, de 2 a 4 nodos cada una. */
   const filas = [[{ tipo: "inicio", sig: [] }]];
-  for (let f = 1; f <= 5; f++) {
-    const n = f === 5 ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0);
+  let elites = 0;
+  for (let f = 1; f <= 6; f++) {
+    const r = Math.random();
+    const n = f === 1 ? 3 : f === 6 ? 2 + (r < 0.5 ? 1 : 0) : r < 0.25 ? 2 : r < 0.7 ? 3 : 4;
     const fila = [];
     for (let i = 0; i < n; i++) fila.push({ tipo: f === 1 || Math.random() < 0.5 ? "combate" : "evento", sig: [] });
-    if (f === 2 || (f === 4 && Math.random() < 0.5)) fila[Math.floor(Math.random() * n)].tipo = "tesoro";
-    if (f === 3) fila[Math.floor(Math.random() * n)].tipo = "tienda";
-    if (f >= 2 && f <= 4 && Math.random() < 0.45) { const l = fila.filter(x => x.tipo === "combate" || x.tipo === "evento"); if (l.length) azarDe(l).tipo = "elite"; }
-    if (f === 5) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
+    const libres = () => fila.filter(x => x.tipo === "combate" || x.tipo === "evento");
+    if (f === 2 || (f === 5 && Math.random() < 0.5)) azarDe(libres()).tipo = "tesoro";
+    if (f === 3) azarDe(libres()).tipo = "tienda";
+    if (f === 4 && Math.random() < 0.6) azarDe(libres()).tipo = "altar";
+    if (f >= 3 && f <= 5 && elites < 2 && Math.random() < 0.45 && libres().length) { azarDe(libres()).tipo = "elite"; elites++; }
+    if (f >= 2 && f <= 5) libres().forEach(x => { if (Math.random() < 0.18) x.tipo = "misterio"; });
+    if (f === 6) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
     filas.push(fila);
   }
   filas.push([{ tipo: "jefe", sig: [] }]);
@@ -685,17 +775,29 @@ function generarMapa() {
   filas[0][0].hecho = true;
   return { filas, fila: 0, col: 0 };
 }
-const NOMBRE_NODO = { combate: "Combate", elite: "Élite", evento: "Suceso", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
+const NOMBRE_NODO = { combate: "Combate", elite: "Élite", evento: "Suceso", misterio: "Misterio", altar: "Altar maldito", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
 const VICTORIAS = ["Cae el último golpe. El camino queda libre.", "Recogéis el botín y seguís adelante.", "Victoria. Os curáis las heridas como podéis.", "El enemigo cae. Hay monedas entre los restos."];
 const VICTORIAS_JEFE = [
   "El trol cae al barranco. Al otro lado del puente empieza la mazmorra.",
   "Malakar se deshace en polvo y rompéis su filacteria. Un pasadizo sube hacia un castillo.",
   "Lord Varkhul arde al primer rayo de sol. El paso hacia el Pico Cenizo está abierto.",
-  "Ignárax cae sobre su tesoro con un rugido que hace temblar la montaña. El dragón ha muerto."
+  "Ignárax cae sobre su tesoro con un rugido que hace temblar la montaña. El dragón ha muerto.",
+  "El ojo de Nhazgul se apaga como una estrella vieja. El vacío se cierra y, por primera vez en mil años, Valdren duerme tranquila."
 ];
 
 function crearEscena(tipo) {
   const A = ACTOS[S.acto];
+  if (tipo === "misterio") {
+    const r = Math.random();
+    tipo = r < 0.35 ? "combate" : r < 0.75 ? "evento" : "tesoro";
+    log(`El misterio resulta ser: ${NOMBRE_NODO[tipo].toLowerCase()}.`, "esc");
+  }
+  if (tipo === "altar") return { tipo: "prueba", fondo: azarDe(A.fondos), titulo: "Un altar maldito",
+    texto: "Una piedra negra late como un corazón. Promete poder a cambio de algo vuestro.",
+    opciones: [
+      { txt: "Ofrecer vuestra sangre (−3 PG máx. a todos)", stat: null, ok: { t: "La piedra bebe. Algo os cambia por dentro.", fx: { maxTodos: -3, bendicionB: true, moral: -1 } } },
+      { txt: "Ofrecer oro (−15 po cada uno)", stat: null, ok: { t: "El oro se funde en la piedra y escupe un objeto.", fx: { oro: -15, botin: true } } },
+      { txt: "Destrozar el altar", stat: "ani", cd: 13, ok: { t: "La piedra estalla y libera la luz atrapada.", fx: { xp: 6, almaTodos: 4, moral: 1 } }, ko: { t: "La piedra se defiende con fuego negro.", fx: { almaTodos: -4 } } }] };
   if (tipo === "evento") {
     const mem = S.memoria || {};
     const pool = EVENTOS.filter(e => !S.vistosEv.includes(e.id) && (e.requiere ? !!mem[e.requiere] && e.actos.includes(S.acto) : e.acto === S.acto || e.acto === null));
@@ -791,7 +893,8 @@ function nuevaPartida(defs, codigo, dificultad = "normal") {
     zurron: { pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
     acto: -1, mapa: null, modo: "escena", esc: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
     derrota: false, final: null, guardadoActo: null, aprender: [], botin: [], bendiciones: [], ofertaB: null, log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null,
-    dificultad: DIFICULTADES[dificultad] ? dificultad : "normal", memoria: {}, opcionesB: 3, bloqueo: null
+    dificultad: DIFICULTADES[dificultad] ? dificultad : "normal", memoria: {}, opcionesB: 3, bloqueo: null, votacion: null,
+    abismo: dificultad === "dificil" || !!meta().logros.dragon, stats: defs.slice(0, MAX_HEROES).map(() => ({ dano: 0, mejor: 0, curado: 0, bloqueos: 0, criticos: 0, perfectos: 0, bajas: 0, recibido: 0 }))
   };
   /* Mejoras compradas con runas en el altar de este móvil. */
   const mj = meta().mejoras;
@@ -804,10 +907,14 @@ function nuevaPartida(defs, codigo, dificultad = "normal") {
   submenu = null; modal = null; vista = "juego";
   siguienteActo();
 }
+/* El Acto V (el Abismo) se desbloquea tras matar al dragón una vez en este móvil, y siempre en Pesadilla. */
+const ultimoActo = () => (S && S.abismo ? 4 : 3);
 function siguienteActo() {
   S.modo = "escena"; S.fase = "elegir"; S.resultado = null; S.combate = null; S.tienda = null;
-  if (S.acto >= ACTOS.length - 1) {
-    S.esc = { tipo: "final", fondo: "guarida", titulo: "El tesoro del dragón", texto: "Oro de mil reinos. Villabruma está medio quemada y los enanos llevan cien años sin hogar. ¿Qué hacéis con él?",
+  if (S.acto >= ultimoActo()) {
+    const abismo = S.acto >= 4;
+    S.esc = { tipo: "final", fondo: abismo ? "ruinas" : "guarida", titulo: abismo ? "La luz vuelve" : "El tesoro del dragón",
+      texto: (abismo ? "Subís del Abismo con las manos vacías y los ojos llenos de estrellas. Arriba sigue el tesoro del dragón. " : "Oro de mil reinos. ") + "Villabruma está medio quemada y los enanos llevan cien años sin hogar. ¿Qué hacéis con él?",
       opciones: [{ txt: "Repartirlo con Villabruma y los enanos", final: "heroes" }, { txt: "Quedároslo todo", final: "codicia" }] };
     guardar(); return render();
   }
@@ -888,12 +995,13 @@ function elegirFinal(clave) {
   S.final = clave;
   log(`Final: ${FINALES[clave].titulo}`, "esc");
   fx({ tipo: "runas", n: Math.ceil(10 * dif().runas) });
+  if (!S.abismo) log("Bajo el tesoro algo se mueve... El Acto V, el Abismo, queda desbloqueado en este móvil.", "esc");
   if (S.dificultad === "dificil") fx({ tipo: "logro", id: "pesadilla" });
   guardar(); render();
 }
 function reintentar() {
   const g = JSON.parse(S.guardadoActo);
-  g.log = S.log; g.guardadoActo = S.guardadoActo; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
+  g.log = S.log; g.guardadoActo = S.guardadoActo; g.stats = S.stats; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
   S = g;
   S.players.forEach(p => { p.alma = maxAlma(p); });
   S.intentos = (S.intentos || 0) + 1;
@@ -956,6 +1064,75 @@ function usarFuera(id, i) {
 }
 
 /* ---------- Combate ---------- */
+/* Estados que pueden sufrir héroes y enemigos (turnos restantes en obj.est). */
+const ESTADOS = {
+  veneno: { nombre: "Veneno", verbo: "envenena", color: "#7bdc5a", desc: "Pierde PG al empezar su turno." },
+  quemadura: { nombre: "Quemadura", verbo: "quema", color: "#ff8a3d", desc: "Pierde 1d6 PG por turno y no puede regenerarse." },
+  sangrado: { nombre: "Sangrado", verbo: "hace sangrar", color: "#ff5a6e", desc: "Pierde 2 PG por turno." },
+  paralisis: { nombre: "Parálisis", verbo: "paraliza", color: "#ffd84a", desc: "Pierde su próximo turno." },
+  congelado: { nombre: "Congelado", verbo: "congela", color: "#7fd8ff", desc: "Pierde su turno y, mientras tanto, recibe un 50 % más de daño." },
+  debil: { nombre: "Debilitado", verbo: "debilita", color: "#b9a0ff", desc: "−2 para atacar." },
+  maldito: { nombre: "Maldito", verbo: "maldice", color: "#c27bff", desc: "Recibe +2 de cada golpe." },
+  ciego: { nombre: "Cegado", verbo: "ciega", color: "#d6daf0", desc: "Falla la mitad de sus ataques." },
+  regen: { nombre: "Regeneración", verbo: "regenera", color: "#3ddc97", desc: "Recupera 3 PG por turno." }
+};
+const TIMIDOS = ["paralisis", "congelado"];
+/* Ataque especial de cada monstruo: cada N rondas sustituye a su primer ataque. */
+const ESPECIALES = {
+  rata: { nombre: "Mordisco infecto", cada: 2, estado: ["veneno", 2, 0.8] },
+  goblin: { nombre: "Puñalada sucia", cada: 2, estado: ["sangrado", 2, 0.8] },
+  kobold: { nombre: "Red de trampero", cada: 3, estado: ["paralisis", 1, 0.7], sinDano: true },
+  lobo: { nombre: "Desgarro", cada: 2, estado: ["sangrado", 2, 0.7] },
+  osolechuza: { nombre: "Abrazo de oso", cada: 3, estado: ["paralisis", 1, 0.6], mult: 1.5 },
+  esqueleto: { nombre: "Golpe de escudo", cada: 3, estado: ["paralisis", 1, 0.5] },
+  cubo: { nombre: "Engullir", cada: 3, estado: ["veneno", 3, 1], mult: 1.3 },
+  mimico: { nombre: "Lengua pegajosa", cada: 2, estado: ["paralisis", 1, 0.7] },
+  armadura: { nombre: "Tajo pesado", cada: 3, estado: ["sangrado", 2, 1], mult: 1.5 },
+  elemental: { nombre: "Llamarada", cada: 2, estado: ["quemadura", 2, 0.8], todos: true, mult: 0.6 },
+  golem: { nombre: "Puño sísmico", cada: 3, estado: ["paralisis", 1, 0.35], todos: true, mult: 0.6 },
+  trol: { nombre: "Garrazo", cada: 2, estado: ["sangrado", 2, 0.8] },
+  liche: { nombre: "Toque helado", cada: 2, estado: ["congelado", 1, 0.6] },
+  vampiro: { nombre: "Mordisco", cada: 2, estado: ["sangrado", 2, 0.8], mult: 1.2 },
+  dragon: { nombre: "Coletazo", cada: 2, estado: ["paralisis", 1, 0.4], mult: 1.3 },
+  diablillo: { nombre: "Pinchazo ígneo", cada: 2, estado: ["quemadura", 2, 0.9] },
+  arana: { nombre: "Picadura", cada: 2, estado: ["veneno", 3, 1], extra: ["paralisis", 1, 0.4] },
+  sombra: { nombre: "Toque gélido", cada: 2, estado: ["debil", 3, 1], extra: ["ciego", 2, 0.6] },
+  devorador: { nombre: "Mirada del vacío", cada: 2, estado: ["ciego", 2, 0.8], extra: ["maldito", 3, 0.6], mult: 1.2 }
+};
+const ESTADO_AREA = { dragon: ["quemadura", 2, 1], devorador: ["ciego", 1, 1], liche: ["debil", 2, 0.5] };
+const textoEstado = ([k, t, prob]) => `${ESTADOS[k].verbo}${prob < 1 ? ` (${Math.round(prob * 100)} %)` : ""}`;
+/* Pone un estado; los elfos no se dejan paralizar ni congelar. Devuelve si ha prendido. */
+function ponerEstado(obj, k, turnos, esHeroe, id) {
+  if (!obj || !ESTADOS[k]) return false;
+  if (esHeroe && TIMIDOS.includes(k) && obj.raza === "elfo") { log(`${obj.nombre} se libra: linaje feérico.`, "ok"); return false; }
+  obj.est = obj.est || {};
+  obj.est[k] = Math.max(obj.est[k] || 0, turnos);
+  if (!esHeroe && Object.keys(obj.est).length >= 3) fx({ tipo: "logro", id: "estados" });
+  fx({ tipo: "numero", objetivo: id, texto: ESTADOS[k].nombre.toUpperCase(), color: ESTADOS[k].color, fila: 2 });
+  return true;
+}
+/* Daño de estados y paso del tiempo al empezar el turno de alguien. Devuelve true si pierde el turno. */
+function tickEstados(obj, esHeroe, id) {
+  const e = obj.est || {}, partes = [];
+  const herir = (n, k) => {
+    if (esHeroe) obj.alma = Math.max(0, obj.alma - n); else obj.hp = Math.max(0, obj.hp - n);
+    fx({ tipo: "numero", objetivo: id, texto: "-" + n, color: ESTADOS[k].color });
+    partes.push(`${ESTADOS[k].nombre.toLowerCase()} ${n}`);
+  };
+  const a = Math.max(0, S.acto);
+  if (e.veneno) herir(2 + a, "veneno");
+  if (e.quemadura) herir(d(6) + Math.floor(a / 2), "quemadura");
+  if (e.sangrado) herir(2 + Math.floor(a / 2), "sangrado");
+  if (e.regen && (esHeroe ? obj.alma : obj.hp) > 0) {
+    const cu = esHeroe ? curar(obj, 3) : 0;
+    if (cu) { fx({ tipo: "numero", objetivo: id, texto: "+" + cu, color: ESTADOS.regen.color }); partes.push(`regenera ${cu}`); }
+  }
+  if (partes.length) log(`${obj.nombre}: ${partes.join(", ")}.`, esHeroe ? "ko" : "ok");
+  const pierde = !!(e.paralisis || e.congelado);
+  for (const k of Object.keys(e)) { e[k]--; if (e[k] <= 0) delete e[k]; }
+  if (pierde) log(`${obj.nombre} no puede moverse y pierde el turno.`, esHeroe ? "ko" : "ok");
+  return pierde;
+}
 const DIFICULTADES = {
   facil: { nombre: "Aventurero", desc: "Para disfrutar de la historia.", hp: 0.8, dano: -1, atk: -1, runas: 0.5 },
   normal: { nombre: "Héroe", desc: "El reto pensado para el juego.", hp: 1, dano: 0, atk: 0, runas: 1 },
@@ -963,13 +1140,14 @@ const DIFICULTADES = {
 };
 const dif = () => DIFICULTADES[S && S.dificultad] || DIFICULTADES.normal;
 /* Enemigos menores que acompañan al principal en cada acto. */
-const ESBIRROS = [["rata", "kobold"], ["rata", "esqueleto"], ["esqueleto", "lobo"], ["kobold", "elemental"]];
-const NOMBRE_ESBIRRO = { rata: "Rata gigante", kobold: "Kobold", esqueleto: "Esqueleto", lobo: "Huargo", elemental: "Chispa ígnea", goblin: "Goblin" };
+const ESBIRROS = [["rata", "kobold"], ["rata", "esqueleto"], ["esqueleto", "lobo"], ["kobold", "elemental"], ["diablillo", "sombra"]];
+const NOMBRE_ESBIRRO = { rata: "Rata gigante", kobold: "Kobold", esqueleto: "Esqueleto", lobo: "Huargo", elemental: "Chispa ígnea", goblin: "Goblin", diablillo: "Diablillo", sombra: "Sombra", arana: "Arañuela" };
 /* Segunda fase de los jefes: al bajar a media vida cambian de táctica. */
 const FASES = {
   trol: { txt: "El trol arranca un pilar del puente y entra en furia", cambia: r => { r.ataques++; r.regenera = 5; } },
   liche: { txt: "Malakar alza a sus guardianes de la tumba", invoca: ["esqueleto", "esqueleto"], cambia: r => { r.area = { cada: 2, dado: 6, txt: "Malakar lanza un rayo necrótico contra todo el grupo" }; } },
   vampiro: { txt: "Varkhul llama a sus lobos y su sed se vuelve insaciable", invoca: ["lobo"], cambia: r => { r.atk++; r.drena = true; } },
+  devorador: { txt: "Nhazgul devora la luz y llama a sus siervos del vacío", invoca: ["sombra", "diablillo"], cambia: r => { r.atk++; r.area = { cada: 2, dado: 10, txt: "Nhazgul abre su ojo y la luz se apaga" }; } },
   dragon: { txt: "Ignárax alza el vuelo: las armas apenas le alcanzan", cambia: r => { r.resiste = "fisica"; r.debil = null; r.area = { cada: 2, dado: 8, txt: "Ignárax escupe fuego desde el cielo" }; } }
 };
 function crearRival(clave, o = {}) {
@@ -984,7 +1162,7 @@ function crearRival(clave, o = {}) {
     danoExtra: Math.floor(niv / 2) + (o.elite ? 1 : 0) + D_.dano - (o.esbirro ? 1 : 0),
     regenera: o.esbirro ? 0 : e.regenera || 0, area: o.esbirro ? null : e.area || null, estado: o.esbirro ? null : e.estado || null,
     cura: o.esbirro ? null : e.cura || null, furia: !!e.furia, drena: !!e.drena, roba: e.roba || 0, nomuerto: !!e.nomuerto,
-    resiste: e.resiste, debil: e.debil, aturdido: false, veneno: 0, maldito: false, quemado: false, partido: false,
+    resiste: e.resiste, debil: e.debil, est: {}, quemado: false, partido: false, areaEstado: ESTADO_AREA[clave] || null,
     jefe: !!o.jefe, fase: 1, esbirro: !!o.esbirro, marca: null
   };
 }
@@ -1023,7 +1201,7 @@ function iniciarCombate(sc) {
     blando: n === 1, elite: !!sc.esElite, jefe: !!sc.esJefe, robado: {}, combos: 0, perfectos: 0, bloqueos: 0, caidos: 0 };
   objetivoLocal = null;
   rivales.forEach(r => { if (!S.vistos.bestias.includes(r.clave)) S.vistos.bestias.push(r.clave); });
-  S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos ? H(h).usos + (tiene("reservas") ? 1 : 0) : 0; }); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
+  S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos ? H(h).usos + (tiene("reservas") ? 1 : 0) : 0; }); p.fl = {}; p.est = {}; });
   const orden = S.players.map((p, i) => ({ t: "h", i, ini: d(20) + iniMod(p) }));
   rivales.forEach((r, k) => orden.push({ t: "e", r: k, ini: d(20) + ENEMIGOS[r.clave].ini }));
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
@@ -1049,7 +1227,7 @@ function prepararTurno() {
     if (a.t === "e") { if (c.rivales[a.r].hp <= 0) { avanzar(); continue; } return turnoEnemigo(a.r); }
     const p = S.players[a.i];
     if (p.alma <= 0) { avanzar(); continue; }
-    if (p.est.aturdido > 0) { p.est.aturdido--; log(`${p.nombre} no puede moverse y pierde el turno.`, "ko"); avanzar(); continue; }
+    if (tickEstados(p, true, "h" + a.i) || p.alma <= 0) { if (p.alma <= 0) log(`¡${p.nombre} cae!`, "ko"); avanzar(); continue; }
     S.turno = a.i; submenu = null;
     c.objetivo = objetivoValido(c.objetivo);
     guardar(); render();
@@ -1060,7 +1238,7 @@ function prepararTurno() {
 function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   const c = S.combate, r = c.rivales[k];
   if (!r || r.hp <= 0) return "ya había caído";
-  let dmg = Math.max(1, base) + (r.maldito ? 2 : 0);
+  let dmg = Math.max(1, base) + (r.est.maldito ? 2 : 0);
   let mult = 1, nota = "";
   if (r.resiste === clase) { mult = 0.5; nota = " (lo resiste)"; }
   if (r.debil === clase) { mult = 2; nota = " (¡punto débil!)"; }
@@ -1069,7 +1247,10 @@ function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   if (combo) { r.marca = null; c.combos++; }
   dmg = mult < 1 ? Math.max(1, Math.floor(dmg * mult)) : Math.round(dmg * mult);
   if (combo) dmg = Math.round(dmg * 1.5);
+  if (r.est.congelado) { dmg = Math.round(dmg * 1.5); nota += " (¡congelado!)"; }
   r.hp = Math.max(0, r.hp - dmg);
+  const st = porHeroe >= 0 && S.stats && S.stats[porHeroe];
+  if (st) { st.dano += dmg; st.mejor = Math.max(st.mejor, dmg); if (r.hp <= 0) st.bajas++; }
   if (clase === "arcana") r.quemado = true;
   const o = "e" + k;
   fx({ tipo: "golpe", objetivo: o });
@@ -1099,7 +1280,10 @@ function danarHeroe(i, dmg, directo, rk = -1) {
   const p = S.players[i], c = S.combate;
   if (p.raza === "enano") dmg = Math.max(1, dmg - 1);
   if (tiene("piedra")) dmg = Math.max(1, dmg - 1);
+  if (p.est && p.est.maldito) dmg += 2;
+  if (p.est && p.est.congelado) dmg = Math.round(dmg * 1.5);
   p.alma = Math.max(0, p.alma - dmg);
+  if (S.stats && S.stats[i]) S.stats[i].recibido += dmg;
   fx({ tipo: "golpe", objetivo: "h" + i });
   fx({ tipo: "numero", objetivo: "h" + i, texto: "-" + dmg, color: RP.sangre[4] });
   let t = `${dmg} de daño`;
@@ -1134,15 +1318,18 @@ function accion(tipo, arg) {
     const id = p.habs[+slot], h = id && H(id);
     if (!h || (h.usos && !(p.usosH[id] > 0))) return;
     if (h.usos) p.usosH[id]--;
-    if (q === 2) c.perfectos++;
+    if (q === 2) { c.perfectos++; if (S.stats) S.stats[S.turno].perfectos++; }
+    fx({ tipo: "anuncio", texto: h.nombre, sub: p.nombre, tono: h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo" });
     const m = statHab(p, h);
     const blancos = h.area ? vivosR() : [t];
     const r0 = c.rivales[t], e0 = ENEMIGOS[r0.clave];
     const efectosExtra = (rr, dmg, partes) => {
       if (rr.hp <= 0) return;
-      if (h.veneno) { rr.veneno = Math.max(rr.veneno, h.veneno); marcar(rr); partes.push("veneno"); }
-      if (h.debilita) { rr.atkMod = Math.max(rr.atkBase - 4, rr.atkMod - 2); marcar(rr); partes.push("−2 a su ataque"); }
-      if (h.maldice) { rr.maldito = true; marcar(rr); partes.push("maldito"); }
+      const k = c.rivales.indexOf(rr), poner = (est, t) => { if (ponerEstado(rr, est, t, false, "e" + k)) { marcar(rr); partes.push(ESTADOS[est].nombre.toLowerCase()); } };
+      if (h.veneno) poner("veneno", h.veneno);
+      if (h.debilita) poner("debil", 3);
+      if (h.maldice) poner("maldito", 99);
+      if (h.aplica && Math.random() < h.aplica[2]) poner(h.aplica[0], h.aplica[1]);
       if (h.drena && dmg > 0) { const cu = curar(p, Math.max(1, Math.floor(dmg / 2))); fx({ tipo: "cura", objetivo: yo }); partes.push(`te curas ${cu}`); }
     };
     if (h.efecto === "dano") {
@@ -1170,12 +1357,18 @@ function accion(tipo, arg) {
         log(tx, "ok"); mostrarTirada(tx, true);
         return fin();
       }
-      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0);
+      if (p.est.ciego && Math.random() < 0.5) {
+        const tx = `${p.nombre} está cegado y su ${h.nombre} falla.`;
+        fx({ tipo: "numero", objetivo: "e" + t, texto: "FALLO", color: RP.hueso[3] }); log(tx, "ko"); mostrarTirada(tx, false);
+        return fin();
+      }
+      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0) - (p.est.debil ? 2 : 0);
       const bono = usarOlivo() + (q === 2 ? 5 : q === 1 ? 2 : 0);
       const { r, nota } = tiradaD20(p);
       tirarDado(r, 20, () => {
         const total = r + mod + bono, crit = r >= Math.min(critMin(p), h.critico || 20);
         const ok = crit || (r !== 1 && total >= e0.ca);
+        if (crit && S.stats) S.stats[S.turno].criticos++;
         let linea = lineaTirada(p.nombre, h.nombre, r, mod, bono, total, `CA ${e0.ca}`, crit) + nota + ritmo;
         if (ok) { linea += ` → ${golpes(crit)}`; log(linea, "ok"); mostrarTirada(linea, true); }
         else { linea += " → falla"; fx({ tipo: "numero", objetivo: "e" + t, texto: "FALLO", color: RP.hueso[3] }); log(linea, "ko"); mostrarTirada(linea, false); }
@@ -1189,6 +1382,9 @@ function accion(tipo, arg) {
       const objetivos = h.a === "grupo" ? S.players : h.a === "yo" ? [p] : [masHerido()];
       const partes = objetivos.map(o => {
         const real = curar(o, n), oi = idx(o);
+        if (S.stats) S.stats[S.turno].curado += real;
+        if (h.regen && o.alma > 0) { o.est = o.est || {}; o.est.regen = Math.max(o.est.regen || 0, h.regen); }
+        if (h.a === "grupo" || o === p) ["veneno", "quemadura", "sangrado"].forEach(k => { if (o.est) delete o.est[k]; });
         fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
         return `${o.nombre} +${real}`;
       });
@@ -1200,11 +1396,8 @@ function accion(tipo, arg) {
     else blancos.forEach(k => {
       const rr = c.rivales[k];
       fx({ tipo: "magia", objetivo: "e" + k });
-      if (h.efecto === "aturde") rr.aturdido = true;
-      if (h.efecto === "maldice") rr.maldito = true;
-      if (h.efecto === "debilita") rr.atkMod = Math.max(rr.atkBase - 4, rr.atkMod - 2);
-      if (h.efecto === "veneno") rr.veneno = Math.max(rr.veneno, h.turnos);
-      marcar(rr);
+      const est = { aturde: ["paralisis", 1], maldice: ["maldito", 99], debilita: ["debil", 3], veneno: ["veneno", h.turnos] }[h.efecto];
+      if (est && ponerEstado(rr, est[0], est[1], false, "e" + k)) marcar(rr);
     });
     const tx = `${p.nombre} usa ${h.nombre}${blancos.length > 1 ? "" : c.rivales.length > 1 ? ` contra ${r0.nombre}` : ""}: ${resumenHab(id, p).toLowerCase()}.`;
     log(tx, "ok"); mostrarTirada(tx, true);
@@ -1222,13 +1415,13 @@ function accion(tipo, arg) {
       log(`${p.nombre} da ${OBJETOS[o].nombre.toLowerCase()} a ${q.nombre}: +${real} PG.`, "ok");
     }
     if (o === "fuego") { fx({ tipo: "ataque", actor: yo }); fx({ tipo: "proyectil", actor: yo, objetivo: "e" + t, forma: "orbe", rampa: RP.fuego }); log(`${p.nombre} lanza fuego de alquimista → ${danarRival(t, tirar(3, 6), "arcana", false, 1, RP.fuego, S.turno)}`, "ok"); }
-    if (o === "sueno") { r.aturdido = true; marcar(r); log(`${p.nombre} sopla polvo de sueño: ${r.nombre} se duerme un turno.`, "ok"); }
+    if (o === "sueno") { ponerEstado(r, "paralisis", 1, false, "e" + t); marcar(r); log(`${p.nombre} sopla polvo de sueño: ${r.nombre} se duerme un turno.`, "ok"); }
     return fin();
   }
   if (tipo === "anillo") {
     if (!S.anillo || c.anilloUsado) return;
     c.anilloUsado = true;
-    c.rivales.forEach(r => { r.aturdido = true; });
+    c.rivales.forEach((r, k) => { if (r.hp > 0) ponerEstado(r, "paralisis", 1, false, "e" + k); });
     log(`${p.nombre} se vuelve invisible. Los enemigos no saben a quién atacar.`, "ok");
     return fin();
   }
@@ -1267,21 +1460,16 @@ async function turnoEnemigo(ri) {
   guardar(); render();
   await esperar(450);
   if (!sigue()) return;
-  const atk = r.atk + r.atkMod;
-  if (r.veneno > 0) {
-    r.veneno--;
-    const v = d(6);
-    r.hp = Math.max(0, r.hp - v);
-    fx({ tipo: "numero", objetivo: o, texto: "-" + v, color: RP.hoja[4] });
-    log(`El veneno quema a ${r.nombre}: ${v} de daño.`, "ok");
-    if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o }); else comprobarFase(ri);
-  }
-  if (r.hp <= 0) { /* el veneno lo ha rematado */ }
-  else if (r.aturdido) { log(`${r.nombre} pierde su turno.`, "ok"); r.aturdido = false; r.quemado = false; }
+  const atk = r.atk + r.atkMod - (r.est.debil ? 2 : 0);
+  const quemandose = !!r.est.quemadura;
+  const salta = tickEstados(r, false, o);
+  if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o }); else comprobarFase(ri);
+  if (r.hp <= 0) { /* los estados lo han rematado */ }
+  else if (salta) { r.quemado = false; await esperar(350); if (!sigue()) return; }
   else {
     const cada = n => c.ronda % n === 0;
     if (r.regenera) {
-      if (r.quemado) log(`${r.nombre} no puede regenerarse: el fuego le ha cauterizado.`, "ok");
+      if (r.quemado || quemandose) log(`${r.nombre} no puede regenerarse: el fuego le ha cauterizado.`, "ok");
       else if (r.hp < r.hpMax) { const cu = Math.min(r.regenera, r.hpMax - r.hp); r.hp += cu; log(`${r.nombre} se regenera: +${cu} PG.`, "ko"); fx({ tipo: "cura", objetivo: o }); }
       r.quemado = false;
     }
@@ -1290,22 +1478,45 @@ async function turnoEnemigo(ri) {
     if (c.escudo) { log(`${r.nombre} ataca, pero el escudo lo para todo.`, "ok"); c.escudo = false; fx({ tipo: "ataque", actor: o }); }
     else {
       const n = r.ataques + (r.partido ? 1 : 0);
-      for (let k = 0; k < n; k++) {
+      const sp = ESPECIALES[r.clave], usaEsp = !!sp && cada(sp.cada);
+      if (usaEsp) {
+        fx({ tipo: "anuncio", texto: sp.nombre, sub: r.nombre, tono: "ko" });
+        log(`${r.nombre} usa ${sp.nombre}.`, "ko");
+        await esperar(500);
+        if (!sigue()) return;
+      }
+      if (usaEsp && sp.todos) {
+        fx({ tipo: "ataque", actor: o }); fx({ tipo: "destello", color: "rgba(255,140,60,0.3)" });
+        const partes = vivos().map(i => {
+          const dmg = Math.max(1, Math.round(tirar(e.dano[0], e.dano[1], e.dano[2] + (r.danoExtra || 0)) * (sp.mult || 1)));
+          let tx = `${S.players[i].nombre} ${danarHeroe(i, dmg, false).split(".")[0]}`;
+          if (S.players[i].alma > 0 && Math.random() < sp.estado[2] && ponerEstado(S.players[i], sp.estado[0], sp.estado[1], true, "h" + i)) tx += ` (${ESTADOS[sp.estado[0]].nombre.toLowerCase()})`;
+          return tx;
+        });
+        log(`${sp.nombre}: ${partes.join(", ")}.`, "ko");
+        render();
+        await esperar(400);
+        if (!sigue()) return;
+      }
+      for (let k = usaEsp && sp.todos ? 1 : 0; k < n; k++) {
         const ti = heroeAlAzarVivo();
         if (ti < 0) break;
         const t = S.players[ti];
+        const especial = usaEsp && !sp.todos && k === 0;
         fx({ tipo: "ataque", actor: o });
         if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); await esperar(300); if (!sigue()) return; continue; }
         const rr = d(20), def = ca(t);
-        const ok = rr === 20 || (rr !== 1 && rr + atk >= def);
+        const ok = (rr === 20 || (rr !== 1 && rr + atk >= def)) && !(r.est.ciego && Math.random() < 0.5);
         mostrarTirada.ultimo = rr;
         if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), rr);
         if (ok) {
-          let dmg = Math.max(1, tirar(e.dano[0] * (rr === 20 ? 2 : 1), e.dano[1], e.dano[2] + (r.danoExtra || 0)) - (c.blando ? 2 : 0));
+          let dmg = Math.max(1, Math.round((tirar(e.dano[0] * (rr === 20 ? 2 : 1), e.dano[1], e.dano[2] + (r.danoExtra || 0)) - (c.blando ? 2 : 0)) * (especial ? sp.mult || 1 : 1)));
+          if (especial && sp.sinDano) dmg = 0;
           const bloq = await ventanaBloqueo(ti);
           if (!sigue()) return;
-          if (bloq) { dmg = Math.max(1, Math.ceil(dmg / 2)); c.bloqueos++; fx({ tipo: "numero", objetivo: "h" + ti, texto: "BLOQUEO", color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" }); }
-          let txt = `${r.nombre} → ${t.nombre}: ${rr} ${fmt(atk)} vs CA ${def}${bloq ? " · ¡bloqueado!" : ""} → ${danarHeroe(ti, dmg, true, ri)}`;
+          if (bloq) { dmg = Math.max(dmg ? 1 : 0, Math.ceil(dmg / 2)); c.bloqueos++; if (S.stats) S.stats[ti].bloqueos++; fx({ tipo: "numero", objetivo: "h" + ti, texto: "BLOQUEO", color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" }); }
+          let txt = `${especial ? sp.nombre : r.nombre} → ${t.nombre}: ${rr} ${fmt(atk)} vs CA ${def}${bloq ? " · ¡bloqueado!" : ""} → ${dmg > 0 ? danarHeroe(ti, dmg, true, ri) : "sin daño"}`;
+          if (especial && t.alma > 0) [sp.estado, sp.extra].forEach(es => { if (es && Math.random() < es[2] * (bloq ? 0.5 : 1) && ponerEstado(t, es[0], es[1], true, "h" + ti)) txt += `. ${ESTADOS[es[0]].nombre}`; });
           if (r.drena && r.hp > 0) { const cu = Math.max(1, Math.floor(dmg / 2)); r.hp = Math.min(r.hpMax, r.hp + cu); txt += `. Bebe y se cura ${cu}`; }
           if (r.roba && t.oro > 0) { const rob = Math.min(r.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
           log(txt, "ko"); mostrarTirada(txt, false);
@@ -1320,15 +1531,20 @@ async function turnoEnemigo(ri) {
         if (!sigue()) return;
       }
       if (r.hp > 0 && r.area && cada(r.area.cada)) {
-        const partes = vivos().map(i => { fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego }); return `${S.players[i].nombre} ${danarHeroe(i, d(r.area.dado) + Math.floor((r.danoExtra || 0) / 2), false).split(".")[0]}`; });
+        const partes = vivos().map(i => {
+          fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego });
+          const tx = `${S.players[i].nombre} ${danarHeroe(i, d(r.area.dado) + Math.floor((r.danoExtra || 0) / 2), false).split(".")[0]}`;
+          if (r.areaEstado && S.players[i].alma > 0 && Math.random() < r.areaEstado[2]) ponerEstado(S.players[i], r.areaEstado[0], r.areaEstado[1], true, "h" + i);
+          return tx;
+        });
+        fx({ tipo: "anuncio", texto: r.area.txt.replace(/^[^ ]+ /, "").replace(/^./, x => x.toUpperCase()), sub: r.nombre, tono: "ko" });
         if (partes.length) { fx({ tipo: "destello", color: "rgba(255,120,60,0.35)" }); log(`${r.area.txt}: ${partes.join(", ")}.`, "ko"); }
       }
       if (r.hp > 0 && r.estado && cada(r.estado.cada)) {
         const ti = heroeAlAzarVivo();
         if (ti >= 0) {
           const t = S.players[ti];
-          if (t.raza === "elfo") log(`${r.nombre} no puede con ${t.nombre}: linaje feérico.`, "ok");
-          else { t.est.aturdido = 1; log(`${r.estado.txt.replace("{x}", t.nombre)}.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
+          if (ponerEstado(t, "paralisis", 1, true, "h" + ti)) { log(`${r.estado.txt.replace("{x}", t.nombre)}.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
         }
       }
     }
@@ -1342,12 +1558,13 @@ async function turnoEnemigo(ri) {
 function victoria() {
   const sc = S.esc, c = S.combate, principal = c.rivales[0];
   fx({ tipo: "victoria" });
+  fx({ tipo: "salto", actor: "h*" });
   const extra = [];
   let robado = 0;
   S.players.forEach((p, i) => { if (c.robado[i]) { p.oro += c.robado[i]; robado += c.robado[i]; } });
   if (robado) extra.push(`+${robado} po recuperadas`);
   const pesadilla = S.dificultad === "dificil";
-  S.players.forEach(p => { if (p.alma <= 0 && !pesadilla) p.alma = 1; p.est = { aturdido: 0, cegado: 0 }; });
+  S.players.forEach(p => { if (p.alma <= 0 && !pesadilla) p.alma = 1; p.est = {}; });
   if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => { if (p.alma > 0) curar(p, 3); }); extra.push("Inspiración +3 PG"); }
   S.players.forEach(p => { if (p.clase === "brujo" && p.alma > 0) { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   if (tiene("respiro")) { S.players.forEach(p => { if (p.alma > 0) curar(p, Math.ceil(maxAlma(p) * 0.3)); }); extra.push("Segundo respiro: +30 % PG"); }
@@ -1398,6 +1615,14 @@ function iconoNodo(tipo) {
     new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.azul, { relieve: 3 });
     const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.hueso[4]); } };
     PX.texto(pinta, "?", 4, 2, RP.hueso[4], null, 2);
+  } else if (tipo === "altar") {
+    new C(14, 14).rect(2, 8, 10, 4).rect(3, 6, 8, 2).pintar(g, RP.piedra, { relieve: 2 });
+    new C(14, 14).ell(7, 4, 2.5, 2.5).pintar(g, RP.sangre, { relieve: 2 });
+    g.set(7, 1, RP.fuego[3]).set(6, 2, RP.fuego[2]).set(8, 2, RP.fuego[2]);
+  } else if (tipo === "misterio") {
+    new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.violeta, { relieve: 3 });
+    const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.bronce[4]); } };
+    PX.texto(pinta, "?", 4, 2, RP.bronce[4], null, 2);
   } else if (tipo === "tesoro") {
     new C(14, 14).rect(2, 3, 10, 3).pintar(g, RP.madera, { relieve: 1 });
     new C(14, 14).rect(2, 6, 10, 6).pintar(g, RP.madera, { relieve: 2 });
@@ -1575,16 +1800,25 @@ function renderJuego() {
   /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */
   const vivo = !enMapa && !S.final && !S.derrota;
   const enTienda = vivo && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
-  const enPanel = enTienda || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
+  const enPanel = enTienda || !!S.final || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
   $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
   if (!$("#dado").dataset.listo) { $("#dado").dataset.listo = "1"; ESCENARIO.dibujarDado($("#dado"), 20); }
   const acto = Math.max(0, S.acto);
-  $("#barra-titulo").innerHTML = `<span class="progreso">${ACTOS.map((_, i) => `<i class="${i < acto ? "hecho" : i === acto ? "ahora" : ""}"></i>`).join("")}</span><span>Acto ${ROMANOS[acto]} · ${ACTOS[acto].nombre}</span>`;
+  $("#barra-titulo").innerHTML = `<span class="progreso">${ACTOS.slice(0, ultimoActo() + 1).map((_, i) => `<i class="${i < acto ? "hecho" : i === acto ? "ahora" : ""}"></i>`).join("")}</span><span>Acto ${ROMANOS[acto]} · ${ACTOS[acto].nombre}</span>`;
   sincronizarEscenario();
   renderGrupo();
   if (enMapa) renderMapa(); else { $("#mapa").innerHTML = ""; renderEscena(); }
+  /* Cada pantalla nueva del panel entra con una pequeña animación; en combate, aviso de turno. */
+  const clave = [S.modo, S.esc && S.esc.titulo, S.fase, !!S.combate, S.aprender.length, !!S.ofertaB, S.final, S.derrota].join("|");
+  if (clave !== renderJuego.clave) { renderJuego.clave = clave; const pn = $("#panel"); pn.classList.remove("entra"); void pn.offsetWidth; pn.classList.add("entra"); clearTimeout(renderJuego.te); renderJuego.te = setTimeout(() => pn.classList.remove("entra"), 450); }
+  const turnoClave = S.combate && !S.combate.enemigoActua ? `${S.combate.ronda}:${S.combate.pos}` : "";
+  if (turnoClave && turnoClave !== renderJuego.turno) {
+    const p = S.players[S.turno];
+    if (p && (!S.online || p.uid === miId)) anunciar({ texto: S.online ? "¡Tu turno!" : `Turno de ${p.nombre}`, sub: S.online ? p.nombre : "", tono: "turno" });
+  }
+  renderJuego.turno = turnoClave;
   const u = S.log[S.log.length - 1];
   if (u && !$("#dado-info").textContent.trim()) $("#dado-info").textContent = u.t;
 }
@@ -1592,14 +1826,15 @@ function tipoRival(clave) { return typeof PNJ !== "undefined" && PNJ[clave] ? "p
 function sincronizarEscenario() {
   const sc = S.esc;
   let rivales = [];
-  if (S.combate) rivales = S.combate.rivales.map(r => ({ tipo: "enemigo", clave: r.clave, hp: r.hp, max: r.hpMax, maldito: r.maldito, aturdido: r.aturdido, veneno: r.veneno > 0,
+  const colores = o => Object.keys((o && o.est) || {}).filter(k => ESTADOS[k]).map(k => ESTADOS[k].color);
+  if (S.combate) rivales = S.combate.rivales.map(r => ({ tipo: "enemigo", clave: r.clave, hp: r.hp, max: r.hpMax, estados: colores(r), aturdido: !!(r.est.paralisis || r.est.congelado), congelado: !!r.est.congelado,
     flota: r.clave === "elemental" || (r.clave === "dragon" && r.fase === 2), derrotado: r.hp <= 0 }));
   else if (S.resultado && S.resultado.tipo === "victoria") rivales = (S.resultado.rivales || [S.resultado.enemigo]).map(k => ({ tipo: "enemigo", clave: k, derrotado: true }));
   else if (sc && sc.pnj) rivales = [{ tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" }];
   const fondo = (sc && sc.fondo) || ACTOS[Math.max(0, S.acto)].fondos[0];
   escJuego.mostrar({
     fondo, rivales, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
-    heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && p.est.aturdido) }))
+    heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
 }
 function renderGrupo() {
@@ -1608,11 +1843,13 @@ function renderGrupo() {
     const activo = i === S.turno && !S.final && !S.derrota && !(S.combate && S.combate.enemigoActua);
     const max = maxAlma(p), pct = Math.round((100 * p.alma) / max);
     const conectado = !S.online || p.uid === miId || red.peers.some(x => x.presence && x.presence.id === p.uid);
-    return `<button type="button" class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
+    const g = GESTOS[i] && GESTOS[i].hasta > performance.now() ? " " + GESTOS[i].clase : "";
+    return `<button type="button" class="heroe${g}${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
       <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
       <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
-      <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span></span></button>`;
+      <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span>
+      ${p.est && Object.keys(p.est).length ? `<span class="ests">${Object.keys(p.est).filter(k => ESTADOS[k]).map(k => `<i style="--c:${ESTADOS[k].color}" title="${ESTADOS[k].nombre}: ${ESTADOS[k].desc}">${ESTADOS[k].nombre.slice(0, 3)}</i>`).join("")}</span>` : ""}</span></button>`;
   }).join("");
   pintarRetratos($("#grupo"));
 }
@@ -1638,21 +1875,37 @@ function quienLinea(p, verbo) {
   if (turnoMio()) return verbo ? `<p class="quien">${verbo} <b>${esc(p.nombre)}</b>${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2" : ""}</p>` : "";
   return `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b> en su móvil…</p>`;
 }
+/* Premios y números de la partida, para presumir al final. */
+function htmlResumen() {
+  const st = S.stats || [];
+  if (!st.length) return "";
+  const premio = (titulo, campo, unidad) => {
+    let i = -1, mx = 0;
+    st.forEach((x, k) => { if (x && x[campo] > mx) { mx = x[campo]; i = k; } });
+    return i < 0 ? "" : `<li><span>${titulo}</span><b>${esc(S.players[i].nombre)}</b><i>${mx} ${unidad}</i></li>`;
+  };
+  const premios = [premio("Más daño", "dano", "de daño"), premio("Mejor golpe", "mejor", "de golpe"), premio("Sanador", "curado", "PG curados"),
+    premio("El muro", "bloqueos", "bloqueos"), premio("Pulso firme", "perfectos", "perfectos"), premio("Matagigantes", "bajas", "enemigos")].join("");
+  const filas = S.players.map((p, k) => `<tr><td>${esc(p.nombre)}</td><td>${st[k].dano}</td><td>${st[k].curado}</td><td>${st[k].bloqueos}</td><td>${st[k].criticos}</td><td>${st[k].bajas}</td></tr>`).join("");
+  return `<ul class="premios">${premios}</ul>
+    <table class="tabla-stats"><thead><tr><th></th><th>Daño</th><th>Cura</th><th>Bloq.</th><th>Crít.</th><th>Bajas</th></tr></thead><tbody>${filas}</tbody></table>`;
+}
 function renderMapa() {
   const m = S.mapa, p = S.players[S.turno];
   const libres = m.filas[m.fila][m.col].sig;
-  const mio = turnoMio() && !esperandoHost;
+  const mio = (turnoMio() || hayVotacion()) && !esperandoHost;
   const filas = m.filas.map((fila, f) => `<div class="fila-mapa">${fila.map((n, j) => {
     const aqui = f === m.fila && j === m.col, libre = f === m.fila + 1 && libres.includes(j);
-    const cls = `nodo${n.hecho ? " hecho" : ""}${aqui ? " aqui" : ""}${libre ? " libre" : ""}${n.tipo === "jefe" ? " jefe" : ""}`;
+    const vt = libre ? votosDe("nodo", j) : { n: 0 };
+    const cls = `nodo n-${n.tipo}${n.hecho ? " hecho" : ""}${aqui ? " aqui" : ""}${libre ? " libre" : ""}${n.tipo === "jefe" ? " jefe" : ""}${vt.mio ? " votado" : ""}`;
     return `<button type="button" class="${cls}" data-f="${f}" data-j="${j}" ${libre && mio ? `data-juego="nodo" data-v="${j}"` : "disabled"} aria-label="${NOMBRE_NODO[n.tipo]}">
-      <canvas data-icono="${n.tipo}" data-tam="${n.tipo === "jefe" ? 34 : 26}"></canvas></button>`;
+      <canvas data-icono="${n.tipo}" data-tam="${n.tipo === "jefe" ? 32 : 24}"></canvas>${vt.n ? `<span class="votos">${vt.n}</span>` : ""}</button>`;
   }).join("")}</div>`).reverse().join("");
   $("#mapa").innerHTML = `<svg class="lineas" aria-hidden="true"></svg>${filas}`;
   pintarIconos($("#mapa"));
   requestAnimationFrame(dibujarLineas);
-  $("#panel").innerHTML = `${quienLinea(p, "Elige el camino:")}
-    <p class="leyenda">${["combate", "elite", "evento", "tesoro", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
+  $("#panel").innerHTML = `${hayVotacion() ? lineaVotacion() : quienLinea(p, "Elige el camino:")}
+    <p class="leyenda">${["combate", "elite", "evento", "misterio", "tesoro", "altar", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
   pintarIconos($("#panel"));
 }
 function dibujarLineas() {
@@ -1677,8 +1930,15 @@ function renderEscena() {
   const mio = turnoMio() && !esperandoHost, off = !mio;
   if (S.final) {
     const f = FINALES[S.final];
-    el.innerHTML = `<h2>${f.titulo}</h2>${parrafo(f.texto[0])}
-      <ul class="epilogo">${S.players.map(x => `<li><b>${esc(x.nombre)}</b> ${EPILOGOS[D.ejesAlin(x.alin)[1]]}</li>`).join("")}</ul>
+    el.innerHTML = `<p class="sello ok">Fin de la aventura${S.acto >= 4 ? " · Abismo vencido" : ""}</p><h2>${f.titulo}</h2>${parrafo(f.texto[0])}
+      <ul class="epilogo">${(() => {
+        /* Quien comparte destino comparte frase. */
+        const grupos = {};
+        S.players.forEach(x => { const k = D.ejesAlin(x.alin)[1]; (grupos[k] = grupos[k] || []).push(esc(x.nombre)); });
+        return Object.keys(grupos).map(k => `<li><b>${grupos[k].length > 1 ? grupos[k].slice(0, -1).join(", ") + " y " + grupos[k].slice(-1) : grupos[k][0]}</b> ${EPILOGOS[k]}</li>`).join("");
+      })()}</ul>
+      ${htmlResumen()}
+      ${!S.abismo ? `<p class="proxima">Bajo el tesoro algo se mueve… El Acto V, el Abismo, queda desbloqueado.</p>` : ""}
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-ui="otra">Otra aventura</button>` : `<p class="espera">¡Fin! El anfitrión puede empezar otra.</p>`}</div>`;
     return;
   }
@@ -1708,7 +1968,7 @@ function renderEscena() {
   if (S.fase === "resultado" && S.resultado) {
     const r = S.resultado;
     const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "cofre" ? "¡Botín!" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
-    const sigue = sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa";
+    const sigue = sc.esJefe ? (S.acto >= ultimoActo() ? "Ver el tesoro" : S.acto === 3 ? "Bajar al Abismo" : "Siguiente acto") : "Volver al mapa";
     el.innerHTML = `${cab}<p class="sello ${r.ok ? "ok" : "ko"}">${sello}</p>${parrafo(r.texto || "")}
       ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
       ${S.botin.length ? `<div class="botin">${S.botin.map(tarjetaBotin).join("")}</div>` : ""}
@@ -1723,20 +1983,24 @@ function renderEscena() {
     el.innerHTML = `${cab}${parrafo(sc.texto)}<div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sc.boton}</button>` : quienLinea(p, "")}</div>`;
     return;
   }
+  /* En línea se vota: todos pueden tocar; la tirada la hace quien tiene el turno. */
+  const vot = hayVotacion(), offV = vot ? esperandoHost : off;
+  const conVotos = (k, v, chip) => { const vt = votosDe(k, v); return [chip, vt.n ? `${vt.n} voto${vt.n > 1 ? "s" : ""}${vt.mio ? " · tú" : ""}` : ""].filter(Boolean).join(" · "); };
+  const quienV = verbo => (vot ? lineaVotacion() + `<p class="quien">Tira los dados <b>${esc(p.nombre)}</b></p>` : quienLinea(p, verbo));
   if (sc.tipo === "prueba") {
-    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decide")}<div class="menu">${sc.opciones.map((op, i) => {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienV("Decide")}<div class="menu">${sc.opciones.map((op, i) => {
       const chip = op.stat ? `${ABREV[op.stat]}${fmt(stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0))} · CD ${op.cd}` : "";
-      return boton(`data-juego="op" data-v="${i}"`, op.txt, chip, "", off);
+      return boton(`data-juego="op" data-v="${i}"${votosDe("op", i).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("op", i, chip), "", offV);
     }).join("")}</div>`;
     return;
   }
   if (sc.tipo === "enigma") {
     const tachada = respuestaTachada(sc);
-    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Responde")}<div class="menu dos">${sc.respuestas.map((t, i) => boton(`data-juego="resp" data-v="${i}"`, i === tachada ? `<s>${t}</s>` : t, "", "", off || i === tachada)).join("")}</div>`;
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienV("Responde")}<div class="menu dos">${sc.respuestas.map((t, i) => boton(`data-juego="resp" data-v="${i}"${votosDe("resp", i).mio ? ' data-votado="1"' : ""}`, i === tachada ? `<s>${t}</s>` : t, conVotos("resp", i, ""), "", offV || i === tachada)).join("")}</div>`;
     return;
   }
   if (sc.tipo === "final") {
-    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decidid juntos. Elige")}<div class="menu">${sc.opciones.map(op => boton(`data-juego="final" data-v="${op.final}"`, op.txt, "", "", off)).join("")}</div>`;
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${vot ? lineaVotacion() : quienLinea(p, "Decidid juntos. Elige")}<div class="menu">${sc.opciones.map(op => boton(`data-juego="final" data-v="${op.final}"${votosDe("final", op.final).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("final", op.final, ""), "", offV)).join("")}</div>`;
     return;
   }
   if (sc.tipo === "tienda") return renderTienda(el, p, mio);
@@ -1761,9 +2025,10 @@ function intencion(c, k) {
   const r = c.rivales[k], ie = c.orden.findIndex(a => a.t === "e" && a.r === k);
   const ronda = c.pos <= ie ? c.ronda : c.ronda + 1;
   const cada = n => ronda % n === 0;
-  if (r.aturdido) return "pierde el turno";
-  const n = r.ataques + (r.partido ? 1 : 0);
+  if (r.est.paralisis || r.est.congelado) return "pierde el turno";
+  const n = r.ataques + (r.partido ? 1 : 0), sp = ESPECIALES[r.clave];
   const partes = [c.escudo ? "su ataque está bloqueado" : `atacará ${n === 1 ? "1 vez" : n + " veces"}`];
+  if (sp && cada(sp.cada) && !c.escudo) partes.push(`usará <b>${sp.nombre}</b> (${[sp.estado, sp.extra].filter(Boolean).map(textoEstado).join(", ")}${sp.todos ? ", a todos" : ""})`);
   if (r.area && cada(r.area.cada)) partes.push("<b>¡golpe a todo el grupo!</b>");
   if (r.estado && cada(r.estado.cada)) partes.push("<b>intentará paralizar a alguien</b>");
   if (r.cura && cada(r.cura.cada) && r.hp < r.hpMax) partes.push("se curará");
@@ -1778,7 +2043,8 @@ function renderCombate(el, sc, p, mio) {
   const t = miObjetivo(), r = c.rivales[t], e = ENEMIGOS[r.clave];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
   const chips = [c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", `CA ${e.ca}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
-    r.maldito ? "Maldito" : "", r.veneno ? `Veneno ${r.veneno}` : "", r.atkMod < r.atkBase ? `Ataque ${fmt(r.atkMod - r.atkBase)}` : "", r.aturdido ? "Sin turno" : "", r.marca ? "¡Listo para combo!" : "", c.escudo ? "Escudo" : ""].filter(Boolean);
+    r.marca ? "¡Listo para combo!" : "", c.escudo ? "Escudo" : ""].filter(Boolean)
+    .concat(Object.keys(r.est).filter(k => ESTADOS[k]).map(k => `<i class="est" style="--c:${ESTADOS[k].color}">${ESTADOS[k].nombre}${r.est[k] < 90 ? ` ${r.est[k]}` : ""}</i>`));
   const varios = c.rivales.length > 1;
   const lista = c.rivales.map((x, k) => `<button type="button" class="riv${k === t ? " sel" : ""}${x.hp <= 0 ? " muerto" : ""}${k === c.actua ? " actua" : ""}" ${varios && x.hp > 0 ? `data-ui="objetivo" data-k="${k}"` : `data-ui="bestia" data-k="${x.clave}"`} ${x.hp <= 0 ? "disabled" : ""}>
       <span class="rn">${esc(x.nombre)}</span><span class="barra-rival"><i style="width:${Math.round((100 * x.hp) / x.hpMax)}%"></i></span><b>${x.hp}/${x.hpMax}</b></button>`).join("");
@@ -1856,7 +2122,7 @@ function htmlMochila() {
   }).join("")}</ul>${S.anillo ? "<p>Anillo de invisibilidad: una vez por combate, el enemigo pierde su turno.</p>" : ""}`;
 }
 function htmlCompendio(pestana, k) {
-  const tabs = { bestiario: "Bestiario", mundo: "Mundo", razas: "Razas", clases: "Clases" };
+  const tabs = { bestiario: "Bestiario", estados: "Estados", mundo: "Mundo", razas: "Razas", clases: "Clases" };
   let cuerpo = "";
   if (pestana === "mundo") cuerpo = LORE.mundo.map(x => `<article><h3>${x.titulo}</h3>${x.texto.map(t => `<p>${t}</p>`).join("")}</article>`).join("")
     + Object.keys(LORE.lugares).filter(i => S && S.vistos.lugares.includes(+i)).map(i => `<article><h3>${LORE.lugares[i].titulo}</h3><p>${LORE.lugares[i].texto[0]}</p></article>`).join("");
@@ -1866,6 +2132,8 @@ function htmlCompendio(pestana, k) {
       <p class="bloque-stats">${e.tipo} · VD ${e.vd} · CA ${e.ca} · PG ${e.alma}${e.resiste ? ` · resiste ${TIPOS_DANO[e.resiste]}` : ""}${e.debil ? ` · débil a ${TIPOS_DANO[e.debil]}` : ""}</p>
       <p><b>${e.rasgoDesc}</b> ${e.lore}</p></div></article>`;
   }).join("") || `<p class="espera">Aún no os habéis cruzado con ningún monstruo.</p>`;
+  if (pestana === "estados") cuerpo = Object.keys(ESTADOS).map(k => `<article><h3 style="color:${ESTADOS[k].color}">${ESTADOS[k].nombre}</h3><p>${ESTADOS[k].desc}</p></article>`).join("")
+    + `<article><h3>Ataques especiales</h3><p>Cada monstruo tiene uno. «Su turno» avisa cuándo lo usará y qué estado provoca.</p></article>`;
   if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(x => { const r = RAZAS[x]; return `<article><h3>${r.nombre}</h3><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p>${r.lore}</p></article>`; }).join("");
   if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p>${Object.keys(APRENDE[x]).map(l => `<b>Nv ${l}:</b> ${APRENDE[x][l].map(id => H(id).nombre).join(", ")}`).join(" · ")}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
   return `<h2>Compendio</h2><div class="pestanas">${Object.keys(tabs).map(t => `<button type="button" data-ui="pestana" data-p="${t}" aria-selected="${t === pestana}">${tabs[t]}</button>`).join("")}</div><div class="compendio">${cuerpo}</div>`;
@@ -1880,6 +2148,9 @@ function htmlAyuda() {
     <li><b>Golpe certero:</b> al atacar, para la marca en el centro de la barra: +2 a la tirada, o +5 si es perfecto.</li>
     <li><b>Bloqueo:</b> cuando un ataque va a darte, aparece «¡BLOQUEA!». Tócalo a tiempo y recibes la mitad de daño.</li>
     <li><b>Jefes:</b> a media vida entran en fase 2 y cambian de táctica.</li>
+    <li><b>Estados:</b> veneno, quemadura y sangrado quitan vida cada turno; parálisis y congelación hacen perder el turno; cegado falla la mitad; debilitado pega peor; maldito recibe más daño. Los ves como puntitos de color sobre cada personaje y en el Compendio.</li>
+    <li><b>Votaciones:</b> en línea, el camino y las decisiones se votan (15 s). Si hay empate, gana el voto de quien tiene el turno.</li>
+    <li><b>El Abismo:</b> tras matar al dragón una vez, se desbloquea un quinto acto con un jefe secreto (siempre disponible en Pesadilla).</li>
     <li><b>Runas y logros:</b> al vencer jefes, al caer y con cada logro ganas runas. Gástalas en el altar para empezar con ventajas.</li>
     <li><b>Botín:</b> los cofres y los enemigos sueltan armas, armaduras y objetos mágicos. Pulsa el nombre del héroe que se lo queda (▲ = mejor que lo que lleva). Lo que nadie coge se vende.</li>
     <li><b>Tiradas:</b> d20 + atributo contra la CD (o la CA del enemigo). 20 es crítico y 1 es pifia.</li>
@@ -1901,6 +2172,7 @@ function ejecutar(k, v) {
     case "aprender": return aprender(+v);
     case "bendicion": return elegirBendicion(v);
     case "bloquear": return bloquear();
+    case "votar": { const [k2, v2] = String(v).split("|"); return votar(remoto || miId, k2, v2); }
     case "objeto": return accion("objeto", v);
     case "comprar": return comprar(v);
     case "terminar": return terminarCompras();
@@ -1922,7 +2194,8 @@ document.addEventListener("click", ev => {
   audio();
   const ds = b.dataset;
   if (ds.juego) {
-    const k = ds.juego, v = ds.v;
+    let k = ds.juego, v = ds.v;
+    if (S && VOTABLES.has(k) && hayVotacion()) { v = `${k}|${v}`; k = "votar"; }
     if (!S || (ocupado && k !== "bloquear") || (esperandoHost && k !== "bloquear") || certeroActivo) return;
     if (k === "reintentar" ? S.online && !esHost() : !permitido(k, miId)) return;
     const mandar = (vv = v) => (S.online && !esHost() ? (k === "bloquear" ? enviarBloqueo() : enviarJugada(k, vv)) : ejecutar(k, vv));
@@ -1943,7 +2216,7 @@ document.addEventListener("click", ev => {
     case "sel-sig": return cambiarSeleccion(ds.c, 1);
     case "sel-azar": { const h = heroeEditado(); const n = heroeAlAzar(Math.floor(Math.random() * 9)); Object.assign(h, { raza: n.raza, clase: n.clase, look: n.look }); if (sel.online) publicarPresencia(); return renderSeleccion(); }
     case "sel-heroe": sel.actual = +ds.i; return renderSeleccion();
-    case "sel-anadir": sel.heroes.push(heroeAlAzar(sel.heroes.length)); sel.actual = sel.heroes.length - 1; return renderSeleccion();
+    case "sel-anadir": { const n = heroeAlAzar(sel.heroes.length), usados = sel.heroes.map(h => h.nombre); n.nombre = NOMBRES.find(x => !usados.includes(x) && Math.random() < 0.3) || NOMBRES.find(x => !usados.includes(x)) || n.nombre; sel.heroes.push(n); } sel.actual = sel.heroes.length - 1; return renderSeleccion();
     case "sel-quitar": sel.heroes.splice(sel.actual, 1); sel.actual = Math.max(0, sel.actual - 1); return renderSeleccion();
     case "sel-listo":
       if (!sel.online) return comenzarLocal();
@@ -1988,7 +2261,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (location.hash === "#prueba") window.__dym = { estado: () => S, H };
+if (location.hash === "#prueba") window.__dym = { estado: () => S, H, render: () => render() };
 render();
 conectar();
 })();

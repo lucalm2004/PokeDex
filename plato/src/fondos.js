@@ -1849,6 +1849,365 @@ const FONDOS = (() => {
     }
   }
 
+  /* ---------- El Abismo, el plano de las sombras ---------- */
+  const NADA = ["#05030a", "#0c0717", "#170d2a", "#251543", "#3a2160", "#57357f"];          // cielo del vacío
+  const OBSIDIANA = ["#07050b", "#110c19", "#1d1529", "#2d2242", "#463563", "#6a5290"];     // roca negra y vidriosa
+  const AZUR = ["#08222a", "#0f4a56", "#1c8590", "#47c6c8", "#b6fff2"];                   // fulgor cian
+  const SOL_NEGRO = [140, 24];
+  const ESTRELLAS_ABISMO = [];
+  const nebulosa = (x, y) => Math.sin(x * 0.045 + Math.sin(y * 0.09) * 1.6) * Math.sin(y * 0.07 - x * 0.012 + 1.3);
+  const coronaAbismo = (x, y) => Math.max(0, 1 - Math.hypot(x - SOL_NEGRO[0], y - SOL_NEGRO[1]) / 44);
+  function abismo(g) {
+    ESTRELLAS_ABISMO.length = 0;
+    const [sx, sy] = SOL_NEGRO;
+    rellenar(g, 0, 0, W, 72, NADA, (x, y) => 0.2 + Math.pow(y / 72, 1.8) * 2.6 + Math.max(0, nebulosa(x, y)) * 1.5 + coronaAbismo(x, y) * 1.4, 0.7);
+    // una veta de polvo de estrellas cian que cruza el cielo en diagonal
+    for (let y = 0; y < 66; y++) for (let x = 0; x < W; x++) {
+      const banda = 1 - Math.abs(y - (42 - x * 0.18 + Math.sin(x * 0.05) * 5)) / 5.5, v = 0.6 + 0.4 * Math.sin(x * 0.13 - y * 0.2);
+      if (banda > 0 && umbral(x, y) < banda * 0.55 * v) g.set(x, y, banda > 0.72 ? AZUR[2] : AZUR[1]);
+    }
+    for (let i = 0; i < 130; i++) {
+      const x = Math.floor(hash(i, 1, 41) * W), y = Math.floor(hash(i, 2, 41) * 64), h = hash(i, 3, 41);
+      if (Math.hypot(x - sx, y - sy) < 15) continue;
+      g.set(x, y, h > 0.85 ? HU[4] : h > 0.55 ? AZUR[3] : h > 0.3 ? MG[3] : NADA[5]);
+      if (h > 0.95) for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) g.set(x + a, y + b, MG[2]);
+      ESTRELLAS_ABISMO.push([x, y, h]);
+    }
+    // el sol negro: un disco de vacío con la corona encendida
+    for (let y = sy - 22; y <= sy + 22; y++) for (let x = sx - 22; x <= sx + 22; x++) {
+      const d = Math.hypot(x - sx, y - sy), a = Math.atan2(y - sy, x - sx), rayo = Math.max(0, Math.sin(a * 7 + 0.5)) ** 3;
+      if (d < 9) g.set(x, y, d > 8 ? NADA[2] : NADA[0]);
+      else if (d < 10.2) g.set(x, y, a < -1.2 && a > -2.9 ? AZUR[4] : MG[4]);
+      else if (d < 11.2) g.set(x, y, MG[3]);
+      else {
+        const f = (1 - (d - 11) / 11) * (0.45 + rayo * 0.9);
+        if (f > 0 && umbral(x, y) < f * 0.7) g.set(x, y, f > 0.6 ? MG[3] : MG[2]);
+      }
+    }
+    // islas flotantes: las lejanas en silueta, las cercanas de obsidiana con cristales debajo
+    for (const [cx, cy, w, h] of [[72, 40, 12, 6], [118, 50, 9, 5], [58, 9, 7, 4], [186, 14, 8, 4], [100, 30, 6, 3]]) isla(g, cx, cy, w, h, cx, true);
+    isla(g, 30, 22, 38, 19, 5, false);
+    isla(g, 172, 38, 24, 12, 9, false);
+    isla(g, 104, 12, 14, 7, 13, false);
+    for (const [x, y] of [[22, 46], [36, 49], [168, 54], [178, 56], [104, 23]]) g.set(x, y, OBSIDIANA[3]).set(x + 1, y, OBSIDIANA[2]).set(x, y - 1, OBSIDIANA[4]);
+    // un obelisco roto en la isla grande
+    conBorde(g, NADA[0], tmp => {
+      capa().poly([[34, 21], [34, 8], [36, 5], [38, 9], [38, 21]]).pintar(tmp, OBSIDIANA, { relieve: 1.5, max: 4 });
+      for (const y of [11, 15, 18]) tmp.set(35, y, AZUR[3], AZUR).set(36, y, AZUR[2], AZUR);
+    });
+    // agujas de obsidiana en el horizonte y bruma violeta
+    for (let x = 0; x < W; x++) {
+      const aguja = hash(x >> 3, 4) > 0.7 ? (4 - Math.abs((x & 7) - 3.5)) * 2.2 : 0;
+      const top = Math.round(66 - Math.abs(Math.sin(x * 0.07 + 1)) * 4 - Math.max(0, Math.sin(x * 0.23)) * 2 - aguja);
+      for (let y = top; y < 72; y++) g.set(x, y, y === top ? NADA[4] : y < top + 2 && aguja ? NADA[3] : NADA[2]);
+    }
+    for (let y = 58; y < 72; y++) for (let x = 0; x < W; x++) {
+      const f = (1 - Math.abs(y - 66) / 7) * (0.5 + 0.5 * Math.sin(x * 0.04 + 2));
+      if (f > 0 && umbral(x, y) < f * 0.45) g.set(x, y, MG[1]);
+    }
+    // suelo de obsidiana cuarteada; las grietas más hondas brillan
+    const tes = teselas(150, 77, 0, 72, W, 36, 2.8, 40);
+    const brilloSuelo = (x, y) => Math.max(0, 1 - Math.abs(x - sx) / (12 + (y - 72) * 0.7)) * 1.1;
+    roca(g, tes, OBSIDIANA, (x, y) => 1.4 + ((y - 72) / 36) * 0.7 + brilloSuelo(x, y), () => [-0.4, -1, 1], { vari: 0.6, relieve: 1.2, bisel: 1.6, oscuro: 1.6, grieta: 0.5, s: 0.3 });
+    for (let y = 73; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, k = tes.id[i], k2 = tes.id2[i];
+      if (tes.grupo[k] === tes.grupo[k2] || tes.borde[i] > 0.4) continue;
+      const par = hash(Math.min(k, k2), Math.max(k, k2), 5), zona = y > 84 && y < 104 && x > 12 && x < 180;
+      if (par > (zona ? 0.86 : 0.62)) g.set(x, y, par > 0.93 ? AZUR[2] : zona ? MG[1] : MG[2]);
+    }
+    for (let x = 0; x < W; x++) { g.set(x, 72, OBSIDIANA[0]); if (umbral(x, 73) < 0.6) g.set(x, 73, OBSIDIANA[4]); }
+    // esquirlas de cristal en las esquinas del suelo
+    for (const [x, y, alto, lado] of [[4, 104, 9, 1], [11, 106, 5, 1], [186, 103, 10, -1], [178, 106, 6, -1], [40, 76, 4, 1], [150, 75, 5, -1]]) {
+      conBorde(g, NADA[0], tmp => {
+        capa().poly([[x - 1.5, y], [x + lado * 1.5, y - alto], [x + 1.5, y]]).pintar(tmp, AZUR, { relieve: 1, min: 1, max: 3, luz: [-0.7, -0.5, 0.5] });
+        tmp.set(x + lado, y - alto + 1, AZUR[4], AZUR);
+      });
+    }
+  }
+  /* Isla de roca que flota: arriba casi plana, abajo un cono mellado. */
+  function isla(g, cx, cy, w, h, sem, lejos) {
+    const abajo = [];
+    for (let k = 0; k <= 8; k++) {
+      const f = k / 8;
+      abajo.push([cx + w / 2 - f * w, cy + 1 + h * Math.pow(Math.sin(f * Math.PI), 1.5) * (0.7 + hash(k, sem, 2) * 0.5)]);
+    }
+    const c = capa().ell(cx, cy, w / 2, Math.max(1.2, w / 16)).poly([[cx + w / 2, cy], ...abajo, [cx - w / 2, cy]]);
+    if (lejos) { cada(c, (x, y) => g.set(x, y, c.tiene(x, y - 1) ? NADA[3] : NADA[5])); return c; }
+    const tes = teselas(Math.max(4, Math.round(w / 3)), sem, Math.floor(cx - w / 2), cy - 3, w + 2, h + 6, 1.2);
+    roca(g, tes, OBSIDIANA, (x, y) => 3 - ((y - cy) / h) * 2.4, () => [-0.6, -0.8, 1], { masc: c, vari: 0.6, relieve: 1.4, bisel: 1.8, s: 0.3 });
+    cada(c, (x, y) => {
+      if (!c.tiene(x, y - 1)) g.set(x, y, umbral(x, y) < 0.5 ? MG[3] : OBSIDIANA[5]);
+      else if (!c.tiene(x, y + 1) && hash(x, y, sem) > 0.7) g.set(x, y, AZUR[hash(x, sem) > 0.5 ? 3 : 2]);
+      else if (!c.tiene(x - 1, y)) g.set(x, y, OBSIDIANA[3]);
+    });
+    contraluz(g, c, NADA[1], 0, 1);
+    return c;
+  }
+  function abismoAnim(ctx, t) {
+    if (!ESTRELLAS_ABISMO.length) abismo(new Rejilla(W, H));
+    // las estrellas titilan
+    ESTRELLAS_ABISMO.forEach(([x, y, h], i) => {
+      const p = ((t / 1000) * (0.15 + h * 0.2) + hash(i, 43)) % 1;
+      if (p > 0.12) return;
+      ctx.fillStyle = HU[4]; ctx.fillRect(x, y, 1, 1);
+      if (p > 0.03 && p < 0.08 && h > 0.5) { ctx.fillStyle = h > 0.8 ? AZUR[3] : MG[3]; ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1); }
+    });
+    // motas de sombra que suben despacio desde las grietas
+    for (let i = 0; i < 16; i++) {
+      const p = ((t / 1000) * (0.05 + hash(i, 44) * 0.05) + hash(i, 45)) % 1;
+      if (p > 0.9) continue;
+      const x = Math.round(hash(i, 46) * W + Math.sin(t / 900 + i * 2.3) * 3), y = Math.round(106 - p * 70);
+      ctx.fillStyle = p < 0.3 ? AZUR[3] : p < 0.65 ? MG[3] : MG[2];
+      ctx.fillRect(x, y, 1, 1);
+    }
+    // la corona del sol negro late
+    const v = Math.sin(t / 900);
+    if (v > 0.3) {
+      ctx.fillStyle = v > 0.8 ? AZUR[4] : MG[4];
+      const [sx, sy] = SOL_NEGRO;
+      for (let a = 0; a < 6.283; a += 0.21) ctx.fillRect(Math.round(sx + Math.cos(a + t / 4000) * 11.5), Math.round(sy + Math.sin(a + t / 4000) * 11.5), 1, 1);
+    }
+  }
+
+  /* ---------- El nido de las arañas ---------- */
+  const ROCA_NIDO = ["#08090c", "#121519", "#1c2125", "#283033", "#384443", "#52645c"];
+  const SETAS_NIDO = [[16, 73, ESPECTRO], [44, 71, MG], [150, 72, ESPECTRO], [178, 75, MG], [8, 104, MG], [185, 104, ESPECTRO]];
+  const luzNido = (x, y) => lim(SETAS_NIDO.reduce((v, [sx, sy]) => v + Math.max(0, 1 - Math.hypot((x - sx) / 34, (y - sy) / 26)) ** 1.6, 0));
+  const GOTA_NIDO = [124, 13];
+  const HILO_ARANA = [70, 0];
+  const hacia_Abajo = () => [0, 1, 1];
+  const SEDA = [GRIS[2], GRIS[3], GRIS[4]];
+  function nido(g) {
+    g.rect(0, 0, W, H, ROCA_NIDO[0]);
+    const tes = teselas(90, 33, 0, 0, W, 74, 1.4, 16);
+    roca(g, tes, ROCA_NIDO, (x, y) => 0.9 + luzNido(x, y) * 3.2 - Math.max(0, 12 - y) * 0.08, hacia_Abajo, { vari: 0.6, relieve: 1.3, bisel: 2.2, oscuro: 1.5 });
+    // la boca del túnel por donde salen las arañas
+    const tunel = capa().ell(100, 48, 22, 19).quitarRect(0, 70, W, 40);
+    cada(tunel, (x, y) => { const d = Math.hypot((x - 100) / 22, (y - 48) / 19); g.set(x, y, ROCA_NIDO[lim(tono(x, y, d * 2.4 - 0.7, 0.8), 0, 2)], ROCA_NIDO); });
+    contraluz(g, tunel, ROCA_NIDO[4], 0, -1);
+    contraluz(g, tunel, ROCA_NIDO[3], -1, 0);
+    estalactitas(g, [[12, 4, 14], [34, 3, 9], [58, 3, 12], [124, 3, 13], [140, 2, 7], [166, 4, 15], [184, 3, 10]], 0, ROCA_NIDO, (x, y) => luzNido(x, y + 30), hacia_Abajo);
+    // velo de seda roto delante del túnel
+    tela(g, 100, 44, 19, 0, 6.283 * 11 / 12, 12, 4, [ROCA_NIDO[2], GRIS[2], GRIS[3]], 4, 0.3);
+    // suelo de roca con hilos sueltos
+    for (let y = 72; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = 1.5 + luzNido(x, y) * 2.2 - (y - 72) * 0.012 + Math.sin(x * 0.11 + y * 0.3) * 0.25 + ((x * 7 + y * 5) % 23 === 0 ? -1 : 0);
+      g.set(x, y, ROCA_NIDO[lim(tono(x, y, v, 0.35), 0, 5)], ROCA_NIDO);
+    }
+    for (let x = 0; x < W; x++) g.set(x, 72, ROCA_NIDO[1]);
+    for (let i = 0; i < 26; i++) {
+      const x = Math.floor(hash(i, 51) * W), y = 74 + Math.floor(hash(i, 52) * 32);
+      g.set(x, y, ROCA_NIDO[4]).set(x + 1, y, ROCA_NIDO[3]).set(x, y + 1, ROCA_NIDO[1]);
+    }
+    // halo de las setas sobre la roca, y las setas
+    for (const [sx, sy, ram] of SETAS_NIDO) for (let j = -16; j < 10; j++) for (let i = -18; i < 19; i++) {
+      const d = Math.hypot(i, j * 1.3), x = sx + i, y = sy + j;
+      if (d < 18 && ROCA_NIDO.includes(g.get(x, y)) && umbral(x, y) < (1 - d / 18) * 0.6) g.set(x, y, d < 7 ? ram[2] : ram[1]);
+    }
+    SETAS_NIDO.forEach(([x, y, ram]) => setas(g, x, y, ram));
+    // telarañas gruesas en las esquinas de arriba y a ras de suelo
+    tela(g, 0, 0, 46, 0, Math.PI / 2, 8, 5, SEDA, 1);
+    tela(g, 191, 0, 40, Math.PI / 2, Math.PI, 7, 4, SEDA, 2);
+    tela(g, 0, 107, 22, -Math.PI / 2, 0, 5, 3, SEDA, 3);
+    tela(g, 191, 107, 20, Math.PI, Math.PI * 1.5, 5, 3, SEDA, 5);
+    // capullos colgados con presas envueltas
+    capullo(g, 52, 0, 16, 13);
+    capullo(g, 154, 0, 22, 11);
+    capullo(g, 162, 0, 12, 8);
+    // huesos de los que no salieron
+    costillar(g, 18, 56);
+    calavera(g, 172, 66, HU, -1);
+    calavera(g, 4, 94, HU, 1);
+    capa().linea(178, 98, 188, 95, 2).pintar(g, HU, { relieve: 1, max: 2 });
+    capa().linea(124, 70, 134, 68, 1).pintar(g, HU, { plano: 2 });
+    for (const [x0, y0, x1, y1] of [[60, 74, 82, 76], [120, 75, 142, 73], [0, 82, 14, 80]]) capa().curva(x0, y0, (x0 + x1) / 2, Math.max(y0, y1) + 2, x1, y1, 1).pintar(g, SEDA, { plano: 0 });
+  }
+  /* Telaraña grande: radios desde (x, y) entre los ángulos a0 y a1 y vueltas combadas hacia el centro;
+     cerca del centro la seda se espesa en un velo tramado. hueco = parte de hilos rotos. */
+  function tela(g, x, y, r, a0, a1, radios, vueltas, cols, sem = 1, hueco = 0) {
+    const cerrada = a1 - a0 > 6, ang = k => a0 + ((a1 - a0) * k) / (cerrada ? radios : radios - 1);
+    for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
+      const d = Math.hypot(i, j), a = (Math.atan2(j, i) + 6.283) % 6.283;
+      const dentro = cerrada || (a >= ((a0 + 6.283) % 6.283) - 0.01 && a <= ((a0 + 6.283) % 6.283) + (a1 - a0) + 0.01);
+      if (dentro && d < r * 0.42 && umbral(x + i, y + j) < (1 - d / (r * 0.42)) * 0.55) g.set(x + i, y + j, cols[0]);
+    }
+    for (let k = 0; k < radios; k++) {
+      if (hash(k, 99, sem) < hueco * 0.5) continue;
+      for (let s = 0; s <= r; s += 0.5) g.set(Math.round(x + Math.cos(ang(k)) * s), Math.round(y + Math.sin(ang(k)) * s), cols[s < r * 0.55 ? 2 : 1]);
+    }
+    for (let v = 1; v <= vueltas; v++) {
+      const rr = (r * v) / (vueltas + 0.3);
+      for (let k = 0; k < (cerrada ? radios : radios - 1); k++) {
+        if (hash(k, v, sem) < hueco) continue;
+        const p0 = [x + Math.cos(ang(k)) * rr, y + Math.sin(ang(k)) * rr], p1 = [x + Math.cos(ang(k + 1)) * rr, y + Math.sin(ang(k + 1)) * rr];
+        const n = Math.ceil(Math.hypot(p1[0] - p0[0], p1[1] - p0[1])) + 1;
+        for (let s = 0; s <= n; s++) {
+          const f = s / n, comba = Math.sin(f * Math.PI) * rr * 0.12, mx = p0[0] + (p1[0] - p0[0]) * f, my = p0[1] + (p1[1] - p0[1]) * f;
+          const dx = x - mx, dy = y - my, dl = Math.hypot(dx, dy) || 1;
+          g.set(Math.round(mx + (dx / dl) * comba), Math.round(my + (dy / dl) * comba), cols[rr < r * 0.5 ? 2 : 1]);
+        }
+      }
+    }
+  }
+  /* Capullo de seda colgado de un hilo, con las vueltas de la seda marcadas. */
+  function capullo(g, x, y0, y, largo) {
+    for (let j = y0; j < y; j++) g.set(x, j, SEDA[2]);
+    conBorde(g, ROCA_NIDO[0], tmp => {
+      const c = capa().ell(x, y + largo / 2, Math.max(2, largo * 0.3), largo / 2);
+      c.pintar(tmp, HU, { relieve: 2.5, max: 3, min: 1 });
+      cada(c, (px, py) => { if ((py * 2 + px) % 5 === 0) tmp.set(px, py, HU[Math.max(0, HU.indexOf(tmp.get(px, py)) - 1)], HU); });
+    });
+  }
+  function nidoAnim(ctx, t) {
+    // una araña pequeña baja y sube por su hilo, que se mece
+    const [hx] = HILO_ARANA, largo = Math.round(24 + Math.sin(t / 2100) * 12), mece = Math.sin(t / 900) * 2;
+    ctx.fillStyle = SEDA[1];
+    for (let j = 0; j < largo; j++) ctx.fillRect(Math.round(hx + (mece * j) / largo), j, 1, 1);
+    const ax = Math.round(hx + mece), pata = Math.floor(t / 180) % 2;
+    ctx.fillStyle = NE[0]; ctx.fillRect(ax - 1, largo, 3, 2); ctx.fillRect(ax, largo + 2, 1, 1);
+    ctx.fillStyle = SO[3]; ctx.fillRect(ax - 2, largo + pata, 1, 1); ctx.fillRect(ax + 2, largo + 1 - pata, 1, 1); ctx.fillRect(ax - 2, largo + 2 - pata, 1, 1); ctx.fillRect(ax + 2, largo + 1 + pata, 1, 1);
+    ctx.fillStyle = R.sangre[4]; ctx.fillRect(ax, largo + 1, 1, 1);
+    // gota que cae de una estalactita
+    const [gx, gy] = GOTA_NIDO, p = (t / 2600) % 1;
+    ctx.fillStyle = CRISTAL[3];
+    if (p < 0.55) ctx.fillRect(gx, gy, 1, p > 0.3 ? 2 : 1);
+    else if (p < 0.8) { const y = Math.round(gy + ((p - 0.55) / 0.25) ** 2 * 64); ctx.fillRect(gx, y, 1, 2); }
+    else if (p < 0.88) { ctx.fillStyle = CRISTAL[4]; ctx.fillRect(gx - 1, gy + 64, 1, 1); ctx.fillRect(gx + 1, gy + 64, 1, 1); ctx.fillRect(gx, gy + 63, 1, 1); }
+    // esporas que flotan sobre las setas
+    luciernagas(ctx, t, 12, 0, 56, W, 50, [ESPECTRO[2], ESPECTRO[4], MG[4]], 13);
+  }
+
+  /* ---------- Las ruinas del templo élfico, al caer la tarde ---------- */
+  const ANOCHECER = [SO[1], AZ[1], VI[2], R.piel.violeta[2], R.piel.violeta[3], TE[3], F[3], F[4]];
+  const RUINA = ["#17121f", "#272030", "#3b3144", "#574958", "#7d6870", "#ad8f86", "#dcb898"];
+  const SOL_RUINAS = [96, 58];
+  const luzRuinas = (x, y) => Math.max(0, 1 - Math.hypot((x - SOL_RUINAS[0]) / 80, (y - SOL_RUINAS[1]) / 56));
+  const RAMAS_RUINAS = [[14, 10], [46, 30], [76, 6], [118, 12], [150, 40], [176, 10]];
+  function ruinas(g) {
+    const [sx, sy] = SOL_RUINAS;
+    rellenar(g, 0, 0, W, 72, ANOCHECER, (x, y) => Math.pow(y / 66, 1.25) * 6.2 + Math.max(0, 1 - Math.hypot(x - sx, (y - sy) * 1.6) / 64) * 1.8, 0.55);
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor(hash(i, 1, 61) * W), y = Math.floor(hash(i, 2, 61) * 22);
+      if (ANOCHECER.indexOf(g.get(x, y)) <= 1) g.set(x, y, hash(i, 3, 61) > 0.75 ? HU[4] : HU[2]);
+    }
+    // nubes finas con la panza encendida
+    for (const [x0, x1, y] of [[4, 60, 30], [126, 186, 26], [40, 94, 42], [110, 160, 46]]) for (let x = x0; x < x1; x++) {
+      const f = (x - x0) / (x1 - x0), alto = Math.round(Math.sin(f * Math.PI) * 2);
+      for (let j = 0; j <= alto; j++) g.set(x + j, y - j, j ? ANOCHECER[3] : ANOCHECER[2]);
+      if (f > 0.1 && f < 0.9) g.set(x, y + 1, ANOCHECER[5]);
+    }
+    capa().ell(sx, sy, 8.5, 8.5).pintar(g, [F[4]], { plano: 0 });
+    capa().ell(sx, sy, 5.5, 5.5).pintar(g, [HU[4]], { plano: 0 });
+    // colinas y bosque lejanos contra el ocaso
+    for (let x = 0; x < W; x++) {
+      const t1 = Math.round(56 - Math.sin(x * 0.03 + 1) * 4 - hash(x >> 2, 8) * 2), t2 = Math.round(63 - Math.sin(x * 0.05 + 3) * 2 - (hash(x >> 1, 9) > 0.6 ? 2 : 0) - (hash(x >> 3, 10) > 0.7 ? 4 - Math.abs((x & 7) - 3.5) : 0));
+      for (let y = t1; y < 72; y++) g.set(x, y, y === t1 && Math.abs(x - sx) < 40 ? GR[2] : R.piel.violeta[1]);
+      for (let y = t2; y < 72; y++) g.set(x, y, y === t2 ? VI[1] : SO[2]);
+    }
+    arcoRuinas(g);
+    // columnas: dos enteras con capitel en los bordes y dos partidas
+    columna(g, 6, 72, 62, 10, {});
+    columna(g, 40, 72, 36, 8, { roto: true });
+    columna(g, 146, 72, 28, 8, { roto: true, inclina: 0.5 });
+    columna(g, 174, 72, 64, 10, {});
+    // un trozo de friso caído entre las columnas de la izquierda y otro a la derecha
+    conBorde(g, RUINA[0], tmp => {
+      capa().poly([[18, 72], [20, 64], [36, 62], [38, 70], [36, 72]]).pintar(tmp, RUINA, { relieve: 2, max: 4, luz: [0.7, -0.4, 0.5] });
+      for (let x = 22; x < 35; x += 4) tmp.set(x, 66, RUINA[2], RUINA).set(x + 1, 65, RUINA[4], RUINA);
+      capa().poly([[158, 72], [160, 66], [170, 65], [171, 72]]).pintar(tmp, RUINA, { relieve: 2, max: 4, luz: [-0.7, -0.4, 0.5] });
+    });
+    // hiedra que trepa por las columnas y cuelga del arco
+    copa(g, [[11, 60, 6, 9], [8, 34, 4, 6], [44, 64, 5, 6], [150, 66, 5, 5], [178, 54, 5, 9], [182, 26, 4, 5]], MUSGO, 61, { relieve: 3, max: 3, luz: [0.4, -0.7, 0.5] });
+    RAMAS_RUINAS.forEach(([x, y], i) => enredadera(g, x, y, 14 + Math.floor(hash(i, 62) * 18), 70 + i));
+    for (let x = 84; x <= 108; x += 4) enredadera(g, x, Math.round(alturaArco(x) + 1), 6 + Math.floor(hash(x, 63) * 14), x);
+    // suelo de losas de mármol cuarteadas, con hierba en las juntas
+    losas(g, 73, [3, 4, 4, 5, 6, 7, 7], 22, 96, -60, RUINA, (x, y) => 1.6 + luzRuinas(x, y) * 2.2 + Math.max(0, 1 - Math.abs(x - sx) / (10 + (y - 72) * 0.9)) * 0.9, 29, (x, y) => (hash(x, y, 6) > 0.55 ? MUSGO[2] : RUINA[0]));
+    for (let x = 0; x < W; x++) g.set(x, 72, MUSGO[1]);
+    // calvas de hierba donde faltan losas, sobre todo en los bordes
+    for (const [cx, cy, rx, ry] of [[10, 86, 14, 5], [182, 92, 16, 6], [60, 106, 18, 3], [140, 77, 10, 2], [96, 104, 8, 2]]) {
+      for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) {
+        const d = Math.hypot((x - cx) / rx, (y - cy) / ry);
+        if (d < 1 && umbral(x, y) < (1 - d) * 1.6) g.set(x, y, MUSGO[d < 0.4 ? 3 : 2]);
+      }
+    }
+    for (let i = 0; i < 40; i++) {
+      const x = Math.floor(hash(i, 64) * W), y = 74 + Math.floor(hash(i, 65) * 34);
+      if (y > 84 && y < 103 && x > 16 && x < 176) continue;
+      const al = 2 + Math.floor(((y - 72) / 36) * 3);
+      for (let j = 0; j < al; j++) { g.set(x, y - j, MUSGO[2]); g.set(x + (j % 2 ? 1 : -1), y - j - 1, j === al - 1 ? OL[3] : MUSGO[3]); }
+      if (hash(i, 66) > 0.75) g.set(x, y - al - 1, hash(i, 67) > 0.5 ? R.piel.violeta[4] : HU[4]);
+    }
+  }
+  /* Borde de abajo del arco apuntado (intradós) para cada x del vano. */
+  const alturaArco = x => 28 - Math.sqrt(Math.max(0, 26 * 26 - (x < 96 ? 106 - x : x - 86) ** 2));
+  /* El gran arco apuntado del templo, con la mitad de arriba a la derecha derrumbada. */
+  function arcoRuinas(g) {
+    const arco = capa();
+    for (let y = 0; y < 72; y++) for (let x = 64; x <= 128; x++) {
+      const dentroExt = y >= 28 ? x < 80 + 0 && x >= 70 || x > 112 && x <= 122 : Math.hypot(x - 106, y - 28) < 36 && Math.hypot(x - 86, y - 28) < 36 && (x < 96 ? x >= 70 : x <= 122) ;
+      const dentroInt = y >= 28 ? x >= 80 && x <= 112 : Math.hypot(x - 106, y - 28) < 26 && Math.hypot(x - 86, y - 28) < 26;
+      if (dentroExt && !dentroInt) arco.on(x, y);
+    }
+    for (let x = 96; x <= 128; x++) for (let y = 0; y < 22 + (x - 96) * 0.35 + hash(x >> 1, 3) * 4; y++) if (x > 100) arco.off(x, y);
+    sillares(g, 64, 0, 129, [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6], RUINA, x => (x < 96 ? 2.2 : 2.5), { sem: 81, ancho: 7, bisel: 0.6, junta: 1.3, vari: 0.5, masc: arco });
+    cada(arco, (x, y) => {
+      if (!arco.tiene(x, y - 1) || (!arco.tiene(x + 1, y) && x > 96 && y < 28) || (!arco.tiene(x - 1, y) && x >= 80 && x < 96)) g.set(x, y, RUINA[5]);
+      else if (!arco.tiene(x + 1, y) && x < 96) g.set(x, y, RUINA[6]);
+      else if (!arco.tiene(x - 1, y) && x > 96) g.set(x, y, RUINA[6]);
+      else if (!arco.tiene(x - 1, y) || !arco.tiene(x + 1, y)) g.set(x, y, RUINA[1]);
+    });
+    // hojas talladas en la clave y en las impostas
+    for (const [x, y] of [[74, 30], [116, 30], [88, 12]]) plantilla(g, [" a ", "aba", " c "], x, y, { a: RUINA[4], b: RUINA[6], c: RUINA[2] });
+    for (const [x, y] of [[106, 30], [112, 40], [118, 52]]) g.set(x, y, RUINA[3]);
+  }
+  /* Columna estriada con basa; si no está rota, con capitel. inclina = corte en diagonal de la rotura. */
+  function columna(g, x, base, alto, ancho, op = {}) {
+    const lado = Math.sign(SOL_RUINAS[0] - (x + ancho / 2)), luz = [lado * 0.7, -0.35, 0.55];
+    conBorde(g, RUINA[0], tmp => {
+      const fuste = capa().rect(x, base - alto, ancho, alto);
+      if (op.roto) for (let i = 0; i < ancho; i++) {
+        const corte = Math.round(hash(i, x, 3) * 4 + (op.inclina ? i * op.inclina : 0) + (i % 3 === 0 ? 2 : 0));
+        for (let j = 0; j < corte; j++) fuste.off(x + i, base - alto + j);
+      }
+      fuste.pintar(tmp, RUINA, { relieve: ancho / 2, luz, max: 5 });
+      cada(fuste, (px, py) => { if ((px - x) % 3 === 1 && px < x + ancho - 1) tmp.set(px, py, RUINA[Math.max(0, RUINA.indexOf(tmp.get(px, py)) - 1)], RUINA); });
+      cada(fuste, (px, py) => { if (!fuste.tiene(px + lado, py)) tmp.set(px, py, RUINA[5], RUINA); });
+      capa().rect(x - 1, base - 6, ancho + 2, 2).rect(x - 2, base - 4, ancho + 4, 4).pintar(tmp, RUINA, { relieve: 1.5, luz, max: 5 });
+      if (!op.roto) {
+        const top = base - alto;
+        capa().rect(x - 1, top - 2, ancho + 2, 2).rect(x - 3, top - 5, ancho + 6, 3).pintar(tmp, RUINA, { relieve: 1.2, luz, max: 5 });
+        for (const dx of [-3, ancho + 2]) tmp.set(x + dx, top - 2, RUINA[3], RUINA).set(x + dx, top - 1, RUINA[2], RUINA);
+        if (top - 5 > 0) capa().rect(x - 4, 0, ancho + 8, top - 5).pintar(tmp, RUINA, { relieve: 1.5, luz, max: 4 });
+      }
+    });
+  }
+  /* Hiedra colgante: un tallo que baja serpenteando con hojas a los lados y alguna flor. */
+  function enredadera(g, x, y, largo, sem) {
+    const az = azar(sem);
+    let px = x;
+    for (let j = 0; j < largo; j++) {
+      px += (az() - 0.5) * 0.8 + Math.sin(j * 0.35 + sem) * 0.2;
+      const X = Math.round(px), Y = y + j;
+      g.set(X, Y, MUSGO[1]);
+      if (j % 2 === 0) {
+        const s = az() < 0.5 ? -1 : 1;
+        g.set(X + s, Y, MUSGO[s < 0 ? 3 : 2]).set(X + s, Y - 1, MUSGO[4]);
+        if (az() < 0.12) g.set(X + s * 2, Y, R.piel.violeta[4]);
+      }
+    }
+  }
+  function ruinasAnim(ctx, t) {
+    luciernagas(ctx, t, 18, 0, 36, W, 60, [OL[3], HO[4], OC[4]], 21);
+    // hojas que se desprenden de la hiedra y caen meciéndose
+    RAMAS_RUINAS.forEach(([x0, y0], i) => {
+      const p = ((t / 1000) * (0.07 + hash(i, 71) * 0.05) + hash(i, 72)) % 1;
+      if (p > 0.92) return;
+      const x = Math.round(x0 + Math.sin(p * 11 + i) * 5 + p * 18 * (i % 2 ? 1 : -1)), y = Math.round(y0 + 10 + p * 84);
+      ctx.fillStyle = i % 3 ? MUSGO[4] : TE[3];
+      ctx.fillRect(x, y, Math.sin(p * 22) > 0 ? 2 : 1, 1);
+    });
+  }
+
   return {
     taberna: { base: taberna, anim: tabernaAnim },
     sotano: { base: sotano, anim: sotanoAnim },
@@ -1862,6 +2221,9 @@ const FONDOS = (() => {
     pico: { base: pico, anim: picoAnim },
     guarida: { base: guarida, anim: guaridaAnim },
     castillo: { base: castillo, anim: castilloAnim },
-    trono: { base: trono, anim: tronoAnim }
+    trono: { base: trono, anim: tronoAnim },
+    abismo: { base: abismo, anim: abismoAnim },
+    telarana: { base: nido, anim: nidoAnim },
+    ruinas: { base: ruinas, anim: ruinasAnim }
   };
 })();

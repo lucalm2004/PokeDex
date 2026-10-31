@@ -506,6 +506,84 @@ h1, h2, h3 { text-wrap: balance; }
 .festejo.fase p { color: var(--ko); }
 .festejo.logro { box-shadow: inset 0 0 0 2px var(--gold), 0 0 60px -6px var(--gold); }
 
+/* ---------- Animación y pulido ---------- */
+#caja-juego { position: relative; }
+.anuncio {
+  position: absolute; left: 50%; top: 10px; z-index: 2; margin: 0; transform: translate(-50%, -6px); opacity: 0; pointer-events: none;
+  display: grid; justify-items: center; gap: 0; padding: 6px 14px 7px; border-radius: 999px; white-space: nowrap;
+  background: rgba(11, 13, 26, .86); box-shadow: inset 0 0 0 1px var(--tono, var(--accent)), 0 6px 20px -6px var(--tono, var(--accent));
+  --tono: var(--accent);
+}
+.anuncio.ver { animation: anuncio 1.5s ease-out forwards; }
+.anuncio b { font-size: 15px; font-weight: 800; color: var(--tono); letter-spacing: .01em; }
+.anuncio small { font-size: 11px; color: var(--muted); }
+.anuncio.t-fisica { --tono: var(--fisica); } .anuncio.t-arcana { --tono: var(--arcana); } .anuncio.t-sagrada { --tono: var(--sagrada); }
+.anuncio.t-cura { --tono: var(--cura); } .anuncio.t-apoyo { --tono: var(--apoyo); } .anuncio.t-ko { --tono: var(--ko); } .anuncio.t-turno { --tono: var(--gold); }
+@keyframes anuncio { 0% { opacity: 0; transform: translate(-50%, -10px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.04); } 20% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -4px); } }
+
+/* Reacciones de los retratos */
+.heroe.g-herido { animation: g-herido .5s; }
+.heroe.g-herido .retrato { filter: drop-shadow(0 0 4px var(--ko)) saturate(1.4); }
+.heroe.g-curado { animation: g-curado .6s; }
+.heroe.g-victoria .retrato { animation: g-salto .6s ease-out; }
+.heroe.grave:not(.caido) { animation: g-grave 1.4s ease-in-out infinite; }
+.heroe.caido .retrato { filter: grayscale(1); transform: rotate(-12deg); }
+.heroe .retrato { transition: transform .3s, filter .3s; }
+@keyframes g-herido { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); background: rgba(255, 107, 129, .25); } 40% { transform: translateX(4px); } 60% { transform: translateX(-2px); } }
+@keyframes g-curado { 50% { box-shadow: inset 0 0 0 2px var(--ok), 0 0 18px -4px var(--ok); } }
+@keyframes g-salto { 40% { transform: translateY(-6px) scale(1.08); } }
+@keyframes g-grave { 50% { box-shadow: inset 0 0 0 1px var(--ko), 0 0 14px -6px var(--ko); } }
+
+/* Estados (chips) */
+.est { font-style: normal; color: var(--c) !important; box-shadow: inset 0 0 0 1px var(--c); }
+.ests { display: flex; gap: 2px; flex-wrap: wrap; }
+.ests i { font-style: normal; font-size: 9px; font-weight: 700; line-height: 1; padding: 2px 4px; border-radius: 6px; color: var(--c); box-shadow: inset 0 0 0 1px var(--c); text-transform: uppercase; }
+
+/* Votaciones */
+.votacion { margin: 0; font-size: 13px; color: var(--muted); }
+.votacion b { color: var(--gold); }
+.nodo { position: relative; }
+.nodo .votos { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--gold); color: var(--bg); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.nodo.votado { box-shadow: inset 0 0 0 3px var(--gold), 0 0 18px -4px var(--gold) !important; }
+.opcion[data-votado] { box-shadow: inset 0 0 0 2px var(--gold); }
+
+/* Mapa más grande: nodos algo menores y leyenda compacta */
+.nodo { width: 40px; height: 40px; }
+.nodo.jefe { width: 52px; height: 52px; }
+.nodo.n-elite { box-shadow: inset 0 0 0 1px rgba(255, 107, 129, .6); }
+.nodo.n-altar { box-shadow: inset 0 0 0 1px rgba(255, 107, 129, .45); }
+.nodo.n-misterio { box-shadow: inset 0 0 0 1px rgba(194, 123, 255, .6); }
+.nodo.n-tesoro { box-shadow: inset 0 0 0 1px rgba(255, 201, 92, .5); }
+.nodo.libre.n-elite, .nodo.libre.n-altar { box-shadow: inset 0 0 0 2px var(--ko), 0 0 18px -4px var(--ko); }
+.leyenda { gap: 4px 9px; font-size: 11px; }
+.lineas line.usada { stroke: var(--accent); stroke-width: 3; opacity: .55; }
+
+/* Pantalla nueva del panel */
+.panel.entra > * { animation: entra .32s ease-out both; }
+.panel.entra > *:nth-child(2) { animation-delay: .04s; }
+.panel.entra > *:nth-child(3) { animation-delay: .08s; }
+.panel.entra > *:nth-child(4) { animation-delay: .12s; }
+.panel.entra > *:nth-child(n+5) { animation-delay: .16s; }
+.panel.entra .acciones .opcion { animation: entra .3s ease-out both; }
+.panel.entra .acciones .opcion:nth-child(2) { animation-delay: .05s; }
+.panel.entra .acciones .opcion:nth-child(3) { animation-delay: .1s; }
+.panel.entra .acciones .opcion:nth-child(4) { animation-delay: .15s; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+.opcion { transition: transform .1s, background .15s, box-shadow .15s; }
+.opcion:active:not(:disabled) { transform: scale(.97); }
+.barra-alma i, .barra-rival i { transition: width .45s cubic-bezier(.2, .8, .2, 1); }
+
+/* Premios del final */
+.premios { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.premios li { display: grid; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); box-shadow: inset 0 0 0 1px rgba(255, 201, 92, .25); }
+.premios span { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.premios b { font-size: 15px; }
+.premios i { font-style: normal; font-size: 11px; color: var(--muted); }
+.tabla-stats { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.tabla-stats th { font-size: 10px; font-weight: 600; color: var(--faint); text-align: right; padding: 2px 4px; }
+.tabla-stats td { text-align: right; padding: 4px; border-top: 1px solid var(--line); color: var(--muted); }
+.tabla-stats td:first-child, .tabla-stats th:first-child { text-align: left; color: var(--text); font-weight: 600; }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
@@ -519,8 +597,9 @@ h1, h2, h3 { text-wrap: balance; }
   .pantalla { gap: 6px; }
   .sel-info p { font-size: 12px; }
   .lema, .intro { display: none; }
-  .nodo { width: 38px; height: 38px; }
-  .nodo.jefe { width: 48px; height: 48px; }
+  .nodo { width: 34px; height: 34px; }
+  .nodo.jefe { width: 44px; height: 44px; }
+  .tabla-stats { display: none; }
   .boton.grande { padding: 12px 16px; }
   .panel { padding: 10px 12px; gap: 8px; }
 }
@@ -616,7 +695,7 @@ h1, h2, h3 { text-wrap: balance; }
     <button type="button" class="icono" data-ui="mochila" aria-label="Mochila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M9 13h6"/></svg></button>
     <button type="button" class="icono" data-ui="menu" aria-label="Menú"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
-  <div class="escenario" id="caja-juego"><canvas id="lienzo" aria-label="Escenario"></canvas></div>
+  <div class="escenario" id="caja-juego"><canvas id="lienzo" aria-label="Escenario"></canvas><p id="anuncio" class="anuncio" hidden></p></div>
   <div class="grupo" id="grupo" aria-label="El grupo"></div>
   <div class="mapa" id="mapa" aria-label="Mapa del acto"></div>
   <section class="panel" id="panel" aria-live="polite"></section>
@@ -1981,6 +2060,160 @@ const { MONSTRUOS, PNJ } = (() => {
     return g;
   }
 
+  /* Diablillo: pequeño y cabezón, alas de murciélago a la espalda, cola acabada en flecha y un tridente. */
+  function diablillo() {
+    const g = new Rejilla(), Rj = R.piel.roja, S = R.sangre, N = NEGRO, F = R.hierro;
+    /* Ala pequeña: membrana con el borde de salida festoneado y varillas finas desde la muñeca. */
+    const ala = (pts, muneca, puntas, op, tonoHueso) => {
+      new Capa().poly(pts).pintar(g, S, op);
+      const h = new Capa().linea(pts[0][0], pts[0][1], muneca[0], muneca[1], 1);
+      puntas.forEach(([x, y]) => h.linea(muneca[0], muneca[1], x, y, 1));
+      h.pintar(g, S, { plano: tonoHueso });
+    };
+    ala([[19, 20], [21, 9], [25, 5], [28.5, 8], [26, 10], [27.5, 13.5], [24.5, 13], [22, 17]], [21, 9], [[25, 5], [28.5, 8], [27.5, 13.5]], { relieve: 1.5, max: 0, profundo: true }, 1);
+    ala([[20, 22], [24, 11], [29, 8], [33.5, 13], [30.5, 14.5], [32.5, 19.5], [28.5, 18], [26, 21], [23, 23]], [24, 11], [[29, 8], [33.5, 13], [32.5, 19.5]], { relieve: 2, max: 1, separar: 0 }, 3);
+    new Capa().curva(21, 29, 31, 34, 30, 27, 2, 1).pintar(g, Rj, { relieve: 1, max: 3, separar: true });
+    new Capa().poly([[26.8, 27.5], [30, 22], [33.2, 27.5], [30, 26.2]]).pintar(g, Rj, { relieve: 1, min: 2, max: 3, separar: true });
+    new Capa().linea(20, 29, 22, 31, 2).linea(22, 31, 21, 33, 2).pintar(g, Rj, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(18.5, 26, 3.4, 3.6);
+    cuerpo.pintar(g, Rj, { relieve: 2.5, min: 2, separar: true });
+    new Capa().linea(17, 28, 15, 31, 2).linea(15, 31, 16, 33, 2).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
+    for (const x of [14, 20]) new Capa().rect(x, 33, 3, 2).pintar(g, N, { relieve: 1, min: 2, separar: true });
+    new Capa().rect(8, 12, 1, 23).pintar(g, R.madera, { relieve: 1, max: 2 });
+    new Capa().rect(6, 12, 5, 1).rect(6, 9, 1, 3).rect(8, 8, 1, 4).rect(10, 9, 1, 3).pintar(g, F, { relieve: 1, min: 2 });
+    pon(g, F, 4, [6, 9], [8, 8], [10, 9]);
+    const cab = new Capa().ell(15.5, 18, 4.3, 3.9).poly([[13, 19], [11, 22.5], [16, 21.5]]).poly([[18.5, 16.5], [23.5, 14.5], [19, 19.5]]);
+    cab.pintar(g, Rj, { relieve: 3, min: 2, separar: true });
+    new Capa().curva(13.5, 15, 11.5, 13, 12, 10.5, 2, 1).curva(17.5, 14.5, 18.5, 12, 20.5, 11, 2, 1).pintar(g, HUESO, { relieve: 1, min: 2, separar: true });
+    pon(g, R.bronce, 4, [12, 17], [15, 17]);
+    pon(g, N, 0, [11, 16], [12, 16], [15, 16], [16, 15], [13, 17], [16, 17]);
+    pon(g, N, 0, [11, 20], [12, 21], [13, 21], [14, 21], [15, 21], [16, 20]);
+    pon(g, HUESO, 4, [12, 20], [15, 20]);
+    pon(g, Rj, 1, [17, 19], [18, 18]);
+    new Capa().linea(17, 24, 12, 25, 2).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
+    new Capa().ell(9, 24.5, 1.4, 1.3).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
+    pon(g, Rj, 4, [13, 15], [20, 24]);
+    return g.contorno();
+  }
+
+  /* Araña gigante de las cuevas: patas acodadas bien altas, ojos en racimo y un reloj de arena rojo en el lomo. */
+  function arana() {
+    const g = new Rejilla(), S = R.sombra, Sg = R.sangre, F = R.fuego;
+    const pata = (pts, op) => {
+      const c = new Capa();
+      for (let i = 0; i + 1 < pts.length; i++) c.linea(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], i === 0 ? 2 : 1);
+      c.pintar(g, S, { relieve: 1, ...op });
+    };
+    for (const p of [[[12, 23], [7, 12], [3, 29]], [[14, 23], [13, 12], [12, 31]], [[17, 23], [25, 21], [28, 31]], [[18, 22], [33, 19], [35, 29]]]) pata(p, { max: 1 });
+    const abdomen = new Capa().ell(26, 14, 7.6, 7);
+    abdomen.pintar(g, S, { relieve: 4, separar: true });
+    new Capa().poly([[23.5, 9], [28.5, 9], [26, 12.5], [28.5, 16], [23.5, 16], [26, 12.5]]).recortar(abdomen).pintar(g, Sg, { relieve: 1, min: 3 });
+    for (const [i, j] of [[21, 12], [30, 10], [31, 15], [22, 17], [27, 19], [32, 18], [20, 15]]) pon(g, S, 4, [i, j]);
+    const torax = new Capa().ell(14, 23.5, 5, 3.6).ell(10.5, 23, 2.8, 2.6);
+    torax.pintar(g, S, { relieve: 2.5, separar: true });
+    for (const p of [[[12, 25], [5, 15], [1, 33]], [[14, 26], [10, 18], [7, 34]], [[16, 26], [21, 20], [24, 34]], [[17, 25], [29, 22], [32, 34]]]) pata(p, { max: 3, separar: true });
+    new Capa().curva(9, 25, 7, 27, 8.5, 29, 2, 1).curva(11, 26, 10, 28, 11, 30, 2, 1).pintar(g, S, { relieve: 1, max: 2, separar: true });
+    pon(g, HUESO, 2, [8, 29], [11, 30]);
+    pon(g, F, 4, [10, 22]);
+    pon(g, Sg, 4, [9, 22], [11, 22]);
+    pon(g, F, 4, [9, 21], [11, 21]);
+    pon(g, Sg, 3, [8, 23], [12, 21], [13, 22], [10, 20]);
+    bordeLuz(g, S);
+    return g.contorno();
+  }
+
+  /* Sombra: un espectro de humo violeta con la capucha vacía y dos ojos pálidos; flota, así que acaba en jirones. */
+  function sombra() {
+    const g = new Rejilla(), S = R.sombra, Mg = R.magia, E = ESPECTRO;
+    new Capa().linea(23, 14, 27, 19, 2).linea(27, 19, 29, 24, 2).pintar(g, S, { relieve: 1, max: 2 });
+    abanico(new Capa(), 29, 24, [[-1, 3], [0.5, 3], [2, 2]]).pintar(g, E, { relieve: 1, max: 2 });
+    const cuerpo = new Capa().ell(18, 8.5, 4.6, 5).poly([[13, 9], [23, 9], [27, 18], [28, 26], [25, 33], [15, 34.5], [10, 29], [11, 18]]);
+    [[12, 27, 1.4], [15.5, 29.5, 1.2], [19, 26.5, 1.5], [22.5, 30, 1.2], [26, 27, 1.5]].forEach(([x, y, a]) => cuerpo.restar(muesca(x, y, 35.5, a)));
+    cuerpo.pintar(g, S, { relieve: 3, separar: true });
+    /* El humo se va apagando hacia abajo en vetas onduladas, no en cuadrícula. */
+    for (let y = 16; y < 36; y++) for (let x = 0; x < 36; x++) {
+      if (!cuerpo.tiene(x, y)) continue;
+      const veta = Math.sin(x * 1.3 + Math.sin(y * 0.45) * 2.2), f = (y - 16) / 18;
+      const k = S.indexOf(g.get(x, y));
+      if (veta < f * 1.6 - 0.6 && PX.umbral(x, y) < 0.3 + f) pon(g, S, Math.max(0, k - 1 - (f > 0.6 ? 1 : 0)), [x, y]);
+      else if (veta > 0.82 && f < 0.85) pon(g, Mg, 1, [x, y]);
+    }
+    new Capa().ell(16, 10, 2.8, 3.2).pintar(g, S, { plano: 0 });
+    new Capa().linea(13, 6, 18, 3.5, 1).linea(13, 6, 12.5, 13, 1).recortar(cuerpo).pintar(g, Mg, { plano: 3 });
+    pon(g, Mg, 2, [14, 14], [18, 13], [19, 4], [20, 4]);
+    pon(g, E, 4, [15, 9], [17, 9], [15, 10], [17, 10]);
+    pon(g, E, 2, [15, 11], [17, 11]);
+    new Capa().linea(14, 14, 9, 17, 2).linea(9, 17, 5, 15, 2).pintar(g, S, { relieve: 1, max: 3, separar: true });
+    abanico(new Capa(), 4.5, 15, [[-3, -2], [-3.5, 0.5], [-2.5, 2.5]]).pintar(g, E, { relieve: 1, min: 2, max: 3 });
+    bordeLuz(g, S);
+    g.contorno(S[0]);
+    for (const [x0, y0, x1, y1] of [[13, 32, 11, 35], [18, 33, 19, 35], [24, 32, 27, 35], [10, 28, 7, 31], [28, 24, 31, 27]]) hilo(g, x0, y0, x1, y1, S[3]);
+    for (const [i, j, k] of [[8, 33, 2], [30, 31, 3], [26, 6, 3], [8, 9, 2], [31, 19, 2], [5, 25, 3]]) if (!g.get(i, j)) pon(g, Mg, k, [i, j]);
+    return g;
+  }
+
+  /* Nhazgul, el Devorador de Estrellas: una masa de vacío con estrellas dentro, un ojo enorme,
+     corona de cuernos y tentáculos. Borde violeta por la luz y cian por el otro lado. */
+  const VACIO = ["#040208", "#0b0616", "#170d2c", "#2a1748", "#432670"];
+  const CIAN = ["#08222a", "#0f4a56", "#1c8590", "#47c6c8", "#b6fff2"];
+  function devorador() {
+    const g = new Rejilla(), V = VACIO, Mg = R.magia, C = CIAN, az = PX.azar(23);
+    const tentaculos = (op, ...l) => { const c = new Capa(); l.forEach(a => c.curva(...a)); c.pintar(g, V, { relieve: 2, ...op }); return c; };
+    /* Ventosas que brillan en la cara de abajo de cada tentáculo. */
+    const ventosas = (c, ram) => { for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) if (c.tiene(x, y) && !c.tiene(x, y + 1) && c.tiene(x - 1, y) && (x + y) % 3 === 0) pon(g, ram, 3, [x, y - 1]); };
+    ventosas(tentaculos({ max: 2 }, [27, 22, 35, 25, 34, 14, 5, 1.5], [24, 27, 29, 35, 35, 32, 5, 1.5]), C);
+    const cuernos = new Capa();
+    for (const [x0, y0, cx, cy, x1, y1, gr] of [[11, 11, 5, 7, 5, 1, 4], [16, 8, 13.5, 3, 14.5, 0, 3.5], [21, 7, 22, 2, 25, 0, 4], [26, 9, 30, 5, 32, 0, 3.5], [29, 13, 34, 12, 35, 6, 3.5]]) cuernos.curva(x0, y0, cx, cy, x1, y1, gr, 1);
+    cuernos.pintar(g, Mg, { relieve: 1.5, max: 3, separar: true });
+    for (const [x, y] of [[5, 1], [14, 0], [25, 0], [32, 0], [35, 6], [5, 2], [32, 1]]) pon(g, C, 4, [x, y]);
+    for (const [x, y] of [[8, 6], [15, 4], [22, 3], [29, 5], [32, 10]]) pon(g, Mg, 1, [x, y]);
+    const cuerpo = new Capa().ell(19.5, 17.5, 12.5, 11).ell(14, 21, 8, 7);
+    cuerpo.pintar(g, V, { relieve: 6, separar: true });
+    /* Una nebulosa en espiral y estrellas sueltas dentro del vacío. */
+    for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) {
+      if (!cuerpo.tiene(x, y)) continue;
+      const a = Math.atan2(y - 18, x - 22), d = Math.hypot(x - 22, y - 18), v = Math.sin(a * 2 + d * 0.45);
+      if (v > 0.5 && PX.umbral(x, y) < (v - 0.5) * 2) pon(g, Mg, v > 0.9 && d > 4 ? 2 : 1, [x, y]);
+    }
+    for (let i = 0; i < 60; i++) {
+      const x = Math.floor(az() * 36), y = Math.floor(az() * 36), r = az();
+      if (cuerpo.tiene(x, y) && cuerpo.tiene(x + 1, y) && cuerpo.tiene(x, y + 1) && cuerpo.tiene(x - 1, y)) pon(g, r > 0.8 ? HUESO : r > 0.4 ? C : Mg, r > 0.92 ? 4 : 3, [x, y]);
+    }
+    /* El ojo: párpado de vacío, globo cian, iris violeta y pupila rasgada. */
+    const ojo = new Capa().ell(13.5, 15.5, 5.6, 4.4);
+    new Capa().ell(13.5, 15.5, 6.8, 5.6).pintar(g, V, { plano: 0 });
+    for (let a = 3.5; a < 6.0; a += 0.12) pon(g, Mg, 3, [Math.round(13.5 + Math.cos(a) * 6.6), Math.round(15.5 + Math.sin(a) * 5.4)]);
+    ojo.pintar(g, C, { relieve: 3, min: 2 });
+    new Capa().ell(12.5, 15.5, 3, 3.2).recortar(ojo).pintar(g, Mg, { relieve: 2, min: 2 });
+    new Capa().rect(12, 12.5, 1, 7).recortar(ojo).pintar(g, V, { plano: 0 });
+    pon(g, V, 0, [11, 15], [11, 16], [13, 15], [13, 16]);
+    pon(g, HUESO, 4, [10, 13], [11, 13], [15, 13]);
+    pon(g, Mg, 4, [14, 17]);
+    /* Las fauces, con un resplandor de estrellas tragadas al fondo. */
+    const boca = new Capa().poly([[8.5, 24], [25, 22], [23, 28.5], [12, 29.5]]);
+    boca.pintar(g, V, { plano: 0 });
+    for (let y = 22; y < 31; y++) for (let x = 8; x < 26; x++) if (boca.tiene(x, y)) {
+      const f = 1 - Math.hypot((x - 17) / 7, (y - 26.5) / 2.6);
+      if (f > 0 && PX.umbral(x, y) < f * 1.4) pon(g, C, f > 0.55 ? 3 : f > 0.25 ? 2 : 1, [x, y]);
+    }
+    for (let x = 10; x <= 23; x += 2) {
+      const ya = Math.round(24 - (x - 9) * 0.12);
+      pon(g, HUESO, 4, [x, ya]); pon(g, HUESO, 2, [x, ya + 1]);
+      if (x < 22) pon(g, HUESO, 3, [x + 1, 28 + (x < 13 ? 1 : 0)]);
+    }
+    const delante = tentaculos({ separar: true }, [11, 26, 4, 25, 2, 33, 5, 2], [16, 28, 14, 34, 8, 35, 5, 2], [21, 28, 23, 33, 28, 35, 4.5, 1.5], [9, 19, 2, 16, 1, 24, 4, 1.5]);
+    ventosas(delante, Mg);
+    for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) {
+      if (g.rampa(x, y) !== V) continue;
+      if (!g.get(x - 1, y) || !g.get(x, y - 1)) pon(g, Mg, 2, [x, y]);
+      else if (cuerpo.tiene(x, y) && (!g.get(x + 1, y) || !g.get(x, y + 1))) pon(g, C, 2, [x, y]);
+    }
+    g.contorno(V[0]);
+    for (const [i, j, ram, k] of [[2, 9, C, 4], [1, 13, Mg, 3], [35, 22, C, 3], [5, 29, Mg, 4], [10, 2, Mg, 3], [30, 31, C, 4], [27, 1, C, 3], [0, 28, C, 3]]) if (!g.get(i, j)) pon(g, ram, k, [i, j]);
+    destello(g, 2, 5, C); destello(g, 33, 28, Mg);
+    return g;
+  }
+
   /* ---------- Personajes no jugadores ---------- */
   /* PNJ con cuerpo de héroe, mirando a la izquierda. «encima» pinta antes del contorno y «brillo» después
      (destellos sin borde). Las dos reciben las coordenadas del héroe, que mira a la derecha. */
@@ -2141,7 +2374,7 @@ const { MONSTRUOS, PNJ } = (() => {
   };
 
   return {
-    MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon, lobo, armadura, vampiro, kobold, elemental },
+    MONSTRUOS: { rata, goblin, osolechuza, trol, esqueleto, mimico, liche, cubo, golem, dragon, lobo, armadura, vampiro, kobold, elemental, diablillo, arana, sombra, devorador },
     PNJ: PNJS
   };
 })();
@@ -4022,7 +4255,7 @@ const DATOS = (() => {
   /* Cuatro atributos abreviados: Fuerza cuenta también como Constitución y Sabiduría como Destreza. */
   const STATS = { raz: "Inteligencia", ani: "Fuerza", elo: "Carisma", tem: "Sabiduría" };
   const ABREV = { raz: "INT", ani: "FUE", elo: "CAR", tem: "SAB" };
-  const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán"];
+  const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán", "El Abismo"];
   const ROMANOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
   const NIVELES = [0, 8, 18, 30, 44, 60, 78, 98, 120, 145];
@@ -4131,40 +4364,40 @@ const DATOS = (() => {
     rayo: { nombre: "Rayo arcano", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, usos: 0, desc: "Proyectil mágico básico." },
     descarga: { nombre: "Descarga sobrenatural", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 8], tirada: true, usos: 0, desc: "Energía de tu patrón. Usa Carisma." },
     muro: { nombre: "Muro de escudos", efecto: "escudo", usos: 2, desc: "El próximo ataque enemigo no hace daño." },
-    furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], usos: 2, desc: "Golpe seguro y brutal." },
+    furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], aplica: ["sangrado", 2, 0.3], usos: 2, desc: "Golpe seguro y brutal." },
     humo: { nombre: "Bomba de humo", efecto: "aturde", usos: 1, desc: "El enemigo pierde su próximo turno." },
     flechas: { nombre: "Lluvia de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 2, usos: 2, desc: "Dos disparos seguros." },
-    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, area: true, usos: 2, desc: "Explosión segura que alcanza a todos los enemigos." },
+    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, area: true, aplica: ["quemadura", 2, 0.6], usos: 2, desc: "Explosión segura que alcanza a todos los enemigos." },
     maleficio: { nombre: "Maleficio", efecto: "maldice", usos: 1, desc: "El enemigo recibe +2 de cada golpe todo el combate." },
-    luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, usos: 2, desc: "Daño seguro. Doble contra no muertos." },
-    cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
+    luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, aplica: ["ciego", 2, 0.4], usos: 2, desc: "Daño seguro. Doble contra no muertos." },
+    cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], regen: 2, usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
     curar: { nombre: "Curar heridas", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 3, desc: "Cura al aliado más herido." },
-    tajo: { nombre: "Tajo poderoso", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, usos: 3, desc: "Golpe fuerte con tirada." },
+    tajo: { nombre: "Tajo poderoso", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, aplica: ["sangrado", 2, 0.5], usos: 3, desc: "Golpe fuerte con tirada." },
     aliento: { nombre: "Segundo aliento", efecto: "cura", a: "yo", stat: "ani", dado: [1, 10], usos: 1, desc: "Te curas a ti mismo." },
     grito: { nombre: "Grito de guerra", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
-    frenesi: { nombre: "Frenesí", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], golpes: 2, tirada: true, usos: 2, desc: "Dos golpes seguidos con tirada." },
-    devastar: { nombre: "Golpe devastador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 8], usos: 1, desc: "Un golpe seguro enorme." },
+    frenesi: { nombre: "Frenesí", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], golpes: 2, tirada: true, aplica: ["sangrado", 2, 0.35], usos: 2, desc: "Dos golpes seguidos con tirada." },
+    devastar: { nombre: "Golpe devastador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 8], aplica: ["paralisis", 1, 0.5], usos: 1, desc: "Un golpe seguro enorme." },
     veneno: { nombre: "Hoja envenenada", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], tirada: true, veneno: 3, usos: 2, desc: "Golpe que envenena 3 turnos." },
-    asesinar: { nombre: "Golpe furtivo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], tirada: true, critico: 17, usos: 2, desc: "Crítico con 17 o más." },
+    asesinar: { nombre: "Golpe furtivo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], tirada: true, critico: 17, aplica: ["sangrado", 3, 1], usos: 2, desc: "Crítico con 17 o más." },
     danza: { nombre: "Danza de cuchillas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 3, tirada: true, usos: 1, desc: "Tres cuchilladas con tirada." },
     marca: { nombre: "Marca del cazador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], maldice: true, usos: 1, desc: "Disparo seguro que maldice al enemigo (+2 daño)." },
     balsamo: { nombre: "Bálsamo silvestre", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 2, desc: "Cura al aliado más herido." },
-    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], area: true, usos: 1, desc: "Lluvia segura sobre todos los enemigos." },
+    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], area: true, aplica: ["sangrado", 2, 0.5], usos: 1, desc: "Lluvia segura sobre todos los enemigos." },
     escudoMag: { nombre: "Escudo mágico", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
-    escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
+    escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, aplica: ["congelado", 1, 0.35], usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     sueno: { nombre: "Sueño", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], area: true, usos: 1, desc: "Cae sobre todos los enemigos." },
+    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], area: true, aplica: ["quemadura", 2, 1], usos: 1, desc: "Cae sobre todos los enemigos." },
     drenar: { nombre: "Toque vampírico", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, drena: true, usos: 2, desc: "Daño y te curas la mitad." },
     miedo: { nombre: "Susurro aterrador", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
     plaga: { nombre: "Nube de veneno", efecto: "veneno", turnos: 4, area: true, usos: 1, desc: "Envenena 4 turnos a todos los enemigos." },
-    infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], usos: 1, desc: "Llamas del abismo, sin fallo." },
-    plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
+    infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], aplica: ["quemadura", 3, 1], usos: 1, desc: "Llamas del abismo, sin fallo." },
+    plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], regen: 2, usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
     escudoFe: { nombre: "Escudo de fe", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
     orden: { nombre: "Orden divina", efecto: "aturde", usos: 1, desc: "El enemigo obedece y pierde su turno." },
-    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [3, 6], noMuerto: 2, area: true, usos: 1, desc: "Luz sobre todos los enemigos. Doble contra no muertos." },
+    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [3, 6], noMuerto: 2, area: true, aplica: ["ciego", 2, 1], usos: 1, desc: "Luz sobre todos los enemigos. Doble contra no muertos." },
     burla: { nombre: "Burla cruel", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     cuna: { nombre: "Canción de cuna", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, usos: 1, desc: "Una onda de sonido que golpea a todos." }
+    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, aplica: ["paralisis", 1, 0.3], usos: 1, desc: "Una onda de sonido que golpea a todos." }
   };
   /* Qué aprende cada clase y a qué nivel. */
   const APRENDE = {
@@ -4229,6 +4462,8 @@ const DATOS = (() => {
     escamas: { nombre: "Armadura de escamas de dragón", tipo: "armadura", precio: 150, ca: 4, alma: 6, rareza: "legendario", desc: "+4 a la CA y +6 PG máximos." },
     sortija: { nombre: "Sortija de protección", tipo: "talisman", precio: 30, ca: 1, desc: "+1 a la Clase de Armadura." },
     capa: { nombre: "Capa élfica", tipo: "talisman", precio: 55, ca: 1, ini: 2, desc: "+1 a la CA y +2 a la iniciativa." },
+    estelar: { nombre: "Hoja estelar", tipo: "arma", precio: 160, golpe: 3, fis: 5, arc: 3, rareza: "legendario", desc: "+3 para atacar, +5 físico y +3 mágico." },
+    vacio: { nombre: "Corona del vacío", tipo: "talisman", precio: 150, stat: "elo", ca: 2, critico: 19, rareza: "legendario", desc: "+1 Carisma, +2 CA y críticos con 19." },
     corona: { nombre: "Corona del rey muerto", tipo: "talisman", precio: 100, stat: "raz", ca: 1, desc: "+1 a Inteligencia y +1 a la CA." }
   });
   const RAREZAS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" };
@@ -4237,7 +4472,8 @@ const DATOS = (() => {
     ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita"],
     ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro"],
     ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas"],
-    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"]
+    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"],
+    ["flamigera", "escamas", "estelar", "vacio", "vorpal", "baculo", "piedra", "corona"]
   ];
   const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
@@ -4362,6 +4598,31 @@ const DATOS = (() => {
       rasgoDesc: "Llamarada: cada 2 rondas quema a todo el grupo (1d4). Las armas apenas le hacen daño.",
       lore: "Fuego vivo escapado del Plano Elemental por las grietas del volcán."
     },
+    diablillo: {
+      nombre: "Diablillo", tipo: "Infernal pequeño", alin: "Legal malvado", vd: "6",
+      alma: 22, ca: 14, atk: 6, dano: [1, 6, 2], ataques: 2, ini: 5, resiste: "arcana", debil: "sagrada",
+      rasgoDesc: "Pinchazo ígneo: cada 2 rondas su tridente deja quemaduras.",
+      lore: "Criaturas del Abismo que se cuelan por cualquier grieta. Ríen mientras queman."
+    },
+    arana: {
+      nombre: "Araña de las sombras", tipo: "Bestia monstruosa", alin: "Neutral malvado", vd: "7",
+      alma: 30, ca: 14, atk: 6, dano: [1, 8, 2], ataques: 2, ini: 3, resiste: null, debil: "arcana",
+      rasgoDesc: "Picadura: cada 2 rondas envenena y puede atrapar en su red.",
+      lore: "Tejen sus redes entre los mundos. Lo que cae en ellas no vuelve a ver el sol."
+    },
+    sombra: {
+      nombre: "Sombra famélica", tipo: "No muerto", alin: "Caótico malvado", vd: "7", nomuerto: true,
+      alma: 26, ca: 15, atk: 6, dano: [1, 8, 1], ataques: 2, ini: 4, resiste: "fisica", debil: "sagrada",
+      rasgoDesc: "Toque gélido: cada 2 rondas debilita y ciega. Las armas apenas la rozan.",
+      lore: "Lo que queda de quienes Nhazgul devoró: hambre con forma de persona."
+    },
+    devorador: {
+      nombre: "Nhazgul, el Devorador de Estrellas", tipo: "Aberración colosal", alin: "Caótico malvado", vd: "14",
+      alma: 62, ca: 16, atk: 7, dano: [1, 10, 2], ataques: 2, ini: 3, resiste: null, debil: null,
+      area: { cada: 3, dado: 8, txt: "Nhazgul abre su ojo y la luz se apaga" },
+      rasgoDesc: "Ojo del vacío: cada 3 rondas golpea a todo el grupo y lo ciega. A media vida, invoca a sus siervos.",
+      lore: "Más antiguo que los dioses. Fue él quien susurró al dragón durante su sueño de cien años. Come estrellas; ahora tiene hambre de Valdren."
+    },
     dragon: {
       nombre: "Ignárax, el dragón rojo", tipo: "Dragón enorme", alin: "Caótico malvado", vd: "10",
       alma: 40, ca: 15, atk: 5, dano: [1, 10, 0], ataques: 2, ini: 2, resiste: "arcana", debil: null,
@@ -4385,7 +4646,10 @@ const DATOS = (() => {
       jefeTexto: "Lord Varkhul despliega su capa en el salón del trono. Se cura con vuestra sangre y odia la luz sagrada." },
     { nombre: "El Volcán", fondos: ["pico", "forja", "mina"], enemigos: ["kobold", "elemental", "golem"], jefe: "dragon", fondoJefe: "guarida", tienda: "forja",
       intro: "El Pico Cenizo humea sobre las minas enanas. Arriba, Ignárax duerme sobre su oro.",
-      jefeTexto: "Ignárax se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva. Es ahora o nunca." }
+      jefeTexto: "Ignárax se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva. Es ahora o nunca." },
+    { nombre: "El Abismo", fondos: ["abismo", "telarana", "ruinas"], enemigos: ["diablillo", "arana", "sombra"], jefe: "devorador", fondoJefe: "abismo", tienda: "planar",
+      intro: "Bajo el tesoro del dragón se abre una grieta que no tiene fondo. De ella sube un susurro: Ignárax no era más que un siervo. Bajáis.",
+      jefeTexto: "En el centro del vacío flota un ojo del tamaño de una luna. Nhazgul, el Devorador de Estrellas, os mira por primera vez." }
   ];
 
   /* Sucesos: tipo "prueba" (opciones con tirada o sin ella) o "enigma" (acertijo). acto: índice o null (cualquiera). */
@@ -4563,6 +4827,205 @@ const DATOS = (() => {
   };
 })();
 
+/* Dados y Mazmorras · más sucesos y lore: nuevas decisiones con consecuencias en los cuatro actos
+   y el acto secreto, El Abismo, donde aguarda Nhazgul, el Devorador de Estrellas.
+   Se carga después de datos.js y amplía el objeto global DATOS. */
+(() => {
+  "use strict";
+  const { EVENTOS, LORE } = DATOS;
+
+  EVENTOS.push(
+    /* ---------- Acto I · El Camino del Bosque ---------- */
+    { id: "ciervo", acto: 0, tipo: "prueba", pnj: "driada", titulo: "El ciervo blanco",
+      texto: "Un ciervo blanco, sagrado para las dríadas, sangra atrapado en un cepo de cazador furtivo.",
+      opciones: [
+        { txt: "Abrir el cepo con calma", stat: "tem", cd: 12, ok: { t: "El ciervo se aleja despacio y os mira una última vez. El bosque lo recordará.", fx: { xp: 4, moral: 1, marca: "ciervo" } }, ko: { t: "Se revuelve y os cocea antes de huir cojeando.", fx: { alma: -2, xp: 1 } } },
+        { txt: "Rematarlo y vender las astas", stat: null, ok: { t: "Las astas valen buena plata. Las hojas dejan de susurrar a vuestro paso.", fx: { oro: 14, moral: -1, marca: "furtivo" } } },
+        { txt: "No meterse en líos feéricos", stat: null, ok: { t: "Seguís adelante. El bramido se apaga a vuestra espalda.", fx: {} } }] },
+    { id: "moneda", acto: 0, tipo: "prueba", pnj: "forastero", titulo: "La moneda negra",
+      texto: "Un encapuchado en el cruce os ofrece una moneda negra, fría como el fondo de un pozo. «Paga cualquier deuda», susurra.",
+      opciones: [
+        { txt: "Aceptar la moneda", stat: null, ok: { t: "Pesa más de lo que debería. El forastero sonríe y ya no está.", fx: { oro: 10, marca: "moneda" } } },
+        { txt: "Estudiarla antes", stat: "raz", cd: 12, ok: { t: "No tiene cara ni cruz: solo un cielo sin estrellas. La tiráis al río.", fx: { xp: 4 } }, ko: { t: "Os quema los dedos de frío. Al soltarla, ha desaparecido.", fx: { alma: -2 } } },
+        { txt: "Echar al forastero", stat: "ani", cd: 11, ok: { t: "Retrocede sin pisar el barro. Sus ojos no reflejan la luz.", fx: { xp: 3, moral: 1 } }, ko: { t: "Os empuja con una fuerza imposible y se esfuma.", fx: { alma: -3 } } }] },
+    { id: "tabernero", acto: 0, tipo: "enigma", pnj: "tabernero", titulo: "La apuesta del Grifo Tuerto",
+      texto: "El tabernero os detiene en la puerta: «Si acertáis, la ronda corre de mi cuenta. Cuanto más seca, más mojada está. ¿Qué es?»",
+      respuestas: ["Una esponja", "Una toalla", "La sal", "Una jarra"], correcta: 1,
+      ok: { t: "«¡Una toalla!» Os llena el zurrón para el camino.", fx: { xp: 4, pocion: 1 } },
+      ko: { t: "«Una toalla.» Os cobra la ronda entera.", fx: { oro: -4 } } },
+
+    /* ---------- Acto II · La Mazmorra ---------- */
+    { id: "fizwick", acto: 1, tipo: "prueba", pnj: "gnomo", titulo: "Un gnomo en apuros",
+      texto: "Fizwick, el buhonero gnomo, cuelga boca abajo de una trampa de red. «¡Mi carromato! ¡Mis inventos!»",
+      opciones: [
+        { txt: "Bajarlo con cuidado", stat: "ani", cd: 11, ok: { t: "«¡Os debo una, y yo siempre pago!» Apunta vuestros nombres en una libreta.", fx: { xp: 3, moral: 1, marca: "gnomo" } }, ko: { t: "Se os escurre. Se levanta ofendido, pero agradecido.", fx: { xp: 1, marca: "gnomo" } } },
+        { txt: "Cobrarle por bajarlo", stat: "elo", cd: 12, ok: { t: "Paga refunfuñando. No os invitará a su cumpleaños.", fx: { oro: 12 } }, ko: { t: "Se suelta solo y os saca la lengua.", fx: {} } },
+        { txt: "Vaciarle los bolsillos", stat: null, ok: { t: "Monedas y un frasco. Sus maldiciones gnomas os siguen un buen rato.", fx: { oro: 8, sueno: 1, moral: -1 } } }] },
+    { id: "grimorio", acto: 1, tipo: "prueba", titulo: "El grimorio de Malakar",
+      texto: "En un atril de hueso descansa un libro negro. Sus páginas pasan solas y murmuran vuestro nombre.",
+      opciones: [
+        { txt: "Leerlo hasta el final", stat: "raz", cd: 14, ok: { t: "Habla de una grieta y de algo que come estrellas. Os lo lleváis.", fx: { xp: 7, marca: "grimorio" } }, ko: { t: "Las letras se os clavan en los ojos. Os lo lleváis igual.", fx: { almaTodos: -3, marca: "grimorio" } } },
+        { txt: "Quemarlo", stat: "tem", cd: 12, ok: { t: "Arde con llamas verdes y un chillido. El aire se aligera.", fx: { xp: 4, moral: 1 } }, ko: { t: "Las cenizas os buscan la garganta.", fx: { alma: -2, xp: 1 } } },
+        { txt: "Cerrarlo y no mirar atrás", stat: null, ok: { t: "Prudente. Seguís oyendo el murmullo dos pasillos más allá.", fx: { xp: 1 } } }] },
+    { id: "silencio", acto: 1, tipo: "enigma", pnj: "fantasma", titulo: "La guardiana muda",
+      texto: "Una guardia fantasma se lleva un dedo a los labios: «Si me nombras, me rompes. ¿Qué soy?»",
+      respuestas: ["El cristal", "Un juramento", "El silencio", "El hielo"], correcta: 2,
+      ok: { t: "Asiente sin decir nada y os señala un nicho con monedas.", fx: { xp: 5, oro: 12 } },
+      ko: { t: "Su grito sin voz os hiela la sangre.", fx: { almaTodos: -2, xp: 1 } } },
+
+    /* ---------- Acto III · El Castillo ---------- */
+    { id: "reina", acto: 2, tipo: "prueba", pnj: "fantasma", titulo: "La novia de Varkhul",
+      texto: "El fantasma de la reina Aldara llora en la torre. Varkhul la mató en su boda y nunca le dio sepultura.",
+      opciones: [
+        { txt: "Enterrar sus huesos", stat: "tem", cd: 12, ok: { t: "Rezáis sobre su tumba. «No os dejaré solos en la oscuridad», promete.", fx: { xp: 5, moral: 1, marca: "reina" } }, ko: { t: "La tierra del castillo está maldita. Sangráis cavando.", fx: { almaTodos: -2, xp: 2 } } },
+        { txt: "Preguntarle por Varkhul", stat: "elo", cd: 12, ok: { t: "«Teme a la luz del alba.» Os entrega su bendición nupcial.", fx: { bendicion: 1, xp: 3 } }, ko: { t: "Solo sabe llorar. Su pena os pesa.", fx: { xp: 1 } } },
+        { txt: "Quedarse sus joyas", stat: null, ok: { t: "Oro y rubíes. El llanto se vuelve un grito que no os deja dormir.", fx: { oro: 22, alma: -2, moral: -1 } } }] },
+    { id: "celdas", acto: 2, tipo: "prueba", titulo: "La despensa del vampiro",
+      texto: "En las mazmorras, aldeanos de Villabruma esperan pálidos y encadenados. Varkhul los guarda para cenar.",
+      opciones: [
+        { txt: "Liberarlos a todos", stat: "ani", cd: 13, ok: { t: "Huyen por el desagüe. «¡Villabruma sabrá de esto!»", fx: { xp: 5, moral: 1, marca: "aldeanos" } }, ko: { t: "Los guardias os oyen. Los sacáis, pero a golpes.", fx: { almaTodos: -3, xp: 3, marca: "aldeanos" } } },
+        { txt: "Abrir solo la cerradura", stat: "raz", cd: 12, ok: { t: "Clic. Que se busquen la vida. Os dan las gracias igual.", fx: { xp: 3 } }, ko: { t: "La ganzúa se parte. No podéis hacer nada.", fx: { xp: 1 } } },
+        { txt: "Dejarlos: son un estorbo", stat: null, ok: { t: "Sus súplicas resuenan en la piedra mucho rato.", fx: { moral: -1 } } }] },
+    { id: "caliz", acto: 2, tipo: "prueba", titulo: "El cáliz de sangre",
+      texto: "Sobre el altar, un cáliz rebosa sangre caliente. Dicen que quien bebe de él ya no siente el frío de la muerte.",
+      opciones: [
+        { txt: "Beber un trago", stat: "ani", cd: 14, ok: { t: "Una fuerza oscura os recorre las venas. No sabe tan mal.", fx: { maxTodos: 1, xp: 3, moral: -1 } }, ko: { t: "Os retuerce el estómago durante horas.", fx: { almaTodos: -4 } } },
+        { txt: "Verterlo en el suelo", stat: null, ok: { t: "La sangre sisea al tocar la piedra. Algo grita en el castillo.", fx: { xp: 3, moral: 1 } } },
+        { txt: "Venderlo al Mercader de los Planos", stat: "elo", cd: 13, ok: { t: "Paga sin preguntar y se relame.", fx: { oro: 20 } }, ko: { t: "«Está agria», dice. Os da calderilla.", fx: { oro: 4 } } }] },
+
+    /* ---------- Acto IV · El Volcán ---------- */
+    { id: "forja_runas", acto: 3, tipo: "prueba", pnj: "herrero", titulo: "La forja de los ancestros",
+      texto: "Una forja enana apagada desde hace un siglo. El yunque está grabado con runas de sellado.",
+      opciones: [
+        { txt: "Encender la forja", stat: "ani", cd: 13, ok: { t: "El fuego enano despierta y templa algo que dormía en el yunque.", fx: { botin: true, xp: 3 } }, ko: { t: "El fuelle revienta y os escupe brasas.", fx: { almaTodos: -2 } } },
+        { txt: "Leer las runas", stat: "raz", cd: 12, ok: { t: "«Sellamos la grieta bajo el pico. Que nadie cave más hondo.»", fx: { xp: 6 } }, ko: { t: "Son enano antiguo. Ni idea.", fx: { xp: 1 } } }] },
+    { id: "susurro", acto: 3, tipo: "prueba", titulo: "Una grieta que susurra",
+      texto: "Bajo las monedas del dragón se abre una grieta fría. De ella sube una voz que no es la de Ignárax: «Venid».",
+      opciones: [
+        { txt: "Escuchar la voz", stat: "tem", cd: 14, ok: { t: "Resistís y oís su nombre: Nhazgul. Él también oye el vuestro.", fx: { xp: 6, marca: "susurro" } }, ko: { t: "La voz os vacía por dentro. Ya sabe quiénes sois.", fx: { almaTodos: -3, marca: "susurro" } } },
+        { txt: "Taparla con rocas", stat: "ani", cd: 12, ok: { t: "La grieta calla. Por ahora.", fx: { xp: 3 } }, ko: { t: "Las rocas caen hacia dentro y no se oye el fondo.", fx: { alma: -2 } } },
+        { txt: "Echarle una ofrenda de oro", stat: null, ok: { t: "Las monedas caen sin hacer ruido. La voz se ríe, complacida.", fx: { oro: -10, bendicion: 1, moral: -1 } } }] },
+    { id: "puerta_enana", acto: 3, tipo: "enigma", titulo: "La puerta de Barak-Thur",
+      texto: "Unas runas brillan en la puerta de piedra: «Tengo dientes y no muerdo; abro lo que está cerrado. ¿Qué soy?»",
+      respuestas: ["Un peine", "Una llave", "Una sierra", "Un rastrillo"], correcta: 1,
+      ok: { t: "La puerta se abre a un almacén enano intacto.", fx: { xp: 5, oro: 18 } },
+      ko: { t: "Un chorro de vapor sale de las juntas.", fx: { almaTodos: -2, xp: 1 } } },
+
+    /* ---------- Acto V · El Abismo ---------- */
+    { id: "puente_sombras", acto: 4, tipo: "prueba", titulo: "El puente de sombra",
+      texto: "Un puente de humo negro cruza un vacío sin fondo. Abajo flotan estrellas apagadas, como ojos muertos.",
+      opciones: [
+        { txt: "Cruzar sin mirar abajo", stat: "tem", cd: 13, ok: { t: "Llegáis al otro lado con el corazón en un puño.", fx: { xp: 7 } }, ko: { t: "Miráis. El vacío os mira a vosotros.", fx: { almaTodos: -4, xp: 2 } } },
+        { txt: "Solidificarlo con magia", stat: "raz", cd: 14, ok: { t: "El humo se vuelve cristal. En él hay monedas atrapadas.", fx: { xp: 8, oro: 20 } }, ko: { t: "El conjuro se deshace a medio puente.", fx: { almaTodos: -3 } } },
+        { txt: "Rodear por el borde", stat: null, ok: { t: "Es más largo y más frío, pero seguro.", fx: { almaTodos: -1, xp: 3 } } }] },
+    { id: "capullos", acto: 4, tipo: "prueba", pnj: "forastero", titulo: "Capullos de seda",
+      texto: "Telarañas del tamaño de velas cuelgan del techo. Dentro de un capullo, alguien todavía respira.",
+      opciones: [
+        { txt: "Cortar la seda", stat: "ani", cd: 13, ok: { t: "Sale un aventurero medio muerto. Os da su bolsa en agradecimiento.", fx: { oro: 15, xp: 6, moral: 1 } }, ko: { t: "La seda vibra. Algo grande baja a mordiscos.", fx: { almaTodos: -4, xp: 2 } } },
+        { txt: "Quemar toda la telaraña", stat: "raz", cd: 12, ok: { t: "Arde en un instante. Entre las cenizas brilla algo.", fx: { botin: true, xp: 4, moral: -1 } }, ko: { t: "El humo es venenoso.", fx: { almaTodos: -3 } } },
+        { txt: "Saquear los capullos secos", stat: null, ok: { t: "Los muertos no necesitan oro. Las arañas no opinan igual.", fx: { oro: 25, alma: -4, moral: -1 } } }] },
+    { id: "dados_diablillos", acto: 4, tipo: "prueba", titulo: "Los dados de los diablillos",
+      texto: "Tres diablillos juegan a los dados sobre una calavera. «¿Una partida? Se apuesta oro… o algo mejor.»",
+      opciones: [
+        { txt: "Apostar y jugar limpio", stat: "tem", cd: 13, ok: { t: "Les ganáis. Pagan entre chillidos de rabia.", fx: { oro: 30, xp: 4 } }, ko: { t: "Pierden los dados, ganan ellos. Siempre.", fx: { oro: -15 } } },
+        { txt: "Hacerles trampa", stat: "elo", cd: 14, ok: { t: "Engañar a un diablillo: hazaña para los bardos.", fx: { oro: 20, xp: 8, moral: -1 } }, ko: { t: "Os pillan. Las trampas se pagan con sangre.", fx: { almaTodos: -4, oro: -10 } } },
+        { txt: "Patear la calavera", stat: null, ok: { t: "Huyen insultándoos en infernal.", fx: { xp: 2 } } }] },
+    { id: "reflejo", acto: 4, tipo: "prueba", titulo: "Vuestras sombras",
+      texto: "Vuestras sombras se despegan del suelo y se ponen en pie. Tienen vuestra cara, pero sonríen distinto.",
+      opciones: [
+        { txt: "Plantarles cara", stat: "ani", cd: 14, ok: { t: "Se deshacen como humo y vuelven a vuestros pies, dóciles.", fx: { xp: 9 } }, ko: { t: "Pegan como vosotros, pero sin cansarse.", fx: { almaTodos: -5, xp: 3 } } },
+        { txt: "Recordar quiénes sois", stat: "tem", cd: 13, ok: { t: "Les habláis de Villabruma. Las sombras bajan la cabeza.", fx: { xp: 7, curaPct: 0.3 } }, ko: { t: "Dudáis. Ellas no.", fx: { maxTodos: -1, xp: 2 } } }] },
+    { id: "estrella_caida", acto: 4, tipo: "prueba", titulo: "Una estrella a medio comer",
+      texto: "Un fragmento de estrella late en el suelo, mordido por unos dientes enormes. Su luz aún calienta.",
+      opciones: [
+        { txt: "Rezar a Solara junto a ella", stat: "tem", cd: 13, ok: { t: "La luz responde. Solara os oye incluso aquí.", fx: { bendicion: 2, almaTodos: 5, xp: 4 } }, ko: { t: "La estrella se apaga un poco más. Solo silencio.", fx: { xp: 2 } } },
+        { txt: "Usar su luz para curaros", stat: null, ok: { t: "Las heridas se cierran. La estrella se apaga para siempre.", fx: { curaPct: 0.6, moral: -1 } } },
+        { txt: "Arrancar un pedazo", stat: "ani", cd: 13, ok: { t: "Quema, pero brilla como un arma sagrada.", fx: { botin: true, alma: -3, xp: 4 } }, ko: { t: "Os abrasa las manos y se os cae al vacío.", fx: { alma: -5 } } }] },
+    { id: "voz_estrellas", acto: 4, tipo: "enigma", pnj: "planar", titulo: "El mercader perdido",
+      texto: "El Mercader de los Planos tiembla: «Respondedme y os saco algo bueno. Murió hace mil años y aún brilla en tu cielo. ¿Qué es?»",
+      respuestas: ["Un dios", "La luna", "Una estrella", "Un fantasma"], correcta: 2,
+      ok: { t: "«Y él se las come.» Os da su mejor mercancía y huye.", fx: { xp: 8, superior: 1, oro: 15 } },
+      ko: { t: "«Una estrella…» Se desvanece. Algo en la oscuridad se relame.", fx: { almaTodos: -3, xp: 2 } } },
+
+    /* ---------- Consecuencias de decisiones anteriores ---------- */
+    { id: "ciervo2", requiere: "ciervo", actos: [1, 2], tipo: "prueba", pnj: "driada", titulo: "Un destello blanco",
+      texto: "Entre la piedra húmeda aparece el ciervo blanco, hecho de luz. La dríada lo envía a pagar su deuda.",
+      opciones: [
+        { txt: "Beber donde pisa", stat: null, ok: { t: "Brota agua clara del suelo. Sabe a bosque.", fx: { curaPct: 0.5, xp: 2, quita: "ciervo" } } },
+        { txt: "Seguirlo", stat: "tem", cd: 12, ok: { t: "Os guía hasta un tesoro escondido y se desvanece.", fx: { botin: true, xp: 4, quita: "ciervo" } }, ko: { t: "Lo perdéis de vista en la oscuridad.", fx: { xp: 1, quita: "ciervo" } } }] },
+    { id: "furtivo2", requiere: "furtivo", actos: [1, 2], tipo: "prueba", pnj: "driada", titulo: "Raíces en la piedra",
+      texto: "Raíces negras revientan los muros. La voz de la dríada brota de ellas: «Mataste a mi ciervo».",
+      opciones: [
+        { txt: "Pedirle perdón", stat: "elo", cd: 13, ok: { t: "Las raíces se retiran despacio. Os perdona, por esta vez.", fx: { xp: 4, moral: 1, quita: "furtivo" } }, ko: { t: "Las raíces os aprietan hasta crujir.", fx: { almaTodos: -3, quita: "furtivo" } } },
+        { txt: "Cortarlas a hachazos", stat: "ani", cd: 13, ok: { t: "Sangran savia y se repliegan. Ella no olvidará.", fx: { xp: 3 } }, ko: { t: "Por cada raíz cortada salen dos.", fx: { almaTodos: -4 } } },
+        { txt: "Ofrecer las ganancias", stat: null, ok: { t: "Las monedas se hunden en la tierra. Silencio.", fx: { oro: -14, quita: "furtivo" } } }] },
+    { id: "moneda2", requiere: "moneda", actos: [3, 4], tipo: "prueba", pnj: "forastero", titulo: "La moneda pesa",
+      texto: "La moneda negra se hiela en vuestra bolsa. El encapuchado vuelve: «Ha llegado la hora de pagar».",
+      opciones: [
+        { txt: "Pagar con sangre", stat: null, ok: { t: "Os araña la palma y bebe. A cambio, os llena la bolsa.", fx: { oro: 25, maxTodos: -1, moral: -1, quita: "moneda" } } },
+        { txt: "Arrojarla a la lava", stat: "tem", cd: 13, ok: { t: "La moneda grita al fundirse. El forastero se deshace en humo.", fx: { xp: 7, moral: 1, quita: "moneda" } }, ko: { t: "Vuelve a vuestra bolsa. Y el frío, a vuestros huesos.", fx: { almaTodos: -3 } } }] },
+    { id: "gnomo2", requiere: "gnomo", actos: [2, 3, 4], tipo: "prueba", pnj: "gnomo", titulo: "Fizwick paga sus deudas",
+      texto: "¡Puf! Fizwick aparece en una nube de humo. «¡Os encontré! Os traigo mi último invento. Casi no explota.»",
+      opciones: [
+        { txt: "Aceptarlo sin preguntar", stat: null, ok: { t: "Es un artilugio rarísimo, pero funciona de maravilla.", fx: { botin: true, xp: 3, quita: "gnomo" } } },
+        { txt: "Pedir algo más práctico", stat: "elo", cd: 11, ok: { t: "Refunfuña y os da frascos de su propia cosecha.", fx: { pocion: 2, sueno: 1, quita: "gnomo" } }, ko: { t: "Se ofende y os deja un frasco por educación.", fx: { pocion: 1, quita: "gnomo" } } }] },
+    { id: "reina2", requiere: "reina", actos: [3, 4], tipo: "prueba", pnj: "fantasma", titulo: "La reina cumple",
+      texto: "Una luz pálida baja de la oscuridad. Es la reina Aldara, en paz por fin. «Os prometí no dejaros solos.»",
+      opciones: [
+        { txt: "Aceptar su abrazo", stat: null, ok: { t: "Su frío es dulce. Las heridas se cierran y el miedo se va.", fx: { curaPct: 0.5, bendicion: 1, xp: 4, quita: "reina" } } },
+        { txt: "Pedirle que vigile el camino", stat: "elo", cd: 12, ok: { t: "Os muestra un atajo y un tesoro olvidado.", fx: { botin: true, xp: 5, quita: "reina" } }, ko: { t: "Se desvanece antes de responder, pero os deja su calma.", fx: { almaTodos: 3, quita: "reina" } } }] },
+    { id: "aldeanos2", requiere: "aldeanos", actos: [3], tipo: "prueba", pnj: "tabernero", titulo: "Noticias de Villabruma",
+      texto: "El tabernero del Grifo Tuerto sube la ladera con una mula: «Los que salvasteis volvieron a casa. El pueblo os manda esto».",
+      opciones: [
+        { txt: "Aceptarlo con gratitud", stat: null, ok: { t: "Pociones, pan y una carta que os hace un nudo en la garganta.", fx: { pocion: 2, superior: 1, xp: 3, quita: "aldeanos" } } },
+        { txt: "Que lo guarden para el pueblo", stat: null, ok: { t: "«Sois buena gente.» Os da al menos su bendición.", fx: { bendicion: 1, xp: 5, moral: 1, quita: "aldeanos" } } }] },
+    { id: "grimorio2", requiere: "grimorio", actos: [4], tipo: "prueba", titulo: "El libro vuelve a casa",
+      texto: "El grimorio de Malakar se abre solo en vuestras manos. Aquí, junto a su amo, por fin lee lo que oculta.",
+      opciones: [
+        { txt: "Leer la última página", stat: "raz", cd: 13, ok: { t: "Es el punto débil de Nhazgul: la luz que robó. Sabéis cómo usarla.", fx: { bendicion: 2, xp: 9, quita: "grimorio" } }, ko: { t: "El libro lee vuestra mente a la vez. Grita en ella.", fx: { almaTodos: -5, quita: "grimorio" } } },
+        { txt: "Tirarlo al vacío", stat: null, ok: { t: "Cae chillando. Una cadena invisible se rompe dentro de vosotros.", fx: { xp: 4, almaTodos: 3, quita: "grimorio" } } }] },
+    { id: "susurro2", requiere: "susurro", actos: [4], tipo: "prueba", titulo: "Nhazgul os conoce",
+      texto: "«Os oí bajo el oro del dragón», dice la voz. «Él me servía. Servidme vosotros y os daré todo lo que brilla.»",
+      opciones: [
+        { txt: "Rechazarlo con firmeza", stat: "tem", cd: 14, ok: { t: "La voz retrocede, herida. Ahora es ella la que duda.", fx: { xp: 10, bendicion: 1, moral: 1, quita: "susurro" } }, ko: { t: "Ríe. Su risa os desgarra por dentro.", fx: { almaTodos: -5, quita: "susurro" } } },
+        { txt: "Aceptar su oro", stat: null, ok: { t: "Llueve oro frío. Algo de vosotros se queda en la oscuridad.", fx: { oro: 30, maxTodos: -2, moral: -1, quita: "susurro" } } }] },
+    { id: "aliado2", requiere: "aliado", actos: [4], tipo: "prueba", pnj: "herrero", titulo: "Las runas de Thrain",
+      texto: "Thrain se arrodilla ante una pared con runas enanas. «Mis ancestros sellaron esto. Puedo despertar su sello.»",
+      opciones: [
+        { txt: "Protegerlo mientras canta", stat: "ani", cd: 12, ok: { t: "Las runas arden de oro. Las sombras huyen chillando.", fx: { xp: 8, curaPct: 0.4, bendicion: 1 } }, ko: { t: "Las sombras os muerden, pero Thrain termina el canto.", fx: { almaTodos: -3, xp: 5 } } },
+        { txt: "Buscar el tesoro de los ancestros", stat: "raz", cd: 13, ok: { t: "Tras las runas hay una cámara enana intacta.", fx: { oro: 25, botin: true } }, ko: { t: "Solo hay polvo y huesos de enano.", fx: { xp: 2 } } }] },
+    { id: "sacrilegio2", requiere: "sacrilegio", actos: [4], tipo: "prueba", titulo: "Las sombras huelen la plata",
+      texto: "Las sombras se arremolinan a vuestro alrededor. Huelen la plata robada a Solara: sin su luz, sois presa fácil.",
+      opciones: [
+        { txt: "Invocar a Solara de todos modos", stat: "tem", cd: 15, ok: { t: "Un rayo de alba atraviesa el Abismo. Solara os perdona.", fx: { xp: 8, almaTodos: 4, moral: 1, quita: "sacrilegio" } }, ko: { t: "Nadie responde. Las sombras se alimentan.", fx: { almaTodos: -5 } } },
+        { txt: "Echarles la plata para que se distraigan", stat: null, ok: { t: "Se lanzan sobre las monedas. Huis mientras pelean.", fx: { oro: -20, xp: 3 } } }] }
+  );
+
+  LORE.mundo.push(
+    { titulo: "La historia de Valdren", texto: [
+      "Durante la Era de las Escamas, los dragones gobernaban Valdren y los hombres les pagaban tributo en oro y en doncellas. Hasta que Aldric el Alzado unió a humanos, elfos y enanos y los expulsó en la Guerra de las Cenizas.",
+      "De aquella alianza nació la Corona de Valdren. Duró cuatrocientos años, hasta que Malakar envenenó al último rey. Desde entonces solo quedan reinos pequeños, ruinas y la Cripta de los Reyes Olvidados."] },
+    { titulo: "Los reinos enanos", texto: [
+      "Bajo las montañas hubo tres reinos enanos: Kor-Ammon, de los canteros; Hondaroca, de los mineros de gemas, y Barak-Thur, la mayor forja del mundo, al pie del Pico Cenizo.",
+      "Los enanos de Barak-Thur cavaron más hondo que nadie. Un día encontraron una grieta fría donde no debía haber nada y la sellaron con siete runas. Poco después llegó Ignárax, y nadie se preguntó por qué eligió dormir justo encima."] },
+    { titulo: "Los dioses y las estrellas", texto: [
+      "Los sacerdotes de Solara enseñan que cada estrella es la mirada de un dios antiguo que vela por el mundo. Cuando una estrella se apaga, su dios cae en el olvido.",
+      "Los astrónomos de Valdren llevan siglos contando cómo desaparecen estrellas del cielo, una a una. Los templos prefieren no hablar de ello."] },
+    { titulo: "El Abismo", texto: [
+      "Bajo el Reino de las Sombras, donde los muertos sin descanso ya no se atreven a bajar, está el Abismo: un vacío sin suelo ni cielo, lleno de estrellas apagadas que flotan como ojos ciegos.",
+      "Allí viven diablillos que apuestan almas a los dados, arañas del tamaño de una casa y sombras que fueron personas y ya no recuerdan su nombre."] },
+    { titulo: "Nhazgul, el Devorador de Estrellas", texto: [
+      "Antes de los dioses ya existía el hambre. Nhazgul es lo que queda de ella: una oscuridad con dientes que se alimenta de la luz de las estrellas, y de los dioses que viven en ellas.",
+      "No puede salir del Abismo por sí mismo, así que susurra. Le susurró a Malakar el secreto de la inmortalidad. Le susurró a Ignárax en sueños durante cien años. Y ahora os susurra a vosotros."] },
+    { titulo: "La cadena de susurros", texto: [
+      "Malakar sirvió al dragón, el dragón prometió el reino a Varkhul, y todos creían mandar sobre alguien. Ninguno sabía que obedecía a la misma voz.",
+      "Por eso la muerte de Ignárax no es el final: es la grieta que Nhazgul esperaba."] }
+  );
+
+  LORE.lugares[4] = { titulo: "El Abismo", texto: [
+    "Al caer Ignárax, el sello enano bajo su tesoro se resquebraja. La grieta lleva al plano de las sombras, donde Nhazgul, el Devorador de Estrellas, espera con hambre de mil años."] };
+})();
+
 /* Dados y Mazmorras · escenario: fondo, héroes, rival y efectos en un lienzo de 192×108 píxeles de arte,
    escalado a múltiplos enteros de los píxeles del dispositivo para que el pixel art quede nítido. */
 const ESCENARIO = (() => {
@@ -4711,7 +5174,7 @@ const ESCENARIO = (() => {
       if (reducido && e.tipo !== "numero") return;
       if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
       if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800, proyectil: 300, tajo: 260, destello: 380 }[e.tipo] || 500 }, e));
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800, proyectil: 300, tajo: 260, destello: 380, salto: 900 }[e.tipo] || 500 }, e));
     }
     function desplazamiento(id, ahora) {
       let dx = 0, dy = 0, blanco = false;
@@ -4720,6 +5183,7 @@ const ESCENARIO = (() => {
         if (p < 0 || p > 1) continue;
         if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 10) * (id[0] === "e" ? -1 : 1);
         if (e.tipo === "golpe" && e.objetivo === id) { blanco = p < 0.45; dx += p < 0.8 ? (Math.floor(p * 12) % 2 ? 1 : -1) : 0; }
+        if (e.tipo === "salto" && (e.actor === id || (e.actor === "h*" && id[0] === "h"))) dy -= Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 6);
       }
       return [dx, dy, blanco];
     }
@@ -4734,6 +5198,13 @@ const ESCENARIO = (() => {
       b.fillRect(x - 3, y - 1, 7, 1); b.fillRect(x - 3, y, 7, 2); b.fillRect(x - 2, y + 2, 5, 1); b.fillRect(x - 1, y + 3, 3, 1); b.fillRect(x, y + 4, 1, 1);
       b.fillStyle = color;
       b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y + 1, 3, 1); b.fillRect(x, y + 2, 1, 1);
+    }
+    /* Fila de puntitos de color, uno por estado (veneno, quemadura…). */
+    function puntos(x, y, colores) {
+      const n = (colores || []).length;
+      if (!n) return;
+      const x0 = Math.round(x - (n * 4 - 1) / 2);
+      colores.forEach((col, k) => { b.fillStyle = PX.CONTORNO; b.fillRect(x0 + k * 4 - 1, y - 1, 5, 5); b.fillStyle = col; b.fillRect(x0 + k * 4, y, 3, 3); });
     }
     function barra(x, y, ancho, valor, max, color) {
       b.fillStyle = PX.CONTORNO; b.fillRect(x - 1, y - 1, ancho + 2, 4);
@@ -4771,7 +5242,7 @@ const ESCENARIO = (() => {
           if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, a.fy - 43 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
           let iy = a.fy - 40;
           if (a.h.aturdido) { PX.texto(b, "ZZ", a.fx - 9, iy, R.mar[4]); }
-          if (a.h.cegado) { PX.texto(b, "?", a.fx + 6, iy, R.bronce[4]); }
+          puntos(a.fx + 1, a.fy - 48, a.h.estados);
         } else {
           const r = a.rival;
           const v = spriteRival(r.tipo, r.clave);
@@ -4786,13 +5257,12 @@ const ESCENARIO = (() => {
             if (Math.floor(p * 10) % 2) continue;
           }
           if (r.tipo === "enemigo") sombraSuelo(a.fx, a.fy - 1, 22);
-          b.drawImage(blanco ? v.blanco : r.petrificado ? v.piedra : v.normal, ix, iy);
+          b.drawImage(blanco ? v.blanco : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
           if (r.tipo === "enemigo" && r.max) {
             barra(a.fx - 15, a.fy - 41, 30, r.hp, r.max, R.sangre[4]);
-            if (r.maldito) PX.texto(b, "!", a.fx + 18, a.fy - 43, R.magia[3]);
             if (r.aturdido) PX.texto(b, "ZZ", a.fx - 22, a.fy - 43, R.mar[4]);
-            if (r.veneno) PX.texto(b, "*", a.fx + 18, a.fy - 36, R.hoja[4]);
-            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, a.fy - 50 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
+            puntos(a.fx, a.fy - 47, r.estados);
+            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, a.fy - 55 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
           }
         }
       }
@@ -4948,7 +5418,9 @@ const LOGROS = {
   legendario: { nombre: "Tesoro de leyenda", desc: "Encuentra un objeto legendario." },
   nivel10: { nombre: "Leyenda viva", desc: "Llega a nivel 10." },
   pesadilla: { nombre: "Sin miedo", desc: "Termina la aventura en Pesadilla." },
-  mimico: { nombre: "¿Era un cofre?", desc: "Derrota a un mímico." }
+  mimico: { nombre: "¿Era un cofre?", desc: "Derrota a un mímico." },
+  devorador: { nombre: "Apagaestrellas", desc: "Vence a Nhazgul, el Devorador de Estrellas, en el Abismo." },
+  estados: { nombre: "Alquimista del dolor", desc: "Ten a un enemigo con 3 estados a la vez." }
 };
 const MEJORAS = {
   alforjas: { nombre: "Alforjas", desc: "+1 poción al empezar.", coste: 6, max: 3 },
@@ -4994,6 +5466,7 @@ const PISTAS = {
   1: { bpm: 78, raiz: 45, modo: [0, 1, 3, 5, 7, 8, 10], acordes: [0, 1, 0, 6], semilla: 11 },
   2: { bpm: 88, raiz: 48, modo: [0, 2, 3, 5, 7, 8, 11], acordes: [0, 5, 4, 0], semilla: 5 },
   3: { bpm: 100, raiz: 46, modo: [0, 1, 4, 5, 7, 8, 10], acordes: [0, 1, 0, 6], semilla: 13 },
+  4: { bpm: 70, raiz: 43, modo: [0, 1, 3, 5, 6, 8, 10], acordes: [0, 6, 5, 1], semilla: 23 },
   jefe: { bpm: 138, raiz: 45, modo: [0, 1, 3, 5, 7, 8, 10], acordes: [0, 1, 5, 4], semilla: 17 }
 };
 function melodia(P) {
@@ -5069,7 +5542,7 @@ function nuevoHeroe(def) {
   return {
     nombre: String(def.nombre || "").trim().slice(0, 16) || "Anónimo", raza, clase, alin: ALINEAMIENTOS[def.alin] ? def.alin : "N",
     look: Object.assign({}, def.look || {}), uid: def.uid || null, base, almaBase, alma: almaBase, xp: 0, nivel: 1, oro: 15,
-    equipo: { arma: null, armadura: null, talisman: null }, habs: APRENDE[clase][1].slice(), usosH: {}, est: { aturdido: 0, cegado: 0 }, fl: {}
+    equipo: { arma: null, armadura: null, talisman: null }, habs: APRENDE[clase][1].slice(), usosH: {}, est: {}, fl: {}
   };
 }
 const lookDe = p => Object.assign({ raza: p.raza, clase: p.clase }, p.look);
@@ -5088,9 +5561,10 @@ const ABR_TIPO = { fisica: "físico", arcana: "mágico", sagrada: "sagrado" };
 function resumenHab(id, p) {
   const h = H(id), m = h.stat ? statHab(p, h) : 0;
   const dados = h.dado ? `${h.golpes ? h.golpes + "×" : ""}${h.dado[0]}d${h.dado[1]}${fmt(m + (h.bono || 0))}` : "";
-  if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}`;
-  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}`;
-  return { escudo: "Bloquea un ataque", aturde: "Pierde un turno", maldice: "+2 daño recibido", debilita: "−2 a su ataque", veneno: `Veneno ${h.turnos} turnos` }[h.efecto];
+  const extras = [h.veneno ? "envenena" : "", h.debilita ? "debilita" : "", h.maldice ? "maldice" : "", h.aplica ? `${ESTADOS[h.aplica[0]].verbo}${h.aplica[2] < 1 ? ` ${Math.round(h.aplica[2] * 100)} %` : ""}` : ""].filter(Boolean);
+  if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}${h.area ? " · a todos" : ""}${extras.length ? " · " + extras.join(" · ") : ""}`;
+  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}${h.regen ? " · regenera" : ""}`;
+  return { escudo: "Bloquea un ataque", aturde: "Paraliza 1 turno", maldice: "Maldice: +2 daño recibido", debilita: "Debilita: −2 a su ataque", veneno: `Envenena ${h.turnos} turnos` }[h.efecto] + (h.area ? " · a todos" : "");
 }
 function statHab(p, h) { return h.stat ? stat(p, h.stat) : 0; }
 /* Próxima habilidad que aprenderá el héroe. */
@@ -5287,9 +5761,63 @@ function permitido(k, uid) {
   if (k === "equipar") return S.players.some(p => p.uid === uid);
   if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
   if (k === "bloquear") return !!S.bloqueo && S.players[S.bloqueo.i].uid === uid;
+  if (k === "votar") return S.players.some(p => p.uid === uid);
   const p = S.players[S.turno];
   return !!p && p.uid === uid;
 }
+/* Votaciones: en línea, el camino y las decisiones las vota el grupo (15 s; si hay empate, manda quien tiene el turno). */
+const VOTABLES = new Set(["nodo", "op", "resp", "final"]);
+const hayVotacion = () => !!(S && S.online && S.players.length > 1);
+const contextoVoto = () => `${S.modo}:${S.mapa ? S.mapa.fila : ""}:${S.esc ? S.esc.titulo : ""}:${S.fase}`;
+function votantes() {
+  const conectados = new Set([miId, ...red.peers.map(p => p.presence && p.presence.id).filter(Boolean)]);
+  return [...new Set(S.players.map(p => p.uid))].filter(u => conectados.has(u));
+}
+function votar(uid, k, v) {
+  if (!VOTABLES.has(k) || !S.players.some(p => p.uid === uid)) return;
+  const ctx = contextoVoto();
+  if (!S.votacion || S.votacion.ctx !== ctx || S.votacion.k !== k) S.votacion = { k, ctx, votos: {}, fin: Date.now() + 15000 };
+  S.votacion.votos[uid] = String(v);
+  if (votantes().every(u => S.votacion.votos[u] !== undefined)) return cerrarVotacion();
+  guardar(); render();
+  clearTimeout(votar.t);
+  votar.t = setTimeout(cerrarVotacion, Math.max(0, S.votacion.fin - Date.now()) + 60);
+}
+function cerrarVotacion() {
+  const vt = S && S.votacion;
+  if (!vt || ocupado) return;
+  clearTimeout(votar.t);
+  S.votacion = null;
+  if (vt.ctx !== contextoVoto()) { guardar(); return render(); }
+  const cuenta = {};
+  Object.values(vt.votos).forEach(v => { cuenta[v] = (cuenta[v] || 0) + 1; });
+  const max = Math.max(...Object.values(cuenta));
+  const empatados = Object.keys(cuenta).filter(v => cuenta[v] === max);
+  const delTurno = vt.votos[S.players[S.turno].uid];
+  const gana = empatados.includes(delTurno) ? delTurno : empatados[0];
+  log(`El grupo vota (${Object.keys(vt.votos).length} votos).`, "esc");
+  ejecutar(vt.k, gana);
+}
+/* Votos que lleva cada opción y si es la mía. */
+function votosDe(k, v) {
+  const vt = S && S.votacion;
+  if (!vt || vt.k !== k) return { n: 0, mio: false };
+  const vals = Object.entries(vt.votos);
+  return { n: vals.filter(([, x]) => x === String(v)).length, mio: vt.votos[miId] === String(v) };
+}
+function lineaVotacion() {
+  const vt = S && S.votacion;
+  if (!hayVotacion()) return "";
+  const n = vt ? Object.keys(vt.votos).length : 0, total = votantes().length;
+  return `<p class="votacion"><b>Votación</b> · ${n}/${total} votos${vt ? ` · <span class="cuenta-voto">${Math.max(0, Math.ceil((vt.fin - Date.now()) / 1000))} s</span>` : " · toca una opción para votar"}</p>`;
+}
+setInterval(() => {
+  if (!S || !S.votacion) return;
+  const c = document.querySelector(".cuenta-voto");
+  if (c) c.textContent = `${Math.max(0, Math.ceil((S.votacion.fin - Date.now()) / 1000))} s`;
+  if (esHost() && Date.now() > S.votacion.fin + 500) cerrarVotacion();
+}, 500);
+
 /* El bloqueo no espera respuesta: va directo y sin bloquear la pantalla. */
 function enviarBloqueo() {
   if (!red.sala) return;
@@ -5403,8 +5931,33 @@ function festejar(titulo, sub, clase = "") {
 }
 const EFECTOS_ESCENA = new Set(["numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
 /* Un efecto se ve en el escenario y además suena y, si toca, se celebra (también en los móviles de los demás). */
+/* Rótulo sobre el escenario con el nombre del ataque y quién lo hace. */
+function anunciar(e) {
+  const el = $("#anuncio");
+  if (!el) return;
+  el.className = "anuncio t-" + (e.tono || "apoyo");
+  el.innerHTML = `<b>${esc(e.texto)}</b>${e.sub ? `<small>${esc(e.sub)}</small>` : ""}`;
+  el.hidden = false;
+  void el.offsetWidth; el.classList.add("ver");
+  clearTimeout(anunciar.t);
+  anunciar.t = setTimeout(() => { el.hidden = true; }, 1500);
+}
+/* Los retratos del grupo reaccionan: se sacuden al recibir daño, brillan al curarse y saltan al ganar. */
+const GESTOS = {};
+function gesto(i, clase) {
+  const chips = document.querySelectorAll("#grupo .heroe");
+  (i === "*" ? [...chips.keys()] : [i]).forEach(k => {
+    GESTOS[k] = { clase, hasta: performance.now() + 650 };
+    const ch = chips[k];
+    if (ch) { ch.classList.remove("g-herido", "g-curado", "g-victoria"); void ch.offsetWidth; ch.classList.add(clase); }
+  });
+}
 function efectoLocal(e) {
-  if (escJuego && EFECTOS_ESCENA.has(e.tipo)) escJuego.efecto(e);
+  if (escJuego && (EFECTOS_ESCENA.has(e.tipo) || e.tipo === "salto")) escJuego.efecto(e);
+  if (e.tipo === "anuncio") anunciar(e);
+  if (e.tipo === "golpe" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-herido");
+  if (e.tipo === "cura" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-curado");
+  if (e.tipo === "salto" || e.tipo === "victoria") gesto("*", "g-victoria");
   if (e.tipo === "golpe") sonar(e.objetivo === "e" ? "golpe" : "herido");
   else if (e.tipo === "magia") sonar("magia");
   else if (e.tipo === "cura") sonar("cura");
@@ -5483,6 +6036,7 @@ function aplicarFx(f = {}, actor) {
   if (f.marca) S.memoria[f.marca] = true;
   if (f.quita) delete S.memoria[f.quita];
   if (f.botin) { S.botin.push(sacarBotin(true)); anunciarBotin(); out.push("¡Un objeto!"); }
+  if (f.bendicionB) { ofrecerBendiciones(); out.push("¡Bendición!"); }
   if (f.moral && actor) {
     const antes = actor.alin;
     actor.alin = D.moverMoral(actor.alin, f.moral);
@@ -5532,15 +6086,21 @@ function lineaTirada(quien, accion, r, mod, bono, total, contra, crit) {
 
 /* ---------- Mapa de caminos ---------- */
 function generarMapa() {
+  /* 6 filas de caminos entre la salida y el jefe, de 2 a 4 nodos cada una. */
   const filas = [[{ tipo: "inicio", sig: [] }]];
-  for (let f = 1; f <= 5; f++) {
-    const n = f === 5 ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0);
+  let elites = 0;
+  for (let f = 1; f <= 6; f++) {
+    const r = Math.random();
+    const n = f === 1 ? 3 : f === 6 ? 2 + (r < 0.5 ? 1 : 0) : r < 0.25 ? 2 : r < 0.7 ? 3 : 4;
     const fila = [];
     for (let i = 0; i < n; i++) fila.push({ tipo: f === 1 || Math.random() < 0.5 ? "combate" : "evento", sig: [] });
-    if (f === 2 || (f === 4 && Math.random() < 0.5)) fila[Math.floor(Math.random() * n)].tipo = "tesoro";
-    if (f === 3) fila[Math.floor(Math.random() * n)].tipo = "tienda";
-    if (f >= 2 && f <= 4 && Math.random() < 0.45) { const l = fila.filter(x => x.tipo === "combate" || x.tipo === "evento"); if (l.length) azarDe(l).tipo = "elite"; }
-    if (f === 5) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
+    const libres = () => fila.filter(x => x.tipo === "combate" || x.tipo === "evento");
+    if (f === 2 || (f === 5 && Math.random() < 0.5)) azarDe(libres()).tipo = "tesoro";
+    if (f === 3) azarDe(libres()).tipo = "tienda";
+    if (f === 4 && Math.random() < 0.6) azarDe(libres()).tipo = "altar";
+    if (f >= 3 && f <= 5 && elites < 2 && Math.random() < 0.45 && libres().length) { azarDe(libres()).tipo = "elite"; elites++; }
+    if (f >= 2 && f <= 5) libres().forEach(x => { if (Math.random() < 0.18) x.tipo = "misterio"; });
+    if (f === 6) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
     filas.push(fila);
   }
   filas.push([{ tipo: "jefe", sig: [] }]);
@@ -5555,17 +6115,29 @@ function generarMapa() {
   filas[0][0].hecho = true;
   return { filas, fila: 0, col: 0 };
 }
-const NOMBRE_NODO = { combate: "Combate", elite: "Élite", evento: "Suceso", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
+const NOMBRE_NODO = { combate: "Combate", elite: "Élite", evento: "Suceso", misterio: "Misterio", altar: "Altar maldito", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
 const VICTORIAS = ["Cae el último golpe. El camino queda libre.", "Recogéis el botín y seguís adelante.", "Victoria. Os curáis las heridas como podéis.", "El enemigo cae. Hay monedas entre los restos."];
 const VICTORIAS_JEFE = [
   "El trol cae al barranco. Al otro lado del puente empieza la mazmorra.",
   "Malakar se deshace en polvo y rompéis su filacteria. Un pasadizo sube hacia un castillo.",
   "Lord Varkhul arde al primer rayo de sol. El paso hacia el Pico Cenizo está abierto.",
-  "Ignárax cae sobre su tesoro con un rugido que hace temblar la montaña. El dragón ha muerto."
+  "Ignárax cae sobre su tesoro con un rugido que hace temblar la montaña. El dragón ha muerto.",
+  "El ojo de Nhazgul se apaga como una estrella vieja. El vacío se cierra y, por primera vez en mil años, Valdren duerme tranquila."
 ];
 
 function crearEscena(tipo) {
   const A = ACTOS[S.acto];
+  if (tipo === "misterio") {
+    const r = Math.random();
+    tipo = r < 0.35 ? "combate" : r < 0.75 ? "evento" : "tesoro";
+    log(`El misterio resulta ser: ${NOMBRE_NODO[tipo].toLowerCase()}.`, "esc");
+  }
+  if (tipo === "altar") return { tipo: "prueba", fondo: azarDe(A.fondos), titulo: "Un altar maldito",
+    texto: "Una piedra negra late como un corazón. Promete poder a cambio de algo vuestro.",
+    opciones: [
+      { txt: "Ofrecer vuestra sangre (−3 PG máx. a todos)", stat: null, ok: { t: "La piedra bebe. Algo os cambia por dentro.", fx: { maxTodos: -3, bendicionB: true, moral: -1 } } },
+      { txt: "Ofrecer oro (−15 po cada uno)", stat: null, ok: { t: "El oro se funde en la piedra y escupe un objeto.", fx: { oro: -15, botin: true } } },
+      { txt: "Destrozar el altar", stat: "ani", cd: 13, ok: { t: "La piedra estalla y libera la luz atrapada.", fx: { xp: 6, almaTodos: 4, moral: 1 } }, ko: { t: "La piedra se defiende con fuego negro.", fx: { almaTodos: -4 } } }] };
   if (tipo === "evento") {
     const mem = S.memoria || {};
     const pool = EVENTOS.filter(e => !S.vistosEv.includes(e.id) && (e.requiere ? !!mem[e.requiere] && e.actos.includes(S.acto) : e.acto === S.acto || e.acto === null));
@@ -5661,7 +6233,8 @@ function nuevaPartida(defs, codigo, dificultad = "normal") {
     zurron: { pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
     acto: -1, mapa: null, modo: "escena", esc: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
     derrota: false, final: null, guardadoActo: null, aprender: [], botin: [], bendiciones: [], ofertaB: null, log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null,
-    dificultad: DIFICULTADES[dificultad] ? dificultad : "normal", memoria: {}, opcionesB: 3, bloqueo: null
+    dificultad: DIFICULTADES[dificultad] ? dificultad : "normal", memoria: {}, opcionesB: 3, bloqueo: null, votacion: null,
+    abismo: dificultad === "dificil" || !!meta().logros.dragon, stats: defs.slice(0, MAX_HEROES).map(() => ({ dano: 0, mejor: 0, curado: 0, bloqueos: 0, criticos: 0, perfectos: 0, bajas: 0, recibido: 0 }))
   };
   /* Mejoras compradas con runas en el altar de este móvil. */
   const mj = meta().mejoras;
@@ -5674,10 +6247,14 @@ function nuevaPartida(defs, codigo, dificultad = "normal") {
   submenu = null; modal = null; vista = "juego";
   siguienteActo();
 }
+/* El Acto V (el Abismo) se desbloquea tras matar al dragón una vez en este móvil, y siempre en Pesadilla. */
+const ultimoActo = () => (S && S.abismo ? 4 : 3);
 function siguienteActo() {
   S.modo = "escena"; S.fase = "elegir"; S.resultado = null; S.combate = null; S.tienda = null;
-  if (S.acto >= ACTOS.length - 1) {
-    S.esc = { tipo: "final", fondo: "guarida", titulo: "El tesoro del dragón", texto: "Oro de mil reinos. Villabruma está medio quemada y los enanos llevan cien años sin hogar. ¿Qué hacéis con él?",
+  if (S.acto >= ultimoActo()) {
+    const abismo = S.acto >= 4;
+    S.esc = { tipo: "final", fondo: abismo ? "ruinas" : "guarida", titulo: abismo ? "La luz vuelve" : "El tesoro del dragón",
+      texto: (abismo ? "Subís del Abismo con las manos vacías y los ojos llenos de estrellas. Arriba sigue el tesoro del dragón. " : "Oro de mil reinos. ") + "Villabruma está medio quemada y los enanos llevan cien años sin hogar. ¿Qué hacéis con él?",
       opciones: [{ txt: "Repartirlo con Villabruma y los enanos", final: "heroes" }, { txt: "Quedároslo todo", final: "codicia" }] };
     guardar(); return render();
   }
@@ -5758,12 +6335,13 @@ function elegirFinal(clave) {
   S.final = clave;
   log(`Final: ${FINALES[clave].titulo}`, "esc");
   fx({ tipo: "runas", n: Math.ceil(10 * dif().runas) });
+  if (!S.abismo) log("Bajo el tesoro algo se mueve... El Acto V, el Abismo, queda desbloqueado en este móvil.", "esc");
   if (S.dificultad === "dificil") fx({ tipo: "logro", id: "pesadilla" });
   guardar(); render();
 }
 function reintentar() {
   const g = JSON.parse(S.guardadoActo);
-  g.log = S.log; g.guardadoActo = S.guardadoActo; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
+  g.log = S.log; g.guardadoActo = S.guardadoActo; g.stats = S.stats; g.rev = S.rev; g.dado = S.dado; g.efectos = S.efectos;
   S = g;
   S.players.forEach(p => { p.alma = maxAlma(p); });
   S.intentos = (S.intentos || 0) + 1;
@@ -5826,6 +6404,75 @@ function usarFuera(id, i) {
 }
 
 /* ---------- Combate ---------- */
+/* Estados que pueden sufrir héroes y enemigos (turnos restantes en obj.est). */
+const ESTADOS = {
+  veneno: { nombre: "Veneno", verbo: "envenena", color: "#7bdc5a", desc: "Pierde PG al empezar su turno." },
+  quemadura: { nombre: "Quemadura", verbo: "quema", color: "#ff8a3d", desc: "Pierde 1d6 PG por turno y no puede regenerarse." },
+  sangrado: { nombre: "Sangrado", verbo: "hace sangrar", color: "#ff5a6e", desc: "Pierde 2 PG por turno." },
+  paralisis: { nombre: "Parálisis", verbo: "paraliza", color: "#ffd84a", desc: "Pierde su próximo turno." },
+  congelado: { nombre: "Congelado", verbo: "congela", color: "#7fd8ff", desc: "Pierde su turno y, mientras tanto, recibe un 50 % más de daño." },
+  debil: { nombre: "Debilitado", verbo: "debilita", color: "#b9a0ff", desc: "−2 para atacar." },
+  maldito: { nombre: "Maldito", verbo: "maldice", color: "#c27bff", desc: "Recibe +2 de cada golpe." },
+  ciego: { nombre: "Cegado", verbo: "ciega", color: "#d6daf0", desc: "Falla la mitad de sus ataques." },
+  regen: { nombre: "Regeneración", verbo: "regenera", color: "#3ddc97", desc: "Recupera 3 PG por turno." }
+};
+const TIMIDOS = ["paralisis", "congelado"];
+/* Ataque especial de cada monstruo: cada N rondas sustituye a su primer ataque. */
+const ESPECIALES = {
+  rata: { nombre: "Mordisco infecto", cada: 2, estado: ["veneno", 2, 0.8] },
+  goblin: { nombre: "Puñalada sucia", cada: 2, estado: ["sangrado", 2, 0.8] },
+  kobold: { nombre: "Red de trampero", cada: 3, estado: ["paralisis", 1, 0.7], sinDano: true },
+  lobo: { nombre: "Desgarro", cada: 2, estado: ["sangrado", 2, 0.7] },
+  osolechuza: { nombre: "Abrazo de oso", cada: 3, estado: ["paralisis", 1, 0.6], mult: 1.5 },
+  esqueleto: { nombre: "Golpe de escudo", cada: 3, estado: ["paralisis", 1, 0.5] },
+  cubo: { nombre: "Engullir", cada: 3, estado: ["veneno", 3, 1], mult: 1.3 },
+  mimico: { nombre: "Lengua pegajosa", cada: 2, estado: ["paralisis", 1, 0.7] },
+  armadura: { nombre: "Tajo pesado", cada: 3, estado: ["sangrado", 2, 1], mult: 1.5 },
+  elemental: { nombre: "Llamarada", cada: 2, estado: ["quemadura", 2, 0.8], todos: true, mult: 0.6 },
+  golem: { nombre: "Puño sísmico", cada: 3, estado: ["paralisis", 1, 0.35], todos: true, mult: 0.6 },
+  trol: { nombre: "Garrazo", cada: 2, estado: ["sangrado", 2, 0.8] },
+  liche: { nombre: "Toque helado", cada: 2, estado: ["congelado", 1, 0.6] },
+  vampiro: { nombre: "Mordisco", cada: 2, estado: ["sangrado", 2, 0.8], mult: 1.2 },
+  dragon: { nombre: "Coletazo", cada: 2, estado: ["paralisis", 1, 0.4], mult: 1.3 },
+  diablillo: { nombre: "Pinchazo ígneo", cada: 2, estado: ["quemadura", 2, 0.9] },
+  arana: { nombre: "Picadura", cada: 2, estado: ["veneno", 3, 1], extra: ["paralisis", 1, 0.4] },
+  sombra: { nombre: "Toque gélido", cada: 2, estado: ["debil", 3, 1], extra: ["ciego", 2, 0.6] },
+  devorador: { nombre: "Mirada del vacío", cada: 2, estado: ["ciego", 2, 0.8], extra: ["maldito", 3, 0.6], mult: 1.2 }
+};
+const ESTADO_AREA = { dragon: ["quemadura", 2, 1], devorador: ["ciego", 1, 1], liche: ["debil", 2, 0.5] };
+const textoEstado = ([k, t, prob]) => `${ESTADOS[k].verbo}${prob < 1 ? ` (${Math.round(prob * 100)} %)` : ""}`;
+/* Pone un estado; los elfos no se dejan paralizar ni congelar. Devuelve si ha prendido. */
+function ponerEstado(obj, k, turnos, esHeroe, id) {
+  if (!obj || !ESTADOS[k]) return false;
+  if (esHeroe && TIMIDOS.includes(k) && obj.raza === "elfo") { log(`${obj.nombre} se libra: linaje feérico.`, "ok"); return false; }
+  obj.est = obj.est || {};
+  obj.est[k] = Math.max(obj.est[k] || 0, turnos);
+  if (!esHeroe && Object.keys(obj.est).length >= 3) fx({ tipo: "logro", id: "estados" });
+  fx({ tipo: "numero", objetivo: id, texto: ESTADOS[k].nombre.toUpperCase(), color: ESTADOS[k].color, fila: 2 });
+  return true;
+}
+/* Daño de estados y paso del tiempo al empezar el turno de alguien. Devuelve true si pierde el turno. */
+function tickEstados(obj, esHeroe, id) {
+  const e = obj.est || {}, partes = [];
+  const herir = (n, k) => {
+    if (esHeroe) obj.alma = Math.max(0, obj.alma - n); else obj.hp = Math.max(0, obj.hp - n);
+    fx({ tipo: "numero", objetivo: id, texto: "-" + n, color: ESTADOS[k].color });
+    partes.push(`${ESTADOS[k].nombre.toLowerCase()} ${n}`);
+  };
+  const a = Math.max(0, S.acto);
+  if (e.veneno) herir(2 + a, "veneno");
+  if (e.quemadura) herir(d(6) + Math.floor(a / 2), "quemadura");
+  if (e.sangrado) herir(2 + Math.floor(a / 2), "sangrado");
+  if (e.regen && (esHeroe ? obj.alma : obj.hp) > 0) {
+    const cu = esHeroe ? curar(obj, 3) : 0;
+    if (cu) { fx({ tipo: "numero", objetivo: id, texto: "+" + cu, color: ESTADOS.regen.color }); partes.push(`regenera ${cu}`); }
+  }
+  if (partes.length) log(`${obj.nombre}: ${partes.join(", ")}.`, esHeroe ? "ko" : "ok");
+  const pierde = !!(e.paralisis || e.congelado);
+  for (const k of Object.keys(e)) { e[k]--; if (e[k] <= 0) delete e[k]; }
+  if (pierde) log(`${obj.nombre} no puede moverse y pierde el turno.`, esHeroe ? "ko" : "ok");
+  return pierde;
+}
 const DIFICULTADES = {
   facil: { nombre: "Aventurero", desc: "Para disfrutar de la historia.", hp: 0.8, dano: -1, atk: -1, runas: 0.5 },
   normal: { nombre: "Héroe", desc: "El reto pensado para el juego.", hp: 1, dano: 0, atk: 0, runas: 1 },
@@ -5833,13 +6480,14 @@ const DIFICULTADES = {
 };
 const dif = () => DIFICULTADES[S && S.dificultad] || DIFICULTADES.normal;
 /* Enemigos menores que acompañan al principal en cada acto. */
-const ESBIRROS = [["rata", "kobold"], ["rata", "esqueleto"], ["esqueleto", "lobo"], ["kobold", "elemental"]];
-const NOMBRE_ESBIRRO = { rata: "Rata gigante", kobold: "Kobold", esqueleto: "Esqueleto", lobo: "Huargo", elemental: "Chispa ígnea", goblin: "Goblin" };
+const ESBIRROS = [["rata", "kobold"], ["rata", "esqueleto"], ["esqueleto", "lobo"], ["kobold", "elemental"], ["diablillo", "sombra"]];
+const NOMBRE_ESBIRRO = { rata: "Rata gigante", kobold: "Kobold", esqueleto: "Esqueleto", lobo: "Huargo", elemental: "Chispa ígnea", goblin: "Goblin", diablillo: "Diablillo", sombra: "Sombra", arana: "Arañuela" };
 /* Segunda fase de los jefes: al bajar a media vida cambian de táctica. */
 const FASES = {
   trol: { txt: "El trol arranca un pilar del puente y entra en furia", cambia: r => { r.ataques++; r.regenera = 5; } },
   liche: { txt: "Malakar alza a sus guardianes de la tumba", invoca: ["esqueleto", "esqueleto"], cambia: r => { r.area = { cada: 2, dado: 6, txt: "Malakar lanza un rayo necrótico contra todo el grupo" }; } },
   vampiro: { txt: "Varkhul llama a sus lobos y su sed se vuelve insaciable", invoca: ["lobo"], cambia: r => { r.atk++; r.drena = true; } },
+  devorador: { txt: "Nhazgul devora la luz y llama a sus siervos del vacío", invoca: ["sombra", "diablillo"], cambia: r => { r.atk++; r.area = { cada: 2, dado: 10, txt: "Nhazgul abre su ojo y la luz se apaga" }; } },
   dragon: { txt: "Ignárax alza el vuelo: las armas apenas le alcanzan", cambia: r => { r.resiste = "fisica"; r.debil = null; r.area = { cada: 2, dado: 8, txt: "Ignárax escupe fuego desde el cielo" }; } }
 };
 function crearRival(clave, o = {}) {
@@ -5854,7 +6502,7 @@ function crearRival(clave, o = {}) {
     danoExtra: Math.floor(niv / 2) + (o.elite ? 1 : 0) + D_.dano - (o.esbirro ? 1 : 0),
     regenera: o.esbirro ? 0 : e.regenera || 0, area: o.esbirro ? null : e.area || null, estado: o.esbirro ? null : e.estado || null,
     cura: o.esbirro ? null : e.cura || null, furia: !!e.furia, drena: !!e.drena, roba: e.roba || 0, nomuerto: !!e.nomuerto,
-    resiste: e.resiste, debil: e.debil, aturdido: false, veneno: 0, maldito: false, quemado: false, partido: false,
+    resiste: e.resiste, debil: e.debil, est: {}, quemado: false, partido: false, areaEstado: ESTADO_AREA[clave] || null,
     jefe: !!o.jefe, fase: 1, esbirro: !!o.esbirro, marca: null
   };
 }
@@ -5893,7 +6541,7 @@ function iniciarCombate(sc) {
     blando: n === 1, elite: !!sc.esElite, jefe: !!sc.esJefe, robado: {}, combos: 0, perfectos: 0, bloqueos: 0, caidos: 0 };
   objetivoLocal = null;
   rivales.forEach(r => { if (!S.vistos.bestias.includes(r.clave)) S.vistos.bestias.push(r.clave); });
-  S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos ? H(h).usos + (tiene("reservas") ? 1 : 0) : 0; }); p.fl = {}; p.est = { aturdido: 0, cegado: 0 }; });
+  S.players.forEach(p => { p.usosH = {}; p.habs.forEach(h => { p.usosH[h] = H(h).usos ? H(h).usos + (tiene("reservas") ? 1 : 0) : 0; }); p.fl = {}; p.est = {}; });
   const orden = S.players.map((p, i) => ({ t: "h", i, ini: d(20) + iniMod(p) }));
   rivales.forEach((r, k) => orden.push({ t: "e", r: k, ini: d(20) + ENEMIGOS[r.clave].ini }));
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
@@ -5919,7 +6567,7 @@ function prepararTurno() {
     if (a.t === "e") { if (c.rivales[a.r].hp <= 0) { avanzar(); continue; } return turnoEnemigo(a.r); }
     const p = S.players[a.i];
     if (p.alma <= 0) { avanzar(); continue; }
-    if (p.est.aturdido > 0) { p.est.aturdido--; log(`${p.nombre} no puede moverse y pierde el turno.`, "ko"); avanzar(); continue; }
+    if (tickEstados(p, true, "h" + a.i) || p.alma <= 0) { if (p.alma <= 0) log(`¡${p.nombre} cae!`, "ko"); avanzar(); continue; }
     S.turno = a.i; submenu = null;
     c.objetivo = objetivoValido(c.objetivo);
     guardar(); render();
@@ -5930,7 +6578,7 @@ function prepararTurno() {
 function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   const c = S.combate, r = c.rivales[k];
   if (!r || r.hp <= 0) return "ya había caído";
-  let dmg = Math.max(1, base) + (r.maldito ? 2 : 0);
+  let dmg = Math.max(1, base) + (r.est.maldito ? 2 : 0);
   let mult = 1, nota = "";
   if (r.resiste === clase) { mult = 0.5; nota = " (lo resiste)"; }
   if (r.debil === clase) { mult = 2; nota = " (¡punto débil!)"; }
@@ -5939,7 +6587,10 @@ function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   if (combo) { r.marca = null; c.combos++; }
   dmg = mult < 1 ? Math.max(1, Math.floor(dmg * mult)) : Math.round(dmg * mult);
   if (combo) dmg = Math.round(dmg * 1.5);
+  if (r.est.congelado) { dmg = Math.round(dmg * 1.5); nota += " (¡congelado!)"; }
   r.hp = Math.max(0, r.hp - dmg);
+  const st = porHeroe >= 0 && S.stats && S.stats[porHeroe];
+  if (st) { st.dano += dmg; st.mejor = Math.max(st.mejor, dmg); if (r.hp <= 0) st.bajas++; }
   if (clase === "arcana") r.quemado = true;
   const o = "e" + k;
   fx({ tipo: "golpe", objetivo: o });
@@ -5969,7 +6620,10 @@ function danarHeroe(i, dmg, directo, rk = -1) {
   const p = S.players[i], c = S.combate;
   if (p.raza === "enano") dmg = Math.max(1, dmg - 1);
   if (tiene("piedra")) dmg = Math.max(1, dmg - 1);
+  if (p.est && p.est.maldito) dmg += 2;
+  if (p.est && p.est.congelado) dmg = Math.round(dmg * 1.5);
   p.alma = Math.max(0, p.alma - dmg);
+  if (S.stats && S.stats[i]) S.stats[i].recibido += dmg;
   fx({ tipo: "golpe", objetivo: "h" + i });
   fx({ tipo: "numero", objetivo: "h" + i, texto: "-" + dmg, color: RP.sangre[4] });
   let t = `${dmg} de daño`;
@@ -6004,15 +6658,18 @@ function accion(tipo, arg) {
     const id = p.habs[+slot], h = id && H(id);
     if (!h || (h.usos && !(p.usosH[id] > 0))) return;
     if (h.usos) p.usosH[id]--;
-    if (q === 2) c.perfectos++;
+    if (q === 2) { c.perfectos++; if (S.stats) S.stats[S.turno].perfectos++; }
+    fx({ tipo: "anuncio", texto: h.nombre, sub: p.nombre, tono: h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo" });
     const m = statHab(p, h);
     const blancos = h.area ? vivosR() : [t];
     const r0 = c.rivales[t], e0 = ENEMIGOS[r0.clave];
     const efectosExtra = (rr, dmg, partes) => {
       if (rr.hp <= 0) return;
-      if (h.veneno) { rr.veneno = Math.max(rr.veneno, h.veneno); marcar(rr); partes.push("veneno"); }
-      if (h.debilita) { rr.atkMod = Math.max(rr.atkBase - 4, rr.atkMod - 2); marcar(rr); partes.push("−2 a su ataque"); }
-      if (h.maldice) { rr.maldito = true; marcar(rr); partes.push("maldito"); }
+      const k = c.rivales.indexOf(rr), poner = (est, t) => { if (ponerEstado(rr, est, t, false, "e" + k)) { marcar(rr); partes.push(ESTADOS[est].nombre.toLowerCase()); } };
+      if (h.veneno) poner("veneno", h.veneno);
+      if (h.debilita) poner("debil", 3);
+      if (h.maldice) poner("maldito", 99);
+      if (h.aplica && Math.random() < h.aplica[2]) poner(h.aplica[0], h.aplica[1]);
       if (h.drena && dmg > 0) { const cu = curar(p, Math.max(1, Math.floor(dmg / 2))); fx({ tipo: "cura", objetivo: yo }); partes.push(`te curas ${cu}`); }
     };
     if (h.efecto === "dano") {
@@ -6040,12 +6697,18 @@ function accion(tipo, arg) {
         log(tx, "ok"); mostrarTirada(tx, true);
         return fin();
       }
-      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0);
+      if (p.est.ciego && Math.random() < 0.5) {
+        const tx = `${p.nombre} está cegado y su ${h.nombre} falla.`;
+        fx({ tipo: "numero", objetivo: "e" + t, texto: "FALLO", color: RP.hueso[3] }); log(tx, "ko"); mostrarTirada(tx, false);
+        return fin();
+      }
+      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0) - (p.est.debil ? 2 : 0);
       const bono = usarOlivo() + (q === 2 ? 5 : q === 1 ? 2 : 0);
       const { r, nota } = tiradaD20(p);
       tirarDado(r, 20, () => {
         const total = r + mod + bono, crit = r >= Math.min(critMin(p), h.critico || 20);
         const ok = crit || (r !== 1 && total >= e0.ca);
+        if (crit && S.stats) S.stats[S.turno].criticos++;
         let linea = lineaTirada(p.nombre, h.nombre, r, mod, bono, total, `CA ${e0.ca}`, crit) + nota + ritmo;
         if (ok) { linea += ` → ${golpes(crit)}`; log(linea, "ok"); mostrarTirada(linea, true); }
         else { linea += " → falla"; fx({ tipo: "numero", objetivo: "e" + t, texto: "FALLO", color: RP.hueso[3] }); log(linea, "ko"); mostrarTirada(linea, false); }
@@ -6059,6 +6722,9 @@ function accion(tipo, arg) {
       const objetivos = h.a === "grupo" ? S.players : h.a === "yo" ? [p] : [masHerido()];
       const partes = objetivos.map(o => {
         const real = curar(o, n), oi = idx(o);
+        if (S.stats) S.stats[S.turno].curado += real;
+        if (h.regen && o.alma > 0) { o.est = o.est || {}; o.est.regen = Math.max(o.est.regen || 0, h.regen); }
+        if (h.a === "grupo" || o === p) ["veneno", "quemadura", "sangrado"].forEach(k => { if (o.est) delete o.est[k]; });
         fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
         return `${o.nombre} +${real}`;
       });
@@ -6070,11 +6736,8 @@ function accion(tipo, arg) {
     else blancos.forEach(k => {
       const rr = c.rivales[k];
       fx({ tipo: "magia", objetivo: "e" + k });
-      if (h.efecto === "aturde") rr.aturdido = true;
-      if (h.efecto === "maldice") rr.maldito = true;
-      if (h.efecto === "debilita") rr.atkMod = Math.max(rr.atkBase - 4, rr.atkMod - 2);
-      if (h.efecto === "veneno") rr.veneno = Math.max(rr.veneno, h.turnos);
-      marcar(rr);
+      const est = { aturde: ["paralisis", 1], maldice: ["maldito", 99], debilita: ["debil", 3], veneno: ["veneno", h.turnos] }[h.efecto];
+      if (est && ponerEstado(rr, est[0], est[1], false, "e" + k)) marcar(rr);
     });
     const tx = `${p.nombre} usa ${h.nombre}${blancos.length > 1 ? "" : c.rivales.length > 1 ? ` contra ${r0.nombre}` : ""}: ${resumenHab(id, p).toLowerCase()}.`;
     log(tx, "ok"); mostrarTirada(tx, true);
@@ -6092,13 +6755,13 @@ function accion(tipo, arg) {
       log(`${p.nombre} da ${OBJETOS[o].nombre.toLowerCase()} a ${q.nombre}: +${real} PG.`, "ok");
     }
     if (o === "fuego") { fx({ tipo: "ataque", actor: yo }); fx({ tipo: "proyectil", actor: yo, objetivo: "e" + t, forma: "orbe", rampa: RP.fuego }); log(`${p.nombre} lanza fuego de alquimista → ${danarRival(t, tirar(3, 6), "arcana", false, 1, RP.fuego, S.turno)}`, "ok"); }
-    if (o === "sueno") { r.aturdido = true; marcar(r); log(`${p.nombre} sopla polvo de sueño: ${r.nombre} se duerme un turno.`, "ok"); }
+    if (o === "sueno") { ponerEstado(r, "paralisis", 1, false, "e" + t); marcar(r); log(`${p.nombre} sopla polvo de sueño: ${r.nombre} se duerme un turno.`, "ok"); }
     return fin();
   }
   if (tipo === "anillo") {
     if (!S.anillo || c.anilloUsado) return;
     c.anilloUsado = true;
-    c.rivales.forEach(r => { r.aturdido = true; });
+    c.rivales.forEach((r, k) => { if (r.hp > 0) ponerEstado(r, "paralisis", 1, false, "e" + k); });
     log(`${p.nombre} se vuelve invisible. Los enemigos no saben a quién atacar.`, "ok");
     return fin();
   }
@@ -6137,21 +6800,16 @@ async function turnoEnemigo(ri) {
   guardar(); render();
   await esperar(450);
   if (!sigue()) return;
-  const atk = r.atk + r.atkMod;
-  if (r.veneno > 0) {
-    r.veneno--;
-    const v = d(6);
-    r.hp = Math.max(0, r.hp - v);
-    fx({ tipo: "numero", objetivo: o, texto: "-" + v, color: RP.hoja[4] });
-    log(`El veneno quema a ${r.nombre}: ${v} de daño.`, "ok");
-    if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o }); else comprobarFase(ri);
-  }
-  if (r.hp <= 0) { /* el veneno lo ha rematado */ }
-  else if (r.aturdido) { log(`${r.nombre} pierde su turno.`, "ok"); r.aturdido = false; r.quemado = false; }
+  const atk = r.atk + r.atkMod - (r.est.debil ? 2 : 0);
+  const quemandose = !!r.est.quemadura;
+  const salta = tickEstados(r, false, o);
+  if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o }); else comprobarFase(ri);
+  if (r.hp <= 0) { /* los estados lo han rematado */ }
+  else if (salta) { r.quemado = false; await esperar(350); if (!sigue()) return; }
   else {
     const cada = n => c.ronda % n === 0;
     if (r.regenera) {
-      if (r.quemado) log(`${r.nombre} no puede regenerarse: el fuego le ha cauterizado.`, "ok");
+      if (r.quemado || quemandose) log(`${r.nombre} no puede regenerarse: el fuego le ha cauterizado.`, "ok");
       else if (r.hp < r.hpMax) { const cu = Math.min(r.regenera, r.hpMax - r.hp); r.hp += cu; log(`${r.nombre} se regenera: +${cu} PG.`, "ko"); fx({ tipo: "cura", objetivo: o }); }
       r.quemado = false;
     }
@@ -6160,22 +6818,45 @@ async function turnoEnemigo(ri) {
     if (c.escudo) { log(`${r.nombre} ataca, pero el escudo lo para todo.`, "ok"); c.escudo = false; fx({ tipo: "ataque", actor: o }); }
     else {
       const n = r.ataques + (r.partido ? 1 : 0);
-      for (let k = 0; k < n; k++) {
+      const sp = ESPECIALES[r.clave], usaEsp = !!sp && cada(sp.cada);
+      if (usaEsp) {
+        fx({ tipo: "anuncio", texto: sp.nombre, sub: r.nombre, tono: "ko" });
+        log(`${r.nombre} usa ${sp.nombre}.`, "ko");
+        await esperar(500);
+        if (!sigue()) return;
+      }
+      if (usaEsp && sp.todos) {
+        fx({ tipo: "ataque", actor: o }); fx({ tipo: "destello", color: "rgba(255,140,60,0.3)" });
+        const partes = vivos().map(i => {
+          const dmg = Math.max(1, Math.round(tirar(e.dano[0], e.dano[1], e.dano[2] + (r.danoExtra || 0)) * (sp.mult || 1)));
+          let tx = `${S.players[i].nombre} ${danarHeroe(i, dmg, false).split(".")[0]}`;
+          if (S.players[i].alma > 0 && Math.random() < sp.estado[2] && ponerEstado(S.players[i], sp.estado[0], sp.estado[1], true, "h" + i)) tx += ` (${ESTADOS[sp.estado[0]].nombre.toLowerCase()})`;
+          return tx;
+        });
+        log(`${sp.nombre}: ${partes.join(", ")}.`, "ko");
+        render();
+        await esperar(400);
+        if (!sigue()) return;
+      }
+      for (let k = usaEsp && sp.todos ? 1 : 0; k < n; k++) {
         const ti = heroeAlAzarVivo();
         if (ti < 0) break;
         const t = S.players[ti];
+        const especial = usaEsp && !sp.todos && k === 0;
         fx({ tipo: "ataque", actor: o });
         if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); await esperar(300); if (!sigue()) return; continue; }
         const rr = d(20), def = ca(t);
-        const ok = rr === 20 || (rr !== 1 && rr + atk >= def);
+        const ok = (rr === 20 || (rr !== 1 && rr + atk >= def)) && !(r.est.ciego && Math.random() < 0.5);
         mostrarTirada.ultimo = rr;
         if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), rr);
         if (ok) {
-          let dmg = Math.max(1, tirar(e.dano[0] * (rr === 20 ? 2 : 1), e.dano[1], e.dano[2] + (r.danoExtra || 0)) - (c.blando ? 2 : 0));
+          let dmg = Math.max(1, Math.round((tirar(e.dano[0] * (rr === 20 ? 2 : 1), e.dano[1], e.dano[2] + (r.danoExtra || 0)) - (c.blando ? 2 : 0)) * (especial ? sp.mult || 1 : 1)));
+          if (especial && sp.sinDano) dmg = 0;
           const bloq = await ventanaBloqueo(ti);
           if (!sigue()) return;
-          if (bloq) { dmg = Math.max(1, Math.ceil(dmg / 2)); c.bloqueos++; fx({ tipo: "numero", objetivo: "h" + ti, texto: "BLOQUEO", color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" }); }
-          let txt = `${r.nombre} → ${t.nombre}: ${rr} ${fmt(atk)} vs CA ${def}${bloq ? " · ¡bloqueado!" : ""} → ${danarHeroe(ti, dmg, true, ri)}`;
+          if (bloq) { dmg = Math.max(dmg ? 1 : 0, Math.ceil(dmg / 2)); c.bloqueos++; if (S.stats) S.stats[ti].bloqueos++; fx({ tipo: "numero", objetivo: "h" + ti, texto: "BLOQUEO", color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" }); }
+          let txt = `${especial ? sp.nombre : r.nombre} → ${t.nombre}: ${rr} ${fmt(atk)} vs CA ${def}${bloq ? " · ¡bloqueado!" : ""} → ${dmg > 0 ? danarHeroe(ti, dmg, true, ri) : "sin daño"}`;
+          if (especial && t.alma > 0) [sp.estado, sp.extra].forEach(es => { if (es && Math.random() < es[2] * (bloq ? 0.5 : 1) && ponerEstado(t, es[0], es[1], true, "h" + ti)) txt += `. ${ESTADOS[es[0]].nombre}`; });
           if (r.drena && r.hp > 0) { const cu = Math.max(1, Math.floor(dmg / 2)); r.hp = Math.min(r.hpMax, r.hp + cu); txt += `. Bebe y se cura ${cu}`; }
           if (r.roba && t.oro > 0) { const rob = Math.min(r.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
           log(txt, "ko"); mostrarTirada(txt, false);
@@ -6190,15 +6871,20 @@ async function turnoEnemigo(ri) {
         if (!sigue()) return;
       }
       if (r.hp > 0 && r.area && cada(r.area.cada)) {
-        const partes = vivos().map(i => { fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego }); return `${S.players[i].nombre} ${danarHeroe(i, d(r.area.dado) + Math.floor((r.danoExtra || 0) / 2), false).split(".")[0]}`; });
+        const partes = vivos().map(i => {
+          fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.fuego });
+          const tx = `${S.players[i].nombre} ${danarHeroe(i, d(r.area.dado) + Math.floor((r.danoExtra || 0) / 2), false).split(".")[0]}`;
+          if (r.areaEstado && S.players[i].alma > 0 && Math.random() < r.areaEstado[2]) ponerEstado(S.players[i], r.areaEstado[0], r.areaEstado[1], true, "h" + i);
+          return tx;
+        });
+        fx({ tipo: "anuncio", texto: r.area.txt.replace(/^[^ ]+ /, "").replace(/^./, x => x.toUpperCase()), sub: r.nombre, tono: "ko" });
         if (partes.length) { fx({ tipo: "destello", color: "rgba(255,120,60,0.35)" }); log(`${r.area.txt}: ${partes.join(", ")}.`, "ko"); }
       }
       if (r.hp > 0 && r.estado && cada(r.estado.cada)) {
         const ti = heroeAlAzarVivo();
         if (ti >= 0) {
           const t = S.players[ti];
-          if (t.raza === "elfo") log(`${r.nombre} no puede con ${t.nombre}: linaje feérico.`, "ok");
-          else { t.est.aturdido = 1; log(`${r.estado.txt.replace("{x}", t.nombre)}.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
+          if (ponerEstado(t, "paralisis", 1, true, "h" + ti)) { log(`${r.estado.txt.replace("{x}", t.nombre)}.`, "ko"); fx({ tipo: "golpe", objetivo: "h" + ti }); }
         }
       }
     }
@@ -6212,12 +6898,13 @@ async function turnoEnemigo(ri) {
 function victoria() {
   const sc = S.esc, c = S.combate, principal = c.rivales[0];
   fx({ tipo: "victoria" });
+  fx({ tipo: "salto", actor: "h*" });
   const extra = [];
   let robado = 0;
   S.players.forEach((p, i) => { if (c.robado[i]) { p.oro += c.robado[i]; robado += c.robado[i]; } });
   if (robado) extra.push(`+${robado} po recuperadas`);
   const pesadilla = S.dificultad === "dificil";
-  S.players.forEach(p => { if (p.alma <= 0 && !pesadilla) p.alma = 1; p.est = { aturdido: 0, cegado: 0 }; });
+  S.players.forEach(p => { if (p.alma <= 0 && !pesadilla) p.alma = 1; p.est = {}; });
   if (S.players.some(p => p.clase === "bardo")) { S.players.forEach(p => { if (p.alma > 0) curar(p, 3); }); extra.push("Inspiración +3 PG"); }
   S.players.forEach(p => { if (p.clase === "brujo" && p.alma > 0) { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   if (tiene("respiro")) { S.players.forEach(p => { if (p.alma > 0) curar(p, Math.ceil(maxAlma(p) * 0.3)); }); extra.push("Segundo respiro: +30 % PG"); }
@@ -6268,6 +6955,14 @@ function iconoNodo(tipo) {
     new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.azul, { relieve: 3 });
     const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.hueso[4]); } };
     PX.texto(pinta, "?", 4, 2, RP.hueso[4], null, 2);
+  } else if (tipo === "altar") {
+    new C(14, 14).rect(2, 8, 10, 4).rect(3, 6, 8, 2).pintar(g, RP.piedra, { relieve: 2 });
+    new C(14, 14).ell(7, 4, 2.5, 2.5).pintar(g, RP.sangre, { relieve: 2 });
+    g.set(7, 1, RP.fuego[3]).set(6, 2, RP.fuego[2]).set(8, 2, RP.fuego[2]);
+  } else if (tipo === "misterio") {
+    new C(14, 14).ell(6.5, 6.5, 5.5, 5.5).pintar(g, RP.tela.violeta, { relieve: 3 });
+    const pinta = { set fillStyle(v) {}, fillRect: (x, y, w, h) => { for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) g.set(x + a, y + b, RP.bronce[4]); } };
+    PX.texto(pinta, "?", 4, 2, RP.bronce[4], null, 2);
   } else if (tipo === "tesoro") {
     new C(14, 14).rect(2, 3, 10, 3).pintar(g, RP.madera, { relieve: 1 });
     new C(14, 14).rect(2, 6, 10, 6).pintar(g, RP.madera, { relieve: 2 });
@@ -6445,16 +7140,25 @@ function renderJuego() {
   /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */
   const vivo = !enMapa && !S.final && !S.derrota;
   const enTienda = vivo && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
-  const enPanel = enTienda || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
+  const enPanel = enTienda || !!S.final || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
   $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
   if (!$("#dado").dataset.listo) { $("#dado").dataset.listo = "1"; ESCENARIO.dibujarDado($("#dado"), 20); }
   const acto = Math.max(0, S.acto);
-  $("#barra-titulo").innerHTML = `<span class="progreso">${ACTOS.map((_, i) => `<i class="${i < acto ? "hecho" : i === acto ? "ahora" : ""}"></i>`).join("")}</span><span>Acto ${ROMANOS[acto]} · ${ACTOS[acto].nombre}</span>`;
+  $("#barra-titulo").innerHTML = `<span class="progreso">${ACTOS.slice(0, ultimoActo() + 1).map((_, i) => `<i class="${i < acto ? "hecho" : i === acto ? "ahora" : ""}"></i>`).join("")}</span><span>Acto ${ROMANOS[acto]} · ${ACTOS[acto].nombre}</span>`;
   sincronizarEscenario();
   renderGrupo();
   if (enMapa) renderMapa(); else { $("#mapa").innerHTML = ""; renderEscena(); }
+  /* Cada pantalla nueva del panel entra con una pequeña animación; en combate, aviso de turno. */
+  const clave = [S.modo, S.esc && S.esc.titulo, S.fase, !!S.combate, S.aprender.length, !!S.ofertaB, S.final, S.derrota].join("|");
+  if (clave !== renderJuego.clave) { renderJuego.clave = clave; const pn = $("#panel"); pn.classList.remove("entra"); void pn.offsetWidth; pn.classList.add("entra"); clearTimeout(renderJuego.te); renderJuego.te = setTimeout(() => pn.classList.remove("entra"), 450); }
+  const turnoClave = S.combate && !S.combate.enemigoActua ? `${S.combate.ronda}:${S.combate.pos}` : "";
+  if (turnoClave && turnoClave !== renderJuego.turno) {
+    const p = S.players[S.turno];
+    if (p && (!S.online || p.uid === miId)) anunciar({ texto: S.online ? "¡Tu turno!" : `Turno de ${p.nombre}`, sub: S.online ? p.nombre : "", tono: "turno" });
+  }
+  renderJuego.turno = turnoClave;
   const u = S.log[S.log.length - 1];
   if (u && !$("#dado-info").textContent.trim()) $("#dado-info").textContent = u.t;
 }
@@ -6462,14 +7166,15 @@ function tipoRival(clave) { return typeof PNJ !== "undefined" && PNJ[clave] ? "p
 function sincronizarEscenario() {
   const sc = S.esc;
   let rivales = [];
-  if (S.combate) rivales = S.combate.rivales.map(r => ({ tipo: "enemigo", clave: r.clave, hp: r.hp, max: r.hpMax, maldito: r.maldito, aturdido: r.aturdido, veneno: r.veneno > 0,
+  const colores = o => Object.keys((o && o.est) || {}).filter(k => ESTADOS[k]).map(k => ESTADOS[k].color);
+  if (S.combate) rivales = S.combate.rivales.map(r => ({ tipo: "enemigo", clave: r.clave, hp: r.hp, max: r.hpMax, estados: colores(r), aturdido: !!(r.est.paralisis || r.est.congelado), congelado: !!r.est.congelado,
     flota: r.clave === "elemental" || (r.clave === "dragon" && r.fase === 2), derrotado: r.hp <= 0 }));
   else if (S.resultado && S.resultado.tipo === "victoria") rivales = (S.resultado.rivales || [S.resultado.enemigo]).map(k => ({ tipo: "enemigo", clave: k, derrotado: true }));
   else if (sc && sc.pnj) rivales = [{ tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" }];
   const fondo = (sc && sc.fondo) || ACTOS[Math.max(0, S.acto)].fondos[0];
   escJuego.mostrar({
     fondo, rivales, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
-    heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && p.est.aturdido) }))
+    heroes: S.players.map(p => ({ look: lookDe(p), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
 }
 function renderGrupo() {
@@ -6478,11 +7183,13 @@ function renderGrupo() {
     const activo = i === S.turno && !S.final && !S.derrota && !(S.combate && S.combate.enemigoActua);
     const max = maxAlma(p), pct = Math.round((100 * p.alma) / max);
     const conectado = !S.online || p.uid === miId || red.peers.some(x => x.presence && x.presence.id === p.uid);
-    return `<button type="button" class="heroe${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
+    const g = GESTOS[i] && GESTOS[i].hasta > performance.now() ? " " + GESTOS[i].clase : "";
+    return `<button type="button" class="heroe${g}${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
       <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
       <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
-      <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span></span></button>`;
+      <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span>
+      ${p.est && Object.keys(p.est).length ? `<span class="ests">${Object.keys(p.est).filter(k => ESTADOS[k]).map(k => `<i style="--c:${ESTADOS[k].color}" title="${ESTADOS[k].nombre}: ${ESTADOS[k].desc}">${ESTADOS[k].nombre.slice(0, 3)}</i>`).join("")}</span>` : ""}</span></button>`;
   }).join("");
   pintarRetratos($("#grupo"));
 }
@@ -6508,21 +7215,37 @@ function quienLinea(p, verbo) {
   if (turnoMio()) return verbo ? `<p class="quien">${verbo} <b>${esc(p.nombre)}</b>${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2" : ""}</p>` : "";
   return `<p class="quien espera">Le toca a <b>${esc(p.nombre)}</b> en su móvil…</p>`;
 }
+/* Premios y números de la partida, para presumir al final. */
+function htmlResumen() {
+  const st = S.stats || [];
+  if (!st.length) return "";
+  const premio = (titulo, campo, unidad) => {
+    let i = -1, mx = 0;
+    st.forEach((x, k) => { if (x && x[campo] > mx) { mx = x[campo]; i = k; } });
+    return i < 0 ? "" : `<li><span>${titulo}</span><b>${esc(S.players[i].nombre)}</b><i>${mx} ${unidad}</i></li>`;
+  };
+  const premios = [premio("Más daño", "dano", "de daño"), premio("Mejor golpe", "mejor", "de golpe"), premio("Sanador", "curado", "PG curados"),
+    premio("El muro", "bloqueos", "bloqueos"), premio("Pulso firme", "perfectos", "perfectos"), premio("Matagigantes", "bajas", "enemigos")].join("");
+  const filas = S.players.map((p, k) => `<tr><td>${esc(p.nombre)}</td><td>${st[k].dano}</td><td>${st[k].curado}</td><td>${st[k].bloqueos}</td><td>${st[k].criticos}</td><td>${st[k].bajas}</td></tr>`).join("");
+  return `<ul class="premios">${premios}</ul>
+    <table class="tabla-stats"><thead><tr><th></th><th>Daño</th><th>Cura</th><th>Bloq.</th><th>Crít.</th><th>Bajas</th></tr></thead><tbody>${filas}</tbody></table>`;
+}
 function renderMapa() {
   const m = S.mapa, p = S.players[S.turno];
   const libres = m.filas[m.fila][m.col].sig;
-  const mio = turnoMio() && !esperandoHost;
+  const mio = (turnoMio() || hayVotacion()) && !esperandoHost;
   const filas = m.filas.map((fila, f) => `<div class="fila-mapa">${fila.map((n, j) => {
     const aqui = f === m.fila && j === m.col, libre = f === m.fila + 1 && libres.includes(j);
-    const cls = `nodo${n.hecho ? " hecho" : ""}${aqui ? " aqui" : ""}${libre ? " libre" : ""}${n.tipo === "jefe" ? " jefe" : ""}`;
+    const vt = libre ? votosDe("nodo", j) : { n: 0 };
+    const cls = `nodo n-${n.tipo}${n.hecho ? " hecho" : ""}${aqui ? " aqui" : ""}${libre ? " libre" : ""}${n.tipo === "jefe" ? " jefe" : ""}${vt.mio ? " votado" : ""}`;
     return `<button type="button" class="${cls}" data-f="${f}" data-j="${j}" ${libre && mio ? `data-juego="nodo" data-v="${j}"` : "disabled"} aria-label="${NOMBRE_NODO[n.tipo]}">
-      <canvas data-icono="${n.tipo}" data-tam="${n.tipo === "jefe" ? 34 : 26}"></canvas></button>`;
+      <canvas data-icono="${n.tipo}" data-tam="${n.tipo === "jefe" ? 32 : 24}"></canvas>${vt.n ? `<span class="votos">${vt.n}</span>` : ""}</button>`;
   }).join("")}</div>`).reverse().join("");
   $("#mapa").innerHTML = `<svg class="lineas" aria-hidden="true"></svg>${filas}`;
   pintarIconos($("#mapa"));
   requestAnimationFrame(dibujarLineas);
-  $("#panel").innerHTML = `${quienLinea(p, "Elige el camino:")}
-    <p class="leyenda">${["combate", "elite", "evento", "tesoro", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
+  $("#panel").innerHTML = `${hayVotacion() ? lineaVotacion() : quienLinea(p, "Elige el camino:")}
+    <p class="leyenda">${["combate", "elite", "evento", "misterio", "tesoro", "altar", "tienda", "hoguera", "jefe"].map(t => `<span><canvas data-icono="${t}" data-tam="16"></canvas>${NOMBRE_NODO[t]}</span>`).join("")}</p>`;
   pintarIconos($("#panel"));
 }
 function dibujarLineas() {
@@ -6547,8 +7270,15 @@ function renderEscena() {
   const mio = turnoMio() && !esperandoHost, off = !mio;
   if (S.final) {
     const f = FINALES[S.final];
-    el.innerHTML = `<h2>${f.titulo}</h2>${parrafo(f.texto[0])}
-      <ul class="epilogo">${S.players.map(x => `<li><b>${esc(x.nombre)}</b> ${EPILOGOS[D.ejesAlin(x.alin)[1]]}</li>`).join("")}</ul>
+    el.innerHTML = `<p class="sello ok">Fin de la aventura${S.acto >= 4 ? " · Abismo vencido" : ""}</p><h2>${f.titulo}</h2>${parrafo(f.texto[0])}
+      <ul class="epilogo">${(() => {
+        /* Quien comparte destino comparte frase. */
+        const grupos = {};
+        S.players.forEach(x => { const k = D.ejesAlin(x.alin)[1]; (grupos[k] = grupos[k] || []).push(esc(x.nombre)); });
+        return Object.keys(grupos).map(k => `<li><b>${grupos[k].length > 1 ? grupos[k].slice(0, -1).join(", ") + " y " + grupos[k].slice(-1) : grupos[k][0]}</b> ${EPILOGOS[k]}</li>`).join("");
+      })()}</ul>
+      ${htmlResumen()}
+      ${!S.abismo ? `<p class="proxima">Bajo el tesoro algo se mueve… El Acto V, el Abismo, queda desbloqueado.</p>` : ""}
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-ui="otra">Otra aventura</button>` : `<p class="espera">¡Fin! El anfitrión puede empezar otra.</p>`}</div>`;
     return;
   }
@@ -6578,7 +7308,7 @@ function renderEscena() {
   if (S.fase === "resultado" && S.resultado) {
     const r = S.resultado;
     const sello = r.tipo === "victoria" ? "Victoria" : r.tipo === "cofre" ? "¡Botín!" : r.tipo === "enigma" ? (r.ok ? "Correcto" : "Incorrecto") : r.linea ? (r.ok ? "Éxito" : "Fracaso") : "Hecho";
-    const sigue = sc.esJefe ? (S.acto >= ACTOS.length - 1 ? "Ver el tesoro" : "Siguiente acto") : "Volver al mapa";
+    const sigue = sc.esJefe ? (S.acto >= ultimoActo() ? "Ver el tesoro" : S.acto === 3 ? "Bajar al Abismo" : "Siguiente acto") : "Volver al mapa";
     el.innerHTML = `${cab}<p class="sello ${r.ok ? "ok" : "ko"}">${sello}</p>${parrafo(r.texto || "")}
       ${r.efectos.length ? `<ul class="efectos">${r.efectos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
       ${S.botin.length ? `<div class="botin">${S.botin.map(tarjetaBotin).join("")}</div>` : ""}
@@ -6593,20 +7323,24 @@ function renderEscena() {
     el.innerHTML = `${cab}${parrafo(sc.texto)}<div class="pie">${mio ? `<button type="button" class="boton" data-juego="continuar">${sc.boton}</button>` : quienLinea(p, "")}</div>`;
     return;
   }
+  /* En línea se vota: todos pueden tocar; la tirada la hace quien tiene el turno. */
+  const vot = hayVotacion(), offV = vot ? esperandoHost : off;
+  const conVotos = (k, v, chip) => { const vt = votosDe(k, v); return [chip, vt.n ? `${vt.n} voto${vt.n > 1 ? "s" : ""}${vt.mio ? " · tú" : ""}` : ""].filter(Boolean).join(" · "); };
+  const quienV = verbo => (vot ? lineaVotacion() + `<p class="quien">Tira los dados <b>${esc(p.nombre)}</b></p>` : quienLinea(p, verbo));
   if (sc.tipo === "prueba") {
-    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decide")}<div class="menu">${sc.opciones.map((op, i) => {
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienV("Decide")}<div class="menu">${sc.opciones.map((op, i) => {
       const chip = op.stat ? `${ABREV[op.stat]}${fmt(stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0))} · CD ${op.cd}` : "";
-      return boton(`data-juego="op" data-v="${i}"`, op.txt, chip, "", off);
+      return boton(`data-juego="op" data-v="${i}"${votosDe("op", i).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("op", i, chip), "", offV);
     }).join("")}</div>`;
     return;
   }
   if (sc.tipo === "enigma") {
     const tachada = respuestaTachada(sc);
-    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Responde")}<div class="menu dos">${sc.respuestas.map((t, i) => boton(`data-juego="resp" data-v="${i}"`, i === tachada ? `<s>${t}</s>` : t, "", "", off || i === tachada)).join("")}</div>`;
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienV("Responde")}<div class="menu dos">${sc.respuestas.map((t, i) => boton(`data-juego="resp" data-v="${i}"${votosDe("resp", i).mio ? ' data-votado="1"' : ""}`, i === tachada ? `<s>${t}</s>` : t, conVotos("resp", i, ""), "", offV || i === tachada)).join("")}</div>`;
     return;
   }
   if (sc.tipo === "final") {
-    el.innerHTML = `${cab}${parrafo(sc.texto)}${quienLinea(p, "Decidid juntos. Elige")}<div class="menu">${sc.opciones.map(op => boton(`data-juego="final" data-v="${op.final}"`, op.txt, "", "", off)).join("")}</div>`;
+    el.innerHTML = `${cab}${parrafo(sc.texto)}${vot ? lineaVotacion() : quienLinea(p, "Decidid juntos. Elige")}<div class="menu">${sc.opciones.map(op => boton(`data-juego="final" data-v="${op.final}"${votosDe("final", op.final).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("final", op.final, ""), "", offV)).join("")}</div>`;
     return;
   }
   if (sc.tipo === "tienda") return renderTienda(el, p, mio);
@@ -6631,9 +7365,10 @@ function intencion(c, k) {
   const r = c.rivales[k], ie = c.orden.findIndex(a => a.t === "e" && a.r === k);
   const ronda = c.pos <= ie ? c.ronda : c.ronda + 1;
   const cada = n => ronda % n === 0;
-  if (r.aturdido) return "pierde el turno";
-  const n = r.ataques + (r.partido ? 1 : 0);
+  if (r.est.paralisis || r.est.congelado) return "pierde el turno";
+  const n = r.ataques + (r.partido ? 1 : 0), sp = ESPECIALES[r.clave];
   const partes = [c.escudo ? "su ataque está bloqueado" : `atacará ${n === 1 ? "1 vez" : n + " veces"}`];
+  if (sp && cada(sp.cada) && !c.escudo) partes.push(`usará <b>${sp.nombre}</b> (${[sp.estado, sp.extra].filter(Boolean).map(textoEstado).join(", ")}${sp.todos ? ", a todos" : ""})`);
   if (r.area && cada(r.area.cada)) partes.push("<b>¡golpe a todo el grupo!</b>");
   if (r.estado && cada(r.estado.cada)) partes.push("<b>intentará paralizar a alguien</b>");
   if (r.cura && cada(r.cura.cada) && r.hp < r.hpMax) partes.push("se curará");
@@ -6648,7 +7383,8 @@ function renderCombate(el, sc, p, mio) {
   const t = miObjetivo(), r = c.rivales[t], e = ENEMIGOS[r.clave];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
   const chips = [c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", `CA ${e.ca}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
-    r.maldito ? "Maldito" : "", r.veneno ? `Veneno ${r.veneno}` : "", r.atkMod < r.atkBase ? `Ataque ${fmt(r.atkMod - r.atkBase)}` : "", r.aturdido ? "Sin turno" : "", r.marca ? "¡Listo para combo!" : "", c.escudo ? "Escudo" : ""].filter(Boolean);
+    r.marca ? "¡Listo para combo!" : "", c.escudo ? "Escudo" : ""].filter(Boolean)
+    .concat(Object.keys(r.est).filter(k => ESTADOS[k]).map(k => `<i class="est" style="--c:${ESTADOS[k].color}">${ESTADOS[k].nombre}${r.est[k] < 90 ? ` ${r.est[k]}` : ""}</i>`));
   const varios = c.rivales.length > 1;
   const lista = c.rivales.map((x, k) => `<button type="button" class="riv${k === t ? " sel" : ""}${x.hp <= 0 ? " muerto" : ""}${k === c.actua ? " actua" : ""}" ${varios && x.hp > 0 ? `data-ui="objetivo" data-k="${k}"` : `data-ui="bestia" data-k="${x.clave}"`} ${x.hp <= 0 ? "disabled" : ""}>
       <span class="rn">${esc(x.nombre)}</span><span class="barra-rival"><i style="width:${Math.round((100 * x.hp) / x.hpMax)}%"></i></span><b>${x.hp}/${x.hpMax}</b></button>`).join("");
@@ -6726,7 +7462,7 @@ function htmlMochila() {
   }).join("")}</ul>${S.anillo ? "<p>Anillo de invisibilidad: una vez por combate, el enemigo pierde su turno.</p>" : ""}`;
 }
 function htmlCompendio(pestana, k) {
-  const tabs = { bestiario: "Bestiario", mundo: "Mundo", razas: "Razas", clases: "Clases" };
+  const tabs = { bestiario: "Bestiario", estados: "Estados", mundo: "Mundo", razas: "Razas", clases: "Clases" };
   let cuerpo = "";
   if (pestana === "mundo") cuerpo = LORE.mundo.map(x => `<article><h3>${x.titulo}</h3>${x.texto.map(t => `<p>${t}</p>`).join("")}</article>`).join("")
     + Object.keys(LORE.lugares).filter(i => S && S.vistos.lugares.includes(+i)).map(i => `<article><h3>${LORE.lugares[i].titulo}</h3><p>${LORE.lugares[i].texto[0]}</p></article>`).join("");
@@ -6736,6 +7472,8 @@ function htmlCompendio(pestana, k) {
       <p class="bloque-stats">${e.tipo} · VD ${e.vd} · CA ${e.ca} · PG ${e.alma}${e.resiste ? ` · resiste ${TIPOS_DANO[e.resiste]}` : ""}${e.debil ? ` · débil a ${TIPOS_DANO[e.debil]}` : ""}</p>
       <p><b>${e.rasgoDesc}</b> ${e.lore}</p></div></article>`;
   }).join("") || `<p class="espera">Aún no os habéis cruzado con ningún monstruo.</p>`;
+  if (pestana === "estados") cuerpo = Object.keys(ESTADOS).map(k => `<article><h3 style="color:${ESTADOS[k].color}">${ESTADOS[k].nombre}</h3><p>${ESTADOS[k].desc}</p></article>`).join("")
+    + `<article><h3>Ataques especiales</h3><p>Cada monstruo tiene uno. «Su turno» avisa cuándo lo usará y qué estado provoca.</p></article>`;
   if (pestana === "razas") cuerpo = Object.keys(RAZAS).map(x => { const r = RAZAS[x]; return `<article><h3>${r.nombre}</h3><p><b>${r.pasiva}:</b> ${r.pasivaDesc}</p><p>${r.lore}</p></article>`; }).join("");
   if (pestana === "clases") cuerpo = Object.keys(CLASES).map(x => { const c = CLASES[x]; return `<article><h3>${c.nombre} · ${c.rol}</h3><p>${Object.keys(APRENDE[x]).map(l => `<b>Nv ${l}:</b> ${APRENDE[x][l].map(id => H(id).nombre).join(", ")}`).join(" · ")}</p><p><b>${c.pasiva}:</b> ${c.pasivaDesc}</p></article>`; }).join("");
   return `<h2>Compendio</h2><div class="pestanas">${Object.keys(tabs).map(t => `<button type="button" data-ui="pestana" data-p="${t}" aria-selected="${t === pestana}">${tabs[t]}</button>`).join("")}</div><div class="compendio">${cuerpo}</div>`;
@@ -6750,6 +7488,9 @@ function htmlAyuda() {
     <li><b>Golpe certero:</b> al atacar, para la marca en el centro de la barra: +2 a la tirada, o +5 si es perfecto.</li>
     <li><b>Bloqueo:</b> cuando un ataque va a darte, aparece «¡BLOQUEA!». Tócalo a tiempo y recibes la mitad de daño.</li>
     <li><b>Jefes:</b> a media vida entran en fase 2 y cambian de táctica.</li>
+    <li><b>Estados:</b> veneno, quemadura y sangrado quitan vida cada turno; parálisis y congelación hacen perder el turno; cegado falla la mitad; debilitado pega peor; maldito recibe más daño. Los ves como puntitos de color sobre cada personaje y en el Compendio.</li>
+    <li><b>Votaciones:</b> en línea, el camino y las decisiones se votan (15 s). Si hay empate, gana el voto de quien tiene el turno.</li>
+    <li><b>El Abismo:</b> tras matar al dragón una vez, se desbloquea un quinto acto con un jefe secreto (siempre disponible en Pesadilla).</li>
     <li><b>Runas y logros:</b> al vencer jefes, al caer y con cada logro ganas runas. Gástalas en el altar para empezar con ventajas.</li>
     <li><b>Botín:</b> los cofres y los enemigos sueltan armas, armaduras y objetos mágicos. Pulsa el nombre del héroe que se lo queda (▲ = mejor que lo que lleva). Lo que nadie coge se vende.</li>
     <li><b>Tiradas:</b> d20 + atributo contra la CD (o la CA del enemigo). 20 es crítico y 1 es pifia.</li>
@@ -6771,6 +7512,7 @@ function ejecutar(k, v) {
     case "aprender": return aprender(+v);
     case "bendicion": return elegirBendicion(v);
     case "bloquear": return bloquear();
+    case "votar": { const [k2, v2] = String(v).split("|"); return votar(remoto || miId, k2, v2); }
     case "objeto": return accion("objeto", v);
     case "comprar": return comprar(v);
     case "terminar": return terminarCompras();
@@ -6792,7 +7534,8 @@ document.addEventListener("click", ev => {
   audio();
   const ds = b.dataset;
   if (ds.juego) {
-    const k = ds.juego, v = ds.v;
+    let k = ds.juego, v = ds.v;
+    if (S && VOTABLES.has(k) && hayVotacion()) { v = `${k}|${v}`; k = "votar"; }
     if (!S || (ocupado && k !== "bloquear") || (esperandoHost && k !== "bloquear") || certeroActivo) return;
     if (k === "reintentar" ? S.online && !esHost() : !permitido(k, miId)) return;
     const mandar = (vv = v) => (S.online && !esHost() ? (k === "bloquear" ? enviarBloqueo() : enviarJugada(k, vv)) : ejecutar(k, vv));
@@ -6813,7 +7556,7 @@ document.addEventListener("click", ev => {
     case "sel-sig": return cambiarSeleccion(ds.c, 1);
     case "sel-azar": { const h = heroeEditado(); const n = heroeAlAzar(Math.floor(Math.random() * 9)); Object.assign(h, { raza: n.raza, clase: n.clase, look: n.look }); if (sel.online) publicarPresencia(); return renderSeleccion(); }
     case "sel-heroe": sel.actual = +ds.i; return renderSeleccion();
-    case "sel-anadir": sel.heroes.push(heroeAlAzar(sel.heroes.length)); sel.actual = sel.heroes.length - 1; return renderSeleccion();
+    case "sel-anadir": { const n = heroeAlAzar(sel.heroes.length), usados = sel.heroes.map(h => h.nombre); n.nombre = NOMBRES.find(x => !usados.includes(x) && Math.random() < 0.3) || NOMBRES.find(x => !usados.includes(x)) || n.nombre; sel.heroes.push(n); } sel.actual = sel.heroes.length - 1; return renderSeleccion();
     case "sel-quitar": sel.heroes.splice(sel.actual, 1); sel.actual = Math.max(0, sel.actual - 1); return renderSeleccion();
     case "sel-listo":
       if (!sel.online) return comenzarLocal();
@@ -6858,7 +7601,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (location.hash === "#prueba") window.__dym = { estado: () => S, H };
+if (location.hash === "#prueba") window.__dym = { estado: () => S, H, render: () => render() };
 render();
 conectar();
 })();

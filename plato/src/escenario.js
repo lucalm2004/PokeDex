@@ -146,7 +146,7 @@ const ESCENARIO = (() => {
       if (reducido && e.tipo !== "numero") return;
       if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
       if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800, proyectil: 300, tajo: 260, destello: 380 }[e.tipo] || 500 }, e));
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800, proyectil: 300, tajo: 260, destello: 380, salto: 900 }[e.tipo] || 500 }, e));
     }
     function desplazamiento(id, ahora) {
       let dx = 0, dy = 0, blanco = false;
@@ -155,6 +155,7 @@ const ESCENARIO = (() => {
         if (p < 0 || p > 1) continue;
         if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 10) * (id[0] === "e" ? -1 : 1);
         if (e.tipo === "golpe" && e.objetivo === id) { blanco = p < 0.45; dx += p < 0.8 ? (Math.floor(p * 12) % 2 ? 1 : -1) : 0; }
+        if (e.tipo === "salto" && (e.actor === id || (e.actor === "h*" && id[0] === "h"))) dy -= Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 6);
       }
       return [dx, dy, blanco];
     }
@@ -169,6 +170,13 @@ const ESCENARIO = (() => {
       b.fillRect(x - 3, y - 1, 7, 1); b.fillRect(x - 3, y, 7, 2); b.fillRect(x - 2, y + 2, 5, 1); b.fillRect(x - 1, y + 3, 3, 1); b.fillRect(x, y + 4, 1, 1);
       b.fillStyle = color;
       b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y + 1, 3, 1); b.fillRect(x, y + 2, 1, 1);
+    }
+    /* Fila de puntitos de color, uno por estado (veneno, quemadura…). */
+    function puntos(x, y, colores) {
+      const n = (colores || []).length;
+      if (!n) return;
+      const x0 = Math.round(x - (n * 4 - 1) / 2);
+      colores.forEach((col, k) => { b.fillStyle = PX.CONTORNO; b.fillRect(x0 + k * 4 - 1, y - 1, 5, 5); b.fillStyle = col; b.fillRect(x0 + k * 4, y, 3, 3); });
     }
     function barra(x, y, ancho, valor, max, color) {
       b.fillStyle = PX.CONTORNO; b.fillRect(x - 1, y - 1, ancho + 2, 4);
@@ -206,7 +214,7 @@ const ESCENARIO = (() => {
           if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, a.fy - 43 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
           let iy = a.fy - 40;
           if (a.h.aturdido) { PX.texto(b, "ZZ", a.fx - 9, iy, R.mar[4]); }
-          if (a.h.cegado) { PX.texto(b, "?", a.fx + 6, iy, R.bronce[4]); }
+          puntos(a.fx + 1, a.fy - 48, a.h.estados);
         } else {
           const r = a.rival;
           const v = spriteRival(r.tipo, r.clave);
@@ -221,13 +229,12 @@ const ESCENARIO = (() => {
             if (Math.floor(p * 10) % 2) continue;
           }
           if (r.tipo === "enemigo") sombraSuelo(a.fx, a.fy - 1, 22);
-          b.drawImage(blanco ? v.blanco : r.petrificado ? v.piedra : v.normal, ix, iy);
+          b.drawImage(blanco ? v.blanco : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
           if (r.tipo === "enemigo" && r.max) {
             barra(a.fx - 15, a.fy - 41, 30, r.hp, r.max, R.sangre[4]);
-            if (r.maldito) PX.texto(b, "!", a.fx + 18, a.fy - 43, R.magia[3]);
             if (r.aturdido) PX.texto(b, "ZZ", a.fx - 22, a.fy - 43, R.mar[4]);
-            if (r.veneno) PX.texto(b, "*", a.fx + 18, a.fy - 36, R.hoja[4]);
-            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, a.fy - 50 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
+            puntos(a.fx, a.fy - 47, r.estados);
+            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, a.fy - 55 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
           }
         }
       }

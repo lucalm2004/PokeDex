@@ -6,7 +6,7 @@ const DATOS = (() => {
   /* Cuatro atributos abreviados: Fuerza cuenta también como Constitución y Sabiduría como Destreza. */
   const STATS = { raz: "Inteligencia", ani: "Fuerza", elo: "Carisma", tem: "Sabiduría" };
   const ABREV = { raz: "INT", ani: "FUE", elo: "CAR", tem: "SAB" };
-  const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán"];
+  const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán", "El Abismo"];
   const ROMANOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
   const NIVELES = [0, 8, 18, 30, 44, 60, 78, 98, 120, 145];
@@ -115,40 +115,40 @@ const DATOS = (() => {
     rayo: { nombre: "Rayo arcano", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, usos: 0, desc: "Proyectil mágico básico." },
     descarga: { nombre: "Descarga sobrenatural", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 8], tirada: true, usos: 0, desc: "Energía de tu patrón. Usa Carisma." },
     muro: { nombre: "Muro de escudos", efecto: "escudo", usos: 2, desc: "El próximo ataque enemigo no hace daño." },
-    furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], usos: 2, desc: "Golpe seguro y brutal." },
+    furia: { nombre: "Furia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], aplica: ["sangrado", 2, 0.3], usos: 2, desc: "Golpe seguro y brutal." },
     humo: { nombre: "Bomba de humo", efecto: "aturde", usos: 1, desc: "El enemigo pierde su próximo turno." },
     flechas: { nombre: "Lluvia de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 2, usos: 2, desc: "Dos disparos seguros." },
-    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, area: true, usos: 2, desc: "Explosión segura que alcanza a todos los enemigos." },
+    bola: { nombre: "Bola de fuego", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], bono: 2, area: true, aplica: ["quemadura", 2, 0.6], usos: 2, desc: "Explosión segura que alcanza a todos los enemigos." },
     maleficio: { nombre: "Maleficio", efecto: "maldice", usos: 1, desc: "El enemigo recibe +2 de cada golpe todo el combate." },
-    luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, usos: 2, desc: "Daño seguro. Doble contra no muertos." },
-    cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
+    luz: { nombre: "Luz sagrada", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], noMuerto: 2, aplica: ["ciego", 2, 0.4], usos: 2, desc: "Daño seguro. Doble contra no muertos." },
+    cancion: { nombre: "Canción de descanso", efecto: "cura", a: "grupo", stat: "elo", dado: [1, 6], regen: 2, usos: 2, desc: "Cura a todo el grupo y levanta a los caídos." },
     curar: { nombre: "Curar heridas", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 3, desc: "Cura al aliado más herido." },
-    tajo: { nombre: "Tajo poderoso", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, usos: 3, desc: "Golpe fuerte con tirada." },
+    tajo: { nombre: "Tajo poderoso", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, aplica: ["sangrado", 2, 0.5], usos: 3, desc: "Golpe fuerte con tirada." },
     aliento: { nombre: "Segundo aliento", efecto: "cura", a: "yo", stat: "ani", dado: [1, 10], usos: 1, desc: "Te curas a ti mismo." },
     grito: { nombre: "Grito de guerra", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
-    frenesi: { nombre: "Frenesí", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], golpes: 2, tirada: true, usos: 2, desc: "Dos golpes seguidos con tirada." },
-    devastar: { nombre: "Golpe devastador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 8], usos: 1, desc: "Un golpe seguro enorme." },
+    frenesi: { nombre: "Frenesí", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], golpes: 2, tirada: true, aplica: ["sangrado", 2, 0.35], usos: 2, desc: "Dos golpes seguidos con tirada." },
+    devastar: { nombre: "Golpe devastador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [4, 8], aplica: ["paralisis", 1, 0.5], usos: 1, desc: "Un golpe seguro enorme." },
     veneno: { nombre: "Hoja envenenada", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], tirada: true, veneno: 3, usos: 2, desc: "Golpe que envenena 3 turnos." },
-    asesinar: { nombre: "Golpe furtivo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], tirada: true, critico: 17, usos: 2, desc: "Crítico con 17 o más." },
+    asesinar: { nombre: "Golpe furtivo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], tirada: true, critico: 17, aplica: ["sangrado", 3, 1], usos: 2, desc: "Crítico con 17 o más." },
     danza: { nombre: "Danza de cuchillas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], golpes: 3, tirada: true, usos: 1, desc: "Tres cuchilladas con tirada." },
     marca: { nombre: "Marca del cazador", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], maldice: true, usos: 1, desc: "Disparo seguro que maldice al enemigo (+2 daño)." },
     balsamo: { nombre: "Bálsamo silvestre", efecto: "cura", a: "uno", stat: "tem", dado: [1, 8], usos: 2, desc: "Cura al aliado más herido." },
-    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], area: true, usos: 1, desc: "Lluvia segura sobre todos los enemigos." },
+    tormenta: { nombre: "Tormenta de flechas", efecto: "dano", tipo: "fisica", stat: "ani", dado: [3, 6], area: true, aplica: ["sangrado", 2, 0.5], usos: 1, desc: "Lluvia segura sobre todos los enemigos." },
     escudoMag: { nombre: "Escudo mágico", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
-    escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
+    escarcha: { nombre: "Rayo de escarcha", efecto: "dano", tipo: "arcana", stat: "raz", dado: [1, 8], tirada: true, debilita: true, aplica: ["congelado", 1, 0.35], usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     sueno: { nombre: "Sueño", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], area: true, usos: 1, desc: "Cae sobre todos los enemigos." },
+    meteoro: { nombre: "Lluvia de meteoros", efecto: "dano", tipo: "arcana", stat: "raz", dado: [4, 8], area: true, aplica: ["quemadura", 2, 1], usos: 1, desc: "Cae sobre todos los enemigos." },
     drenar: { nombre: "Toque vampírico", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, drena: true, usos: 2, desc: "Daño y te curas la mitad." },
     miedo: { nombre: "Susurro aterrador", efecto: "debilita", usos: 1, desc: "El enemigo tiene −2 para atacar todo el combate." },
     plaga: { nombre: "Nube de veneno", efecto: "veneno", turnos: 4, area: true, usos: 1, desc: "Envenena 4 turnos a todos los enemigos." },
-    infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], usos: 1, desc: "Llamas del abismo, sin fallo." },
-    plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
+    infernal: { nombre: "Fuego infernal", efecto: "dano", tipo: "arcana", stat: "elo", dado: [4, 6], aplica: ["quemadura", 3, 1], usos: 1, desc: "Llamas del abismo, sin fallo." },
+    plegaria: { nombre: "Plegaria de sanación", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 4], regen: 2, usos: 1, desc: "Cura a todo el grupo y levanta a los caídos." },
     escudoFe: { nombre: "Escudo de fe", efecto: "escudo", usos: 1, desc: "El próximo ataque enemigo no hace daño." },
     orden: { nombre: "Orden divina", efecto: "aturde", usos: 1, desc: "El enemigo obedece y pierde su turno." },
-    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [3, 6], noMuerto: 2, area: true, usos: 1, desc: "Luz sobre todos los enemigos. Doble contra no muertos." },
+    juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [3, 6], noMuerto: 2, area: true, aplica: ["ciego", 2, 1], usos: 1, desc: "Luz sobre todos los enemigos. Doble contra no muertos." },
     burla: { nombre: "Burla cruel", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     cuna: { nombre: "Canción de cuna", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, usos: 1, desc: "Una onda de sonido que golpea a todos." }
+    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, aplica: ["paralisis", 1, 0.3], usos: 1, desc: "Una onda de sonido que golpea a todos." }
   };
   /* Qué aprende cada clase y a qué nivel. */
   const APRENDE = {
@@ -213,6 +213,8 @@ const DATOS = (() => {
     escamas: { nombre: "Armadura de escamas de dragón", tipo: "armadura", precio: 150, ca: 4, alma: 6, rareza: "legendario", desc: "+4 a la CA y +6 PG máximos." },
     sortija: { nombre: "Sortija de protección", tipo: "talisman", precio: 30, ca: 1, desc: "+1 a la Clase de Armadura." },
     capa: { nombre: "Capa élfica", tipo: "talisman", precio: 55, ca: 1, ini: 2, desc: "+1 a la CA y +2 a la iniciativa." },
+    estelar: { nombre: "Hoja estelar", tipo: "arma", precio: 160, golpe: 3, fis: 5, arc: 3, rareza: "legendario", desc: "+3 para atacar, +5 físico y +3 mágico." },
+    vacio: { nombre: "Corona del vacío", tipo: "talisman", precio: 150, stat: "elo", ca: 2, critico: 19, rareza: "legendario", desc: "+1 Carisma, +2 CA y críticos con 19." },
     corona: { nombre: "Corona del rey muerto", tipo: "talisman", precio: 100, stat: "raz", ca: 1, desc: "+1 a Inteligencia y +1 a la CA." }
   });
   const RAREZAS = { comun: "Común", raro: "Raro", epico: "Épico", legendario: "Legendario" };
@@ -221,7 +223,8 @@ const DATOS = (() => {
     ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita"],
     ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro"],
     ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas"],
-    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"]
+    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas"],
+    ["flamigera", "escamas", "estelar", "vacio", "vorpal", "baculo", "piedra", "corona"]
   ];
   const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
@@ -346,6 +349,31 @@ const DATOS = (() => {
       rasgoDesc: "Llamarada: cada 2 rondas quema a todo el grupo (1d4). Las armas apenas le hacen daño.",
       lore: "Fuego vivo escapado del Plano Elemental por las grietas del volcán."
     },
+    diablillo: {
+      nombre: "Diablillo", tipo: "Infernal pequeño", alin: "Legal malvado", vd: "6",
+      alma: 22, ca: 14, atk: 6, dano: [1, 6, 2], ataques: 2, ini: 5, resiste: "arcana", debil: "sagrada",
+      rasgoDesc: "Pinchazo ígneo: cada 2 rondas su tridente deja quemaduras.",
+      lore: "Criaturas del Abismo que se cuelan por cualquier grieta. Ríen mientras queman."
+    },
+    arana: {
+      nombre: "Araña de las sombras", tipo: "Bestia monstruosa", alin: "Neutral malvado", vd: "7",
+      alma: 30, ca: 14, atk: 6, dano: [1, 8, 2], ataques: 2, ini: 3, resiste: null, debil: "arcana",
+      rasgoDesc: "Picadura: cada 2 rondas envenena y puede atrapar en su red.",
+      lore: "Tejen sus redes entre los mundos. Lo que cae en ellas no vuelve a ver el sol."
+    },
+    sombra: {
+      nombre: "Sombra famélica", tipo: "No muerto", alin: "Caótico malvado", vd: "7", nomuerto: true,
+      alma: 26, ca: 15, atk: 6, dano: [1, 8, 1], ataques: 2, ini: 4, resiste: "fisica", debil: "sagrada",
+      rasgoDesc: "Toque gélido: cada 2 rondas debilita y ciega. Las armas apenas la rozan.",
+      lore: "Lo que queda de quienes Nhazgul devoró: hambre con forma de persona."
+    },
+    devorador: {
+      nombre: "Nhazgul, el Devorador de Estrellas", tipo: "Aberración colosal", alin: "Caótico malvado", vd: "14",
+      alma: 62, ca: 16, atk: 7, dano: [1, 10, 2], ataques: 2, ini: 3, resiste: null, debil: null,
+      area: { cada: 3, dado: 8, txt: "Nhazgul abre su ojo y la luz se apaga" },
+      rasgoDesc: "Ojo del vacío: cada 3 rondas golpea a todo el grupo y lo ciega. A media vida, invoca a sus siervos.",
+      lore: "Más antiguo que los dioses. Fue él quien susurró al dragón durante su sueño de cien años. Come estrellas; ahora tiene hambre de Valdren."
+    },
     dragon: {
       nombre: "Ignárax, el dragón rojo", tipo: "Dragón enorme", alin: "Caótico malvado", vd: "10",
       alma: 40, ca: 15, atk: 5, dano: [1, 10, 0], ataques: 2, ini: 2, resiste: "arcana", debil: null,
@@ -369,7 +397,10 @@ const DATOS = (() => {
       jefeTexto: "Lord Varkhul despliega su capa en el salón del trono. Se cura con vuestra sangre y odia la luz sagrada." },
     { nombre: "El Volcán", fondos: ["pico", "forja", "mina"], enemigos: ["kobold", "elemental", "golem"], jefe: "dragon", fondoJefe: "guarida", tienda: "forja",
       intro: "El Pico Cenizo humea sobre las minas enanas. Arriba, Ignárax duerme sobre su oro.",
-      jefeTexto: "Ignárax se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva. Es ahora o nunca." }
+      jefeTexto: "Ignárax se levanta sobre su montaña de oro. Sus alas tapan el techo de la cueva. Es ahora o nunca." },
+    { nombre: "El Abismo", fondos: ["abismo", "telarana", "ruinas"], enemigos: ["diablillo", "arana", "sombra"], jefe: "devorador", fondoJefe: "abismo", tienda: "planar",
+      intro: "Bajo el tesoro del dragón se abre una grieta que no tiene fondo. De ella sube un susurro: Ignárax no era más que un siervo. Bajáis.",
+      jefeTexto: "En el centro del vacío flota un ojo del tamaño de una luna. Nhazgul, el Devorador de Estrellas, os mira por primera vez." }
   ];
 
   /* Sucesos: tipo "prueba" (opciones con tirada o sin ella) o "enigma" (acertijo). acto: índice o null (cualquiera). */
