@@ -16381,8 +16381,8 @@ const ESCENARIO = (() => {
   const R = PX.RAMPAS;
   const reducido = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   /* Pies de cada héroe (x centro, y suelo): tres delante y tres detrás. */
-  const HUECOS = [[84, 139], [54, 135], [114, 133], [68, 124], [100, 124], [28, 127]];
-  const POS_MASCOTA = [140, 141];
+  const HUECOS = [[80, 140], [44, 137], [116, 135], [62, 125], [98, 124], [24, 125]];
+  const POS_MASCOTA = [146, 141];
   /* Con varios enemigos se reparten a la derecha (el principal, delante). */
   const POS_RIVALES = [[[198, 137]], [[180, 139], [224, 128]], [[170, 140], [206, 133], [236, 124]]];
   const POS_RIVAL = POS_RIVALES[0][0];
@@ -16449,6 +16449,7 @@ const ESCENARIO = (() => {
     return v;
   }
   const spriteHeroe = look => sprite("h:" + JSON.stringify(look), [
+    tabla("HEROES_64") && tabla("HEROES_64").componer ? () => tabla("HEROES_64").componer(look) : null,
     tabla("HEROES_HD") && tabla("HEROES_HD").componer ? () => tabla("HEROES_HD").componer(look) : null,
     () => HEROES.componer(look)
   ]);
@@ -16821,8 +16822,9 @@ const ESCENARIO = (() => {
       c.drawImage(v.normal, 0, 0, v.w * s, v.h * s);
       return;
     }
-    /* Recorte cuadrado desde la cabeza. */
-    const lado = Math.max(20, Math.round((v.pie - v.cima) * 0.6));
+    /* Recorte cuadrado desde la cabeza: escala entera y el recorte se ajusta para llenar el tamaño pedido. */
+    const dpr = window.devicePixelRatio || 1, ideal = Math.max(20, Math.round((v.pie - v.cima) * 0.6));
+    const esc_ = Math.max(1, Math.round((tamCss * dpr) / ideal)), lado = Math.max(16, Math.min(v.w, Math.floor((tamCss * dpr) / esc_)));
     const [c, s] = prepararLienzo(cv, tamCss, lado);
     const sx = Math.round(v.cx - lado / 2), sy = Math.max(0, v.cima - 1);
     c.drawImage(v.normal, sx, sy, lado, lado, 0, 0, lado * s, lado * s);
