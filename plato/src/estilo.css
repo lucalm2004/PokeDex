@@ -1052,10 +1052,10 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 .panel.entra > * { animation: subePx .32s steps(5) backwards; }
 .panel.entra > *:nth-child(2) { animation-delay: .04s; } .panel.entra > *:nth-child(3) { animation-delay: .08s; }
 .panel.entra > *:nth-child(4) { animation-delay: .12s; } .panel.entra > *:nth-child(5) { animation-delay: .16s; }
-.menu > .opcion, .talentos-op > .talento-op, .caminos > .camino { animation: subePx .3s steps(5) backwards; }
-.menu > .opcion:nth-child(2), .talentos-op > :nth-child(2), .caminos > :nth-child(2) { animation-delay: .05s; }
-.menu > .opcion:nth-child(3), .talentos-op > :nth-child(3), .caminos > :nth-child(3) { animation-delay: .1s; }
-.menu > .opcion:nth-child(4), .caminos > :nth-child(4) { animation-delay: .15s; }
+.panel.entra .menu > .opcion, .panel.entra .talentos-op > .talento-op, .panel.entra .caminos > .camino { animation: subePx .3s steps(5) backwards; }
+.panel.entra .menu > .opcion:nth-child(2), .panel.entra .talentos-op > :nth-child(2), .panel.entra .caminos > :nth-child(2) { animation-delay: .05s; }
+.panel.entra .menu > .opcion:nth-child(3), .panel.entra .talentos-op > :nth-child(3), .panel.entra .caminos > :nth-child(3) { animation-delay: .1s; }
+.panel.entra .menu > .opcion:nth-child(4), .panel.entra .caminos > :nth-child(4) { animation-delay: .15s; }
 .heroe.activo { animation: brillaPx 1.2s steps(4) infinite; }
 .opcion:not(:disabled):hover { filter: brightness(1.12); }
 @media (max-height: 700px) {

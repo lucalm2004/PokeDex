@@ -722,7 +722,8 @@
       /* Patas de cabra: cadera peluda, corvejón hacia atrás y pezuñas. */
       capa().ell(t.cx, pierTop + 2, (t.wR - t.wL) / 2 + 1.5, 4).pintar(g, ramPelo, { relieve: 3 });
       const pata = (x, f, atras) => {
-        const c = capa().linea(x, pierTop + 2, x + 2, ky + 1, gw + 1).linea(x + 2, ky + 1, f - 1, suelo - 5, gw).linea(f - 1, suelo - 5, f, suelo - 2, gw - 1);
+        const kx = x + 2 + (atras ? t.kAx || 0 : t.kDx || 0);
+        const c = capa().linea(x, pierTop + 2, kx, ky + 1, gw + 1).linea(kx, ky + 1, f - 1, suelo - 5, gw).linea(f - 1, suelo - 5, f, suelo - 2, gw - 1);
         c.pintar(g, ramPelo, { relieve: 2, max: atras ? 2 : 4, separar: true });
         cada(g, ramPelo, x - 6, pierTop + 1, x + 6, suelo - 2, (i, j, k) => { if (k >= 2 && (i * 2 + j) % 5 === 0) g.set(i, j, ramPelo[k - 1], ramPelo); else if (k >= 2 && k < 4 && (i * 2 + j) % 7 === 3) g.set(i, j, ramPelo[k + 1], ramPelo); });
         const pz = capa().rect(f - 2, suelo - 1, 5, 2).on(f + 3, suelo);
@@ -735,22 +736,23 @@
     }
     const rp = o.ramPierna || piel;
     /* Muslo, rodilla y pantorrilla: la de atrás en sombra. */
-    const pierna = (x, f) => capa().linea(x, pierTop - 1, (x + f) / 2, ky, gw + 1).linea((x + f) / 2, ky, f, suelo - 3, gw).ell((x + f) / 2 - 0.3, ky + 4, gw / 2 + 0.2, 2.2);
-    const atras = pierna(xa, fa), delante = pierna(xd, fd);
+    const pierna = (x, f, dk) => { const kx = (x + f) / 2 + dk; return capa().linea(x, pierTop - 1, kx, ky, gw + 1).linea(kx, ky, f, suelo - 3, gw).ell(kx - 0.3 + (dk ? (f - kx) * 0.3 : 0), ky + 4 + (dk ? 0.5 : 0), gw / 2 + 0.2, 2.2); };
+    const kA = t.kAx || 0, kD = t.kDx || 0;
+    const atras = pierna(xa, fa, kA), delante = pierna(xd, fd, kD);
     atras.pintar(g, rp, { relieve: 2.2, max: 2 });
     delante.pintar(g, rp, { relieve: 2.4, separar: true });
     if (rp !== piel) {
       /* Arrugas de la tela en la corva y el tobillo. */
-      pliegue(g, rp, (xd + fd) / 2 + 1, ky - 1, (xd + fd) / 2 - 1, ky + 1);
+      pliegue(g, rp, (xd + fd) / 2 + kD + 1, ky - 1, (xd + fd) / 2 + kD - 1, ky + 1);
       surco(g, rp, 1, fd - 1, suelo - 9, fd + 1, suelo - 10, rp);
     } else {
-      pon(g, piel, 3, [(xd + fd) / 2 | 0, ky]);
-      pon(g, piel, 1, [((xd + fd) / 2 | 0) + 1, ky + 5]);
+      pon(g, piel, 3, [(xd + fd) / 2 + kD | 0, ky]);
+      pon(g, piel, 1, [((xd + fd) / 2 + kD | 0) + 1, ky + 5]);
     }
     if (o.rodillera) {
-      capa().ell((xd + fd) / 2 + 0.2, ky, gw / 2 + 0.6, 1.8).pintar(g, o.rodillera, { relieve: 1.4, separar: true });
-      destello(g, o.rodillera, Math.round((xd + fd) / 2) - 1, ky - 1);
-      capa().ell((xa + fa) / 2, ky, gw / 2 + 0.2, 1.6).pintar(g, o.rodillera, { relieve: 1, max: 2, separar: true });
+      capa().ell((xd + fd) / 2 + kD + 0.2, ky, gw / 2 + 0.6, 1.8).pintar(g, o.rodillera, { relieve: 1.4, separar: true });
+      destello(g, o.rodillera, Math.round((xd + fd) / 2 + kD) - 1, ky - 1);
+      capa().ell((xa + fa) / 2 + kA, ky, gw / 2 + 0.2, 1.6).pintar(g, o.rodillera, { relieve: 1, max: 2, separar: true });
     }
     if (o.descalzo || !o.ramBota) {
       const med = raza === "mediano";
@@ -777,7 +779,7 @@
     [t.torL + 1.5, t.torTop - 0.5], [t.torR - 1.5, t.torTop - 0.5], [t.torR + 0.5, t.torTop + 2], [t.torR + 0.5, t.torTop + 6],
     [t.wR + 0.5, t.torBot + 0.5], [t.wL - 0.5, t.torBot + 0.5], [t.torL - 0.5, t.torTop + 6], [t.torL - 0.5, t.torTop + 2]
   ]);
-  const falda = (t, largo, vuelo) => capa().poly([[t.wL - 0.5, t.torBot - 1.5], [t.wR + 0.5, t.torBot - 1.5], [t.wR + 1.5 + vuelo, t.pierTop + largo + 0.5], [t.wL - 1.5 - vuelo, t.pierTop + largo + 0.5]]);
+  const falda = (t, largo, vuelo) => capa().poly([[t.wL - 0.5, t.torBot - 1.5], [t.wR + 0.5, t.torBot - 1.5], [t.wR + 1.5 + vuelo + (t.faldaD || 0), t.pierTop + largo + 0.5 + (t.faldaDy || 0)], [t.wL - 1.5 - vuelo + (t.faldaI || 0), t.pierTop + largo + 0.5 + (t.faldaIy || 0)]]);
   function cinturon(g, t, ram = CUERO, hebilla = ORO, y = t.torBot - 2, ancho = 3) {
     for (let x = t.wL - 2; x <= t.wR + 2; x++) for (let j = 0; j < ancho; j++) if (g.get(x, y + j)) g.set(x, y + j, ram[j === 0 ? 3 : j === ancho - 1 ? 1 : 2], ram);
     for (let x = t.wL - 2; x <= t.wR + 2; x++) if (g.get(x, y - 1)) matiz(g, x, y - 1, -1);
@@ -825,7 +827,7 @@
 
   /* ---------- Lo que va a la espalda ---------- */
   function capaEspalda(t, largo, vuelo) {
-    return capa().poly([[t.torL + 1, t.torTop], [t.torL + 7, t.torTop], [t.torL + 3, t.pierTop + largo], [t.torL - vuelo, t.pierTop + largo - 1], [t.torL - 3, t.torTop + 5]]);
+    return capa().poly([[t.torL + 1, t.torTop], [t.torL + 7, t.torTop], [t.torL + 3 + (t.capaDx || 0) / 2, t.pierTop + largo + (t.capaDy || 0) / 2], [t.torL - vuelo + (t.capaDx || 0), t.pierTop + largo - 1 + (t.capaDy || 0)], [t.torL - 3, t.torTop + 5]]);
   }
   function espalda(g, t, clase, tela) {
     if (clase === "explorador") {
@@ -1159,7 +1161,7 @@
         const by = y - 4;
         const ala = capa().ell(x - 0.5, by, t.cabRx + 4.5, 1.9);
         /* Copa cónica que se dobla hacia atrás: más alta cuando hay sitio por encima. */
-        const alt = Math.min(15, by - 1);
+        const alt = Math.min(t.altSombrero || 15, by - 1);
         /* Si hay poco sitio, la punta cae blanda por detrás de la cabeza. */
         const cono = alt >= 12
           ? capa().poly([[x - 6.5, by - 0.5], [x + 5.5, by - 0.5], [x + 3, by - alt * 0.55], [x + 0.5, by - alt * 0.85], [x - 2.5, by - alt], [x - 7, by - alt + 0.5], [x - 13, by - alt * 0.45],
@@ -1228,7 +1230,7 @@
       case "guerrero": {
         /* Escudo de cometa por delante del cuerpo: reborde de hierro con remaches, campo de la tela con su
            brillo y una cruz clara; un perfil oscuro lo separa de la armadura. */
-        const sx = t.torR + 3, sy = t.torTop + (t.bajo ? 5 : 6), hw = 7.5;
+        const sx = t.escudo ? t.escudo[0] : t.torR + 3, sy = t.escudo ? t.escudo[1] : t.torTop + (t.bajo ? 5 : 6), hw = 7.5;
         const borde = capa().poly([[sx - hw, sy - 6.5], [sx - hw + 2, sy - 7.5], [sx + hw - 2, sy - 7.5], [sx + hw, sy - 6.5], [sx + hw, sy + 2], [sx + 3.5, sy + 11], [sx, sy + 14.5], [sx - 3.5, sy + 11], [sx - hw, sy + 2]]);
         borde.pintar(g, PLACA, { relieve: 2.6, min: 1 });
         perfilar(g, borde);
