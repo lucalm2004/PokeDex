@@ -851,8 +851,9 @@
     // herramientas y trastos: pico, pala, cubo, montón de mineral, barril y cajas
     capa().linea(92, HZ + 1, 100, 66, 1).pintar(g, M, { plano: 3 });
     conBorde(g, NE[0], tmp => capa().curva(92, 66, 100, 62, 108, 67, 2, 1).pintar(tmp, HI, { relieve: 1, max: 3 }));
-    capa().linea(160, HZ + 1, 155, 68, 1).pintar(g, M, { plano: 2 });
-    conBorde(g, NE[0], tmp => capa().poly([[152, 61], [158, 61], [158, 67], [155, 70], [152, 67]]).pintar(tmp, HI, { relieve: 1.5, max: 3 }));
+    capa().linea(155, 62, 159, 88, 1).pintar(g, M, { plano: 2 });
+    capa().rect(153, 61, 5, 1).pintar(g, M, { plano: 3 });
+    conBorde(g, NE[0], tmp => capa().poly([[156, 88], [162, 88], [163, 95], [160, 98], [157, 96]]).pintar(tmp, HI, { relieve: 1.5, max: 3 }));
     conBorde(g, NE[0], tmp => {
       capa().ell(72, HZ + 2, 14, 6).quitarRect(0, HZ + 3, W, 10).pintar(tmp, TIERRA, { relieve: 4, max: 5, sesgo: -0.1 });
       for (const [x, y] of [[66, 92], [72, 90], [78, 93], [69, 95], [75, 96]]) tmp.set(x, y, B[4], B).set(x + 1, y, B[2], B);
@@ -882,7 +883,7 @@
     });
     // piedras sueltas por el suelo
     for (const [x, y, rx, ry] of [[14, 101, 3, 2], [22, 104, 2, 1.4], [168, 100, 2.5, 1.6], [96, 100, 2, 1.3], [242, 102, 3.5, 2.2], [250, 108, 2, 1.4], [152, 104, 1.6, 1.1]])
-      conBorde(g, CENIZA[0], tmp => capa().ell(x, y, rx, ry).pintar(tmp, TIERRA, { relieve: 1.5, sesgo: -0.1 + luzMina(x, y - 30) * 0.3 }));
+      conBorde(g, CENIZA[0], tmp => capa().ell(x, y, rx, ry).pintar(tmp, TIERRA.slice(2), { relieve: 1.5, sesgo: -0.2 + luzMina(x, y - 30) * 0.3 }));
   }
   /* Racimo de cristales prismáticos que asoma de la roca. */
   function cristales(g, x, y, lado, n) {
@@ -936,11 +937,11 @@
       }
       if (!dentro) for (let x = vx - hw; x <= vx + hw; x++) g.set(x, y + 1, TIERRA[1], TIERRA);
     }
-    for (let y = vy + 2; y < H; y++) {
+    for (let y = vy + 7; y < H; y++) {
       const ff = f(y), w = Math.max(1, Math.round(3 * ff)), dentro = y < HZ;
       for (const lado of [-1, 1]) {
         const xc = Math.round(vx + lado * 25 * ff - w / 2);
-        for (let i = 0; i < w; i++) g.set(xc + i, y, dentro ? HI[i === 0 ? 2 : 1] : HI[i === 0 ? 4 : i === w - 1 ? 1 : 3], HI);
+        for (let i = 0; i < w; i++) g.set(xc + i, y, dentro ? HI[y > 84 ? 1 : 0] : HI[i === 0 ? 4 : i === w - 1 ? 1 : 3], HI);
         if (!dentro) g.set(xc - 1, y, HI[0], HI).set(xc + w, y, HI[0], HI);
       }
     }

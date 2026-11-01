@@ -148,8 +148,86 @@ const DATOS = (() => {
     juicio: { nombre: "Juicio de Solara", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [3, 6], noMuerto: 2, area: true, aplica: ["ciego", 2, 1], usos: 1, desc: "Luz sobre todos los enemigos. Doble contra no muertos." },
     burla: { nombre: "Burla cruel", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, debilita: true, usos: 2, desc: "Daño y el enemigo queda con −2 para atacar." },
     cuna: { nombre: "Canción de cuna", efecto: "aturde", usos: 1, desc: "El enemigo se duerme y pierde su turno." },
-    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, aplica: ["paralisis", 1, 0.3], usos: 1, desc: "Una onda de sonido que golpea a todos." }
+    acorde: { nombre: "Acorde atronador", efecto: "dano", tipo: "arcana", stat: "elo", dado: [3, 6], area: true, aplica: ["paralisis", 1, 0.3], usos: 1, desc: "Una onda de sonido que golpea a todos." },
+    /* Habilidades de los árboles de talentos. */
+    provocar: { nombre: "Desafío", efecto: "provocar", turnos: 3, usos: 2, desc: "Los enemigos van a por ti dos rondas y ganas +2 a la CA." },
+    postura: { nombre: "Postura férrea", efecto: "roca", turnos: 3, usos: 1, desc: "Recibes 3 de daño menos por golpe durante dos rondas." },
+    ejecutar: { nombre: "Ejecución", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, ejecuta: 0.4, usos: 2, desc: "Doble daño si el enemigo está por debajo del 40 % de vida." },
+    torbellino: { nombre: "Torbellino", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 10], tirada: true, area: true, usos: 2, desc: "Giras con el arma y alcanzas a todos los enemigos." },
+    rabia: { nombre: "Golpe de rabia", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 12], tirada: true, rabia: true, usos: 3, desc: "Cuanto más herido estás, más duele: +1 de daño por cada 3 PG que te falten." },
+    rugido: { nombre: "Rugido salvaje", efecto: "inspirar", usos: 1, desc: "Todo el grupo gana +2 para atacar y +2 al daño dos rondas." },
+    pielOso: { nombre: "Piel de oso", efecto: "roca", turnos: 3, usos: 1, desc: "Recibes 3 de daño menos por golpe durante dos rondas." },
+    pisoton: { nombre: "Pisotón", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 6], area: true, aplica: ["paralisis", 1, 0.3], usos: 1, desc: "Haces temblar el suelo bajo todos los enemigos." },
+    robar: { nombre: "Mano ligera", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 6], tirada: true, roba: [5, 12], usos: 3, desc: "Golpe y le birlas oro." },
+    trampa: { nombre: "Trampa de cepo", efecto: "trampa", usos: 1, desc: "El próximo enemigo que actúe pisa la trampa: 2d6 y puede quedar paralizado." },
+    degollar: { nombre: "Degollar", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 6], tirada: true, ejecuta: 0.4, critico: 18, usos: 2, desc: "Crítico con 18 o más y doble daño a enemigos malheridos." },
+    certera: { nombre: "Flecha certera", efecto: "dano", tipo: "fisica", stat: "ani", dado: [2, 8], tirada: true, critico: 18, usos: 2, desc: "Un disparo apuntado: crítico con 18 o más." },
+    hielo: { nombre: "Flecha de hielo", efecto: "dano", tipo: "fisica", stat: "ani", dado: [1, 8], tirada: true, aplica: ["congelado", 1, 0.6], usos: 2, desc: "Puede congelar al enemigo." },
+    cadena: { nombre: "Relámpago en cadena", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], tirada: true, area: true, aplica: ["paralisis", 1, 0.25], usos: 2, desc: "Un rayo que salta de enemigo en enemigo." },
+    transferir: { nombre: "Transferir maná", efecto: "mana", usos: 2, desc: "Das 5 PM al aliado que menos tenga." },
+    pielPiedra: { nombre: "Piel de piedra", efecto: "roca", turnos: 3, usos: 1, desc: "Recibes 3 de daño menos por golpe durante dos rondas." },
+    desintegrar: { nombre: "Desintegrar", efecto: "dano", tipo: "arcana", stat: "raz", dado: [5, 6], tirada: true, ejecuta: 0.3, usos: 1, desc: "Un rayo verde que deshace la carne. Doble daño por debajo del 30 %." },
+    pacto: { nombre: "Pacto de sangre", efecto: "pacto", usos: 2, desc: "Pagas 4 PG y ganas 6 PM." },
+    hambre: { nombre: "Hambre del vacío", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 8], tirada: true, ejecuta: 0.4, drena: true, usos: 2, desc: "Te curas la mitad; doble daño a enemigos malheridos." },
+    maldicionAll: { nombre: "Maldición en masa", efecto: "maldice", area: true, usos: 1, desc: "Todos los enemigos reciben +2 de cada golpe." },
+    purificar: { nombre: "Purificar", efecto: "cura", a: "grupo", stat: "tem", dado: [1, 4], limpia: true, usos: 2, desc: "Cura un poco al grupo y le quita venenos, quemaduras y maldiciones." },
+    bendecir: { nombre: "Bendición de batalla", efecto: "inspirar", usos: 1, desc: "Todo el grupo gana +2 para atacar y +2 al daño dos rondas." },
+    martillo: { nombre: "Martillo espiritual", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [1, 8], golpes: 2, usos: 2, desc: "Un martillo de luz golpea dos veces, sin fallo." },
+    himno: { nombre: "Himno de valor", efecto: "inspirar", usos: 2, desc: "Todo el grupo gana +2 para atacar y +2 al daño dos rondas." },
+    balada: { nombre: "Balada arcana", efecto: "mana", usos: 2, desc: "Das 5 PM al aliado que menos tenga." },
+    disonancia: { nombre: "Disonancia", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], area: true, aplica: ["ciego", 2, 0.4], usos: 1, desc: "Un chirrido que aturde a todos los enemigos." },
+    truco: { nombre: "Prestidigitación", efecto: "dano", tipo: "arcana", stat: "elo", dado: [1, 6], tirada: true, roba: [4, 10], usos: 3, desc: "Un truco que hiere y hace desaparecer su bolsa." }
   };
+  /* Árbol de talentos: tres ramas por clase con cuatro nodos (niveles 2, 4, 6 y 8).
+     Cada subida de nivel eliges uno de los nodos disponibles; cada nodo pide el anterior de su rama.
+     Un nodo da una habilidad (hab) o una pasiva (pas: alma, pm, ca, ini, critico, dano{tipo}, cura, regen, meditar, remate, racha, vampiro, defensa, ataqueMini, reduccion, esquivar, oro). */
+  const rama = (nombre, desc, nodos) => ({ nombre, desc, nodos });
+  const nh = hab => ({ hab });
+  const np = (nombre, desc, pas) => ({ nombre, desc, pas });
+  const TALENTOS = {
+    guerrero: [
+      rama("Baluarte", "Aguantar y proteger", [np("Piel curtida", "+5 PG máximos.", { alma: 5 }), nh("provocar"), np("Muro viviente", "Recibes 1 de daño menos de cada golpe.", { reduccion: 1 }), nh("postura")]),
+      rama("Maestro de armas", "Golpear más y mejor", [nh("tajo"), np("Filo preciso", "Crítico con 19 o 20.", { critico: 1 }), nh("torbellino"), nh("devastar")]),
+      rama("Veterano", "Experiencia de mil batallas", [nh("aliento"), np("Táctico", "+3 a la iniciativa: actúas antes.", { ini: 3 }), nh("grito"), nh("ejecutar")])
+    ],
+    barbaro: [
+      rama("Furia ancestral", "Daño salvaje", [nh("rabia"), np("Sed de sangre", "Te curas 3 PG al abatir a un enemigo.", { vampiro: 3 }), nh("frenesi"), nh("devastar")]),
+      rama("Tótem del oso", "Resistencia brutal", [np("Piel gruesa", "+6 PG máximos.", { alma: 6 }), nh("pielOso"), np("Indomable", "Recibes 1 de daño menos de cada golpe.", { reduccion: 1 }), nh("pisoton")]),
+      rama("Señor de la guerra", "Arrastrar al grupo", [nh("grito"), np("Imparable", "Defensas más fáciles y racha máxima +1.", { defensa: 1.3, racha: 1 }), nh("rugido"), np("Berserker", "+2 al daño físico.", { dano: { fisica: 2 } })])
+    ],
+    picaro: [
+      rama("Asesino", "Matar rápido", [nh("veneno"), nh("asesinar"), np("Puñal certero", "Crítico con 18 o más.", { critico: 2 }), nh("degollar")]),
+      rama("Sombras", "Que no te toquen", [np("Escurridizo", "15 % de que un ataque enemigo te falle.", { esquivar: 0.15 }), nh("danza"), np("Golpe en la sombra", "Remates desde el 35 % de vida.", { remate: 0.35 }), nh("miedo")]),
+      rama("Truhan", "Oro y trucos", [nh("robar"), np("Bolsillos hondos", "+5 po para todos tras cada victoria.", { oro: 5 }), nh("trampa"), np("Dedos rápidos", "Minijuegos de ataque más fáciles y +2 iniciativa.", { ataqueMini: 1.35, ini: 2 })])
+    ],
+    explorador: [
+      rama("Cazador", "Disparos letales", [nh("marca"), np("Ojo de halcón", "Crítico con 19 o 20.", { critico: 1 }), nh("certera"), nh("tormenta")]),
+      rama("Trampero", "Preparar el terreno", [nh("veneno"), nh("trampa"), np("Conoce a su presa", "+2 al daño físico.", { dano: { fisica: 2 } }), nh("hielo")]),
+      rama("Guardabosques", "Vivir de la tierra", [nh("balsamo"), np("Vida salvaje", "Recuperas 2 PG al empezar cada ronda.", { regen: 2 }), nh("frenesi"), np("Explorador nato", "+3 iniciativa y 10 % de esquivar.", { ini: 3, esquivar: 0.1 })])
+    ],
+    mago: [
+      rama("Evocación", "Destrucción pura", [nh("escarcha"), np("Poder arcano", "+2 al daño mágico.", { dano: { arcana: 2 } }), nh("cadena"), nh("meteoro")]),
+      rama("Abjuración", "Protegerse", [nh("escudoMag"), np("Reflejos arcanos", "Defensas mucho más fáciles.", { defensa: 1.45 }), nh("pielPiedra"), np("Guardia arcana", "+2 a la CA y +4 PG máximos.", { ca: 2, alma: 4 })]),
+      rama("Encantamiento", "Control y maná", [nh("sueno"), nh("transferir"), np("Meditación", "Recuperas 1 PM al empezar cada ronda y +3 PM máximos.", { meditar: 1, pm: 3 }), nh("desintegrar")])
+    ],
+    brujo: [
+      rama("Pacto infernal", "Fuego del abismo", [nh("drenar"), np("Fuego del pacto", "+2 al daño mágico.", { dano: { arcana: 2 } }), nh("infernal"), np("Alma oscura", "Te curas 4 PG al abatir a un enemigo.", { vampiro: 4 })]),
+      rama("Pacto del vacío", "Hambre que no acaba", [nh("miedo"), nh("hambre"), np("Vacío interior", "+4 PM máximos y 1 PM por ronda.", { pm: 4, meditar: 1 }), nh("plaga")]),
+      rama("Maldiciones", "Hacer sufrir", [nh("pacto"), nh("escarcha"), nh("maldicionAll"), np("Mal de ojo", "Crítico con 18 o más.", { critico: 2 })])
+    ],
+    clerigo: [
+      rama("Vida", "Sanar al grupo", [np("Manos sanadoras", "+2 a todas tus curas.", { cura: 2 }), nh("plegaria"), nh("purificar"), np("Aura de vida", "Recuperas 2 PG al empezar cada ronda y curas +1.", { regen: 2, cura: 1 })]),
+      rama("Guerra", "La fe que golpea", [nh("martillo"), np("Fe armada", "+2 al daño sagrado.", { dano: { sagrada: 2 } }), nh("bendecir"), nh("juicio")]),
+      rama("Orden", "Disciplina sagrada", [nh("escudoFe"), nh("orden"), np("Armadura de fe", "+2 a la CA.", { ca: 2 }), np("Mártir", "+5 PG máximos y 1 de daño menos por golpe.", { alma: 5, reduccion: 1 })])
+    ],
+    bardo: [
+      rama("Valor", "Inspirar al grupo", [nh("himno"), np("Voz de mando", "+3 iniciativa y racha máxima +1.", { ini: 3, racha: 1 }), nh("disonancia"), nh("acorde")]),
+      rama("Encanto", "Que nadie te odie", [nh("burla"), nh("cuna"), np("Encantador", "15 % de que un ataque enemigo te falle.", { esquivar: 0.15 }), nh("drenar")]),
+      rama("Saber", "Trucos y canciones", [nh("truco"), nh("curar"), nh("balada"), np("Maestro del saber", "Minijuegos más fáciles y +3 PM máximos.", { ataqueMini: 1.3, defensa: 1.2, pm: 3 })])
+    ]
+  };
+  /* Si no queda nada del árbol a tu nivel, entrenas. */
+  const ENTRENAMIENTO = { nombre: "Entrenamiento", desc: "+3 PG y +1 PM máximos.", pas: { alma: 3, pm: 1 } };
   /* Qué aprende cada clase y a qué nivel. */
   const APRENDE = {
     guerrero: { 1: ["golpe", "muro"], 2: ["tajo"], 3: ["aliento"], 5: ["grito"], 7: ["frenesi"], 9: ["devastar"] },
@@ -584,6 +662,6 @@ const DATOS = (() => {
 
   return {
     STATS, ABREV, CAPITULOS, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, ORDEN_ALIN,
-    ejesAlin, moverMoral, HABILIDADES, APRENDE, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
+    ejesAlin, moverMoral, HABILIDADES, APRENDE, TALENTOS, ENTRENAMIENTO, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE
   };
 })();

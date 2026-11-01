@@ -4,7 +4,7 @@
 (() => {
 "use strict";
 const D = DATOS;
-const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, HABILIDADES, APRENDE, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
+const { STATS, ABREV, ROMANOS, NIVELES, NOMBRES, RAZAS, CLASES, ALINEAMIENTOS, HABILIDADES, APRENDE, TALENTOS, ENTRENAMIENTO, OBJETOS, RAREZAS, rareza, BOTIN, RANURAS, TIENDAS, TIPOS_DANO, ENEMIGOS, ACTOS, EVENTOS, HOGUERA, FINALES, EPILOGOS, LORE } = D;
 const RP = PX.RAMPAS;
 
 const CLAVE = "dym-partida-v5";
@@ -212,27 +212,80 @@ function nuevoHeroe(def) {
 const lookDe = p => Object.assign({ raza: p.raza, clase: p.clase }, p.look);
 const obj = id => (id ? OBJETOS[id] : null);
 function stat(p, k) { const t = obj(p.equipo.talisman); return p.base[k] + (t && t.stat === k ? 1 : 0); }
-function maxAlma(p) { const a = obj(p.equipo.armadura); return p.almaBase + (a && a.alma ? a.alma : 0); }
+function maxAlma(p) { const a = obj(p.equipo.armadura); return p.almaBase + (a && a.alma ? a.alma : 0) + pasivas(p).alma; }
 function ca(p) {
   const a = obj(p.equipo.armadura), t = obj(p.equipo.talisman);
-  return 10 + stat(p, "ani") + (a && a.ca ? a.ca : 0) + (t && t.ca ? t.ca : 0) + (p.clase === "guerrero" ? 2 : 0);
+  return 10 + stat(p, "ani") + (a && a.ca ? a.ca : 0) + (t && t.ca ? t.ca : 0) + (p.clase === "guerrero" ? 2 : 0) + pasivas(p).ca + (p.est && p.est.provocando ? 2 : 0);
 }
-function iniMod(p) { const t = obj(p.equipo.talisman); return stat(p, "tem") + (t && t.ini ? t.ini : 0); }
-function critMin(p) { const t = obj(p.equipo.talisman); return t && t.critico ? t.critico : 20; }
+function iniMod(p) { const t = obj(p.equipo.talisman); return stat(p, "tem") + (t && t.ini ? t.ini : 0) + pasivas(p).ini; }
+function critMin(p) { const t = obj(p.equipo.talisman); return (t && t.critico ? t.critico : 20) - pasivas(p).critico; }
+/* ---------- Árbol de talentos ---------- */
+/* Los nodos se nombran «rama.posición» (p. ej. "1.2"); "e" es un entrenamiento cuando no queda nada a tu nivel. */
+const nivelNodo = k => 2 + 2 * k;
+function nodoTal(clase, id) {
+  if (id === "e") return Object.assign({ id, rama: -1, k: 0, nivel: 1 }, ENTRENAMIENTO);
+  const [r, k] = String(id).split(".").map(Number), ramas = TALENTOS[clase];
+  const n = ramas && ramas[r] && ramas[r].nodos[k];
+  if (!n) return null;
+  const h = n.hab && H(n.hab);
+  return Object.assign({ id, rama: r, k, nivel: nivelNodo(k), nombre: h ? h.nombre : n.nombre, desc: h ? h.desc : n.desc }, n);
+}
+function pasivas(p) {
+  const t = { alma: 0, pm: 0, ca: 0, ini: 0, critico: 0, dano: {}, cura: 0, regen: 0, meditar: 0, remate: 0, racha: 0, vampiro: 0, defensa: 1, ataqueMini: 1, reduccion: 0, esquivar: 0, oro: 0 };
+  for (const id of (p && p.talentos) || []) {
+    const n = nodoTal(p.clase, id);
+    if (!n || !n.pas) continue;
+    for (const [k, v] of Object.entries(n.pas)) {
+      if (k === "dano") for (const [tp, x] of Object.entries(v)) t.dano[tp] = (t.dano[tp] || 0) + x;
+      else if (k === "defensa" || k === "ataqueMini") t[k] *= v;
+      else if (k === "remate") t.remate = Math.max(t.remate, v);
+      else t[k] += v;
+    }
+  }
+  return t;
+}
+/* Nodos que puede elegir ahora: el siguiente de cada rama, si ya tiene nivel para él. */
+function opcionesTalento(p) {
+  const ramas = TALENTOS[p.clase] || [], tom = new Set(p.talentos || []), out = [];
+  ramas.forEach((r, ri) => { const k = r.nodos.findIndex((_, j) => !tom.has(`${ri}.${j}`)); if (k >= 0 && nivelNodo(k) <= p.nivel) out.push(`${ri}.${k}`); });
+  return out.length ? out : ["e"];
+}
+function elegirTalento(id) {
+  const a = S.aprender[0];
+  if (!a || !a.talento) return;
+  const p = S.players[a.i];
+  if (!opcionesTalento(p).includes(id)) return;
+  const n = nodoTal(p.clase, id);
+  p.talentos = p.talentos || [];
+  p.talentos.push(id);
+  S.aprender.shift();
+  if (n.hab) {
+    if (p.habs.includes(n.hab)) log(`${p.nombre} perfecciona ${H(n.hab).nombre}.`, "nivel");
+    else if (p.habs.length < 4) { p.habs.push(n.hab); log(`${p.nombre} aprende ${H(n.hab).nombre} (${TALENTOS[p.clase][n.rama].nombre}).`, "nivel"); }
+    else S.aprender.unshift({ i: a.i, hab: n.hab });
+  } else {
+    log(`${p.nombre} gana el talento ${n.nombre}: ${n.desc}`, "nivel");
+    if (n.pas.alma && p.alma > 0) p.alma = Math.min(maxAlma(p), p.alma + n.pas.alma);
+    if (n.pas.pm) p.pm = Math.min(pmMax(p), (p.pm || 0) + n.pas.pm);
+  }
+  fx({ tipo: "nivel", texto: n.nombre, sub: `${p.nombre} · ${n.rama >= 0 ? TALENTOS[p.clase][n.rama].nombre : "Entrenamiento"}` });
+  guardar(); render();
+}
 const H = id => HABILIDADES[id];
 const ABR_TIPO = { fisica: "físico", arcana: "mágico", sagrada: "sagrado" };
 /* Resumen corto de una habilidad para los botones: «1d8+3 físico», «Cura 1d8+2»… */
 function resumenHab(id, p) {
   const h = H(id), m = h.stat ? statHab(p, h) : 0;
   const dados = h.dado ? `${h.golpes ? h.golpes + "×" : ""}${h.dado[0]}d${h.dado[1]}${fmt(m + (h.bono || 0))}` : "";
-  const extras = [h.veneno ? "envenena" : "", h.debilita ? "debilita" : "", h.maldice ? "maldice" : "", h.aplica ? `${ESTADOS[h.aplica[0]].verbo}${h.aplica[2] < 1 ? ` ${Math.round(h.aplica[2] * 100)} %` : ""}` : ""].filter(Boolean);
+  const extras = [h.ejecuta ? "remata heridos" : "", h.roba ? "roba oro" : "", h.rabia ? "+daño si estás herido" : "", h.limpia ? "purifica" : "", h.veneno ? "envenena" : "", h.debilita ? "debilita" : "", h.maldice ? "maldice" : "", h.aplica ? `${ESTADOS[h.aplica[0]].verbo}${h.aplica[2] < 1 ? ` ${Math.round(h.aplica[2] * 100)} %` : ""}` : ""].filter(Boolean);
   if (h.efecto === "dano") return `${dados} ${ABR_TIPO[h.tipo]}${h.tirada ? "" : " · seguro"}${h.area ? " · a todos" : ""}${extras.length ? " · " + extras.join(" · ") : ""}`;
-  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}${h.regen ? " · regenera" : ""}`;
-  return { escudo: "Bloquea un ataque", aturde: "Paraliza 1 turno", maldice: "Maldice: +2 daño recibido", debilita: "Debilita: −2 a su ataque", veneno: `Envenena ${h.turnos} turnos` }[h.efecto] + (h.area ? " · a todos" : "");
+  if (h.efecto === "cura") return `Cura ${dados}${h.a === "grupo" ? " al grupo" : h.a === "yo" ? " a ti" : ""}${h.regen ? " · regenera" : ""}${h.limpia ? " · purifica" : ""}`;
+  return { escudo: "Bloquea un ataque", aturde: "Paraliza 1 turno", maldice: "Maldice: +2 daño recibido", debilita: "Debilita: −2 a su ataque", veneno: `Envenena ${h.turnos} turnos`,
+    provocar: "Te atacan a ti · +2 CA", roca: "−3 daño recibido", inspirar: "Grupo: +2 ataque y daño", mana: "+5 PM a un aliado", pacto: "−4 PG → +6 PM", trampa: "Trampa: 2d6 y paraliza" }[h.efecto] + (h.area ? " · a todos" : "");
 }
 function statHab(p, h) { return h.stat ? stat(p, h.stat) : 0; }
 /* Maná: las habilidades fuertes cuestan PM; solo se recupera del todo descansando. */
-function pmMax(p) { return Math.round((6 + 2 * p.nivel) * (tiene("reservas") ? 1.3 : 1)); }
+function pmMax(p) { return Math.round((6 + 2 * p.nivel) * (tiene("reservas") ? 1.3 : 1)) + pasivas(p).pm; }
 function costeHab(p, h) {
   if (!h.usos) return 0;
   const base = h.usos >= 3 ? 2 : h.usos === 2 ? 3 : 5, a = obj(p.equipo.arma);
@@ -455,7 +508,7 @@ function procesarAcciones() {
 function permitido(k, uid) {
   if (!S || !S.online) return true;
   if (k === "equipar") return S.players.some(p => p.uid === uid);
-  if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
+  if (k === "aprender" || k === "talento") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
   if (k === "bloquear") return !!S.bloqueo && S.players[S.bloqueo.i].uid === uid;
   if (k === "votar") return S.players.some(p => p.uid === uid);
   if (S.combate && S.combate.fase === "plan" && ["hab", "equipo", "objeto", "accion", "suceso"].includes(k)) return heroePlan(uid) >= 0;
@@ -631,7 +684,7 @@ function minijuego(tipo, o, cb) {
   certeroActivo = true;
   const defensa = DEFENSAS.includes(tipo);
   const timers = [], luego = (f, ms) => timers.push(setTimeout(f, ms));
-  const generoso = tiene("pulso") ? 1.8 : 1;
+  const generoso = (tiene("pulso") ? 1.8 : 1) * (o.generoso || 1);
   const dur = o.dur || 3000, t0 = performance.now(), azar = rngDe(o.semilla || Date.now());
   let hecho = false, raf = 0;
   const fin = q => {
@@ -1011,16 +1064,14 @@ function subirNivel(p, out) {
   log(t, "nivel"); out.push(t);
   if (p.nivel >= 10) fx({ tipo: "logro", id: "nivel10" });
   fx({ tipo: "nivel", texto: `¡Nivel ${p.nivel}!`, sub: `${p.nombre} · +3 PG máximos` });
-  for (const id of APRENDE[p.clase][p.nivel] || []) {
-    if (p.habs.includes(id)) continue;
-    if (p.habs.length < 4) { p.habs.push(id); const a = `${p.nombre} aprende ${H(id).nombre}`; log(a, "nivel"); out.push(a); }
-    else S.aprender.push({ i: idx(p), hab: id });
-  }
+  /* Cada nivel, un talento del árbol de su clase. */
+  S.aprender.push({ i: idx(p), talento: true });
+  out.push(`${p.nombre} elige talento`);
 }
 /* Aprender una habilidad nueva olvidando otra (slot 0-3), o renunciar a ella (-1). */
 function aprender(slot) {
   const a = S.aprender[0];
-  if (!a) return;
+  if (!a || a.talento) return;
   const p = S.players[a.i];
   if (slot >= 0 && slot < p.habs.length) {
     log(`${p.nombre} olvida ${H(p.habs[slot]).nombre} y aprende ${H(a.hab).nombre}.`, "nivel");
@@ -1050,6 +1101,8 @@ function aplicarFx(f = {}, actor) {
   if (f.comida) { S.zurron.racion = Math.max(0, (S.zurron.racion || 0) + f.comida); out.push(`${fmt(f.comida)} comida`); }
   if (f.pm) { S.players.forEach(p => { p.pm = Math.max(0, Math.min(pmMax(p), (p.pm || 0) + f.pm)); }); out.push(`${fmt(f.pm)} PM`); }
   if (f.curaPct) S.players.forEach(p => { p.pm = pmMax(p); });
+  if (f.mejora) { S.players.forEach(p => { p.mejora = Math.min(5, (p.mejora || 0) + f.mejora); }); out.push(`+${f.mejora} al daño de las armas`); }
+  if (f.talento && actor) { const i = idx(actor); for (let k = 0; k < f.talento; k++) S.aprender.push({ i, talento: true }); out.push(`${actor.nombre}: talento extra`); }
   if (f.mascota) { adoptarMascota(f.mascota); out.push(`Mascota: ${MASCOTAS_DEF[f.mascota] ? MASCOTAS_DEF[f.mascota].nombre : f.mascota}`); }
   if (f.moral && actor) {
     const antes = actor.alin;
@@ -1197,7 +1250,9 @@ function generarMapa() {
     if (f === 4 && Math.random() < 0.6) azarDe(libres()).tipo = "altar";
     if (f >= 3 && f <= 5 && elites < 2 && Math.random() < 0.45 && libres().length) { azarDe(libres()).tipo = "elite"; elites++; }
     if (f >= 2 && f <= 5) libres().forEach(x => { if (Math.random() < 0.18) x.tipo = "misterio"; });
+    if (f >= 2 && f <= 5) [["forja", 0.22], ["santuario", 0.2], ["ruinas", 0.24]].forEach(([t, pr]) => { if (Math.random() < pr && libres().length > 1) azarDe(libres()).tipo = t; });
     if (f === 6) fila[Math.floor(Math.random() * n)].tipo = "hoguera";
+    fila.forEach(x => { if (Math.random() < 0.32) x.rasgo = azarDe(Object.keys(RASGOS)); });
     const usadas = new Set();
     fila.forEach(x => { for (let k = 0; k < 6; k++) { x.pista = pistaDe(x.tipo); if (!usadas.has(x.pista)) break; } usadas.add(x.pista); });
     filas.push(fila);
@@ -1226,6 +1281,8 @@ const PISTAS_BASE = {
   evento: ["Una luz entre los árboles", "Voces que cantan bajito"], tesoro: ["Algo brilla entre el barro", "Un camino que nadie ha pisado"],
   tienda: ["Huele a pan y a forja", "Se oye regatear"], hoguera: ["Un claro resguardado del viento", "Humo de una lumbre tranquila"],
   altar: ["Un frío que no es del viento", "Piedras con runas rotas"], misterio: ["Niebla espesa y silencio", "El camino se pierde de vista"],
+  forja: ["Se oye un martillo a lo lejos", "Huele a carbón y a hierro", "Una columna de humo negro"], santuario: ["Flores frescas junto al camino", "Una campana suena sola", "Luz dorada entre los árboles"],
+  ruinas: ["Piedras talladas entre la maleza", "Runas que brillan en la oscuridad", "Un arco caído sin muro"],
   engano: ["Un sendero como cualquier otro", "Pisadas que van y vienen", "El viento cambia de dirección"]
 };
 function pistaDe(tipo) {
@@ -1233,7 +1290,54 @@ function pistaDe(tipo) {
   const P = D.PISTAS || PISTAS_BASE, lista = Math.random() < 0.18 ? P.engano || PISTAS_BASE.engano : P[tipo] || PISTAS_BASE[tipo] || PISTAS_BASE.engano;
   return azarDe(lista);
 }
-const NOMBRE_NODO = { combate: "Combate", elite: "Élite", evento: "Suceso", misterio: "Misterio", altar: "Altar maldito", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida" };
+const NOMBRE_NODO = { combate: "Combate", elite: "Élite", evento: "Suceso", misterio: "Misterio", altar: "Altar maldito", tesoro: "Cofre", tienda: "Tienda", hoguera: "Hoguera", jefe: "Jefe", inicio: "Salida", forja: "Forja", santuario: "Santuario", ruinas: "Ruinas" };
+/* Rasgos de los caminos: se ven en la tarjeta y pasan algo al llegar. */
+const RASGOS = {
+  trampas: { nombre: "Trampas", desc: "El suelo esconde cepos" },
+  hierbas: { nombre: "Hierbas", desc: "Crecen hierbas medicinales" },
+  monedas: { nombre: "Monedas", desc: "Un rastro de monedas perdidas" },
+  bendito: { nombre: "Tierra bendita", desc: "El aire huele a limpio" },
+  provisiones: { nombre: "Campamento", desc: "Un campamento abandonado" },
+  emboscada: { nombre: "Emboscada", desc: "Algo os vigila" }
+};
+const hayClase = (...cl) => S.players.find(p => p.alma > 0 && cl.includes(p.clase));
+/* Al pisar un camino con rasgo: según quién vaya en el grupo, sale mejor o peor. */
+function aplicarRasgo(n) {
+  const R_ = RASGOS[n.rasgo];
+  if (!R_) return;
+  const a = Math.max(0, S.acto);
+  let t = "";
+  if (n.rasgo === "trampas") {
+    const q = hayClase("picaro", "explorador");
+    if (q) { S.players.forEach(p => { p.oro += 6; }); t = `${q.nombre} (${CLASES[q.clase].nombre.toLowerCase()}) desarma los cepos y vende las piezas: +6 po c/u.`; }
+    else { S.players.forEach((p, i) => { if (p.alma > 0) { const d = Math.min(p.alma - 1, 2 + a + Math.floor(Math.random() * 3)); p.alma -= d; fx({ tipo: "numero", objetivo: "h" + i, texto: "-" + d, color: RP.sangre[4] }); } }); t = "¡Cepos! Nadie los ha visto venir: el grupo pierde PG."; }
+  }
+  if (n.rasgo === "hierbas") { const q = hayClase("clerigo", "explorador"), k = q ? 2 : 1; S.zurron.pocion += k; t = `${q ? `${q.nombre} sabe qué recoger: ` : "Recogéis hierbas: "}+${k} poción${k > 1 ? "es" : ""}.`; }
+  if (n.rasgo === "monedas") { const q = hayClase("picaro"), k = (5 + Math.floor(Math.random() * 6)) * (q ? 2 : 1); S.players.forEach(p => { p.oro += k; }); t = `${q ? `${q.nombre} olfatea más bolsas: ` : ""}+${k} po c/u.`; }
+  if (n.rasgo === "bendito") { S.players.forEach(p => { if (p.alma > 0) { curar(p, Math.ceil(maxAlma(p) * 0.25)); Object.keys(p.est || {}).forEach(k => { if (!BUENOS.includes(k)) delete p.est[k]; }); } }); t = "La tierra bendita os cura un poco y limpia los males."; }
+  if (n.rasgo === "provisiones") { S.zurron.racion = (S.zurron.racion || 0) + 1; t = "Entre los restos del campamento: +1 ración."; }
+  if (n.rasgo === "emboscada") {
+    const q = hayClase("explorador", "guerrero");
+    if (q) { t = `${q.nombre} ve la emboscada venir y la deshace: +${5 + a} PX.`; log(t, "ok"); fx({ tipo: "anuncio", texto: R_.nombre, sub: t, tono: "turno" }); ganarXp(5 + a); return; }
+    const i = vivos()[Math.floor(Math.random() * vivos().length)], p = S.players[i];
+    if (p) { const d = Math.min(p.alma - 1, 3 + a * 2); p.alma -= d; t = `¡Emboscada! Una flecha alcanza a ${p.nombre}: −${d} PG.`; }
+  }
+  log(`${R_.nombre}: ${t}`, "esc");
+  fx({ tipo: "anuncio", texto: R_.nombre, sub: t, tono: n.rasgo === "trampas" || n.rasgo === "emboscada" ? "ko" : "cura" });
+}
+/* Afinidad de clase con cada característica: en los sucesos, quien la tiene puede resolver sin tirar. */
+const AFINIDAD = { ani: ["guerrero", "barbaro", "picaro"], raz: ["mago", "picaro"], elo: ["bardo", "brujo"], tem: ["clerigo", "explorador"] };
+function opcionDeClase(sc) {
+  if (!sc || !sc.opciones || sc.opciones.some(o => o.clase) || Math.random() < 0.3) return sc;
+  for (const op of sc.opciones) {
+    if (!op.stat || !AFINIDAD[op.stat]) continue;
+    const q = S.players.find(p => p.alma > 0 && AFINIDAD[op.stat].includes(p.clase));
+    if (!q) continue;
+    sc.opciones.push(Object.assign({}, JSON.parse(JSON.stringify(op)), { stat: null, clase: q.clase, etiqueta: `${CLASES[q.clase].nombre} · sin tirar`, txt: `${q.nombre}: ${op.txt.replace(/^./, x => x.toLowerCase())}` }));
+    break;
+  }
+  return sc;
+}
 const VICTORIAS = ["Cae el último golpe. El camino queda libre.", "Recogéis el botín y seguís adelante.", "Victoria. Os curáis las heridas como podéis.", "El enemigo cae. Hay monedas entre los restos."];
 const VICTORIAS_JEFE = [
   "El trol cae al barranco. Al otro lado del puente empieza la mazmorra.",
@@ -1250,6 +1354,28 @@ function crearEscena(tipo) {
     tipo = r < 0.35 ? "combate" : r < 0.75 ? "evento" : "tesoro";
     log(`El misterio resulta ser: ${NOMBRE_NODO[tipo].toLowerCase()}.`, "esc");
   }
+  const deClase = ops => ops.filter(o => !o.clase || hayClase(...o.clase)).map(o => (o.clase ? Object.assign(o, { etiqueta: o.clase.map(k => CLASES[k].nombre).join(" / ") }) : o));
+  if (tipo === "forja") return { tipo: "prueba", fondo: azarDe(A.fondos), pnj: "herrero", titulo: "La forja del camino",
+    texto: "Un enano ha montado un yunque junto al sendero. El fuego ruge y el martillo espera.",
+    opciones: deClase([
+      { txt: "Afilar todas las armas (−10 po c/u)", stat: null, ok: { t: "Thrain trabaja hasta el alba. Vuestras armas cortan mejor (+1 al daño).", fx: { oro: -10, mejora: 1 } } },
+      { txt: "Forjar con tus propias manos", clase: ["guerrero", "barbaro"], stat: null, ok: { t: "Golpe a golpe, el acero canta. +2 al daño de todas las armas.", fx: { mejora: 2, xp: 3 } } },
+      { txt: "Ajustar las armaduras", clase: ["guerrero", "clerigo"], stat: null, ok: { t: "Correas nuevas y remaches: +3 PG máximos al grupo.", fx: { maxTodos: 3 } } },
+      { txt: "Vender chatarra", stat: null, ok: { t: "El enano paga bien por el hierro viejo.", fx: { oro: 8 } } }]) };
+  if (tipo === "santuario") return { tipo: "prueba", fondo: azarDe(A.fondos), titulo: "Un santuario de Solara",
+    texto: "Una estatua de la diosa del sol, cubierta de flores frescas. Alguien la cuida todavía.",
+    opciones: deClase([
+      { txt: "Rezar en silencio", stat: null, ok: { t: "Una calma cálida os llena. Recuperáis el maná.", fx: { pm: 99, almaTodos: 4 } } },
+      { txt: "Oficiar un rito", clase: ["clerigo"], stat: null, ok: { t: "La estatua brilla. Solara os bendice.", fx: { curarTodo: 1, pm: 99, bendicion: 2 } } },
+      { txt: "Cantar un himno", clase: ["bardo"], stat: null, ok: { t: "Los pájaros callan para escucharos.", fx: { pm: 99, almaTodos: 6, xp: 3 } } },
+      { txt: "Dejar una ofrenda (−15 po c/u)", stat: null, ok: { t: "La diosa acepta. Os sentís más fuertes.", fx: { oro: -15, maxTodos: 3, pm: 99 } } }]) };
+  if (tipo === "ruinas") return { tipo: "prueba", fondo: azarDe(A.fondos), titulo: "Ruinas con runas",
+    texto: "Columnas caídas y un arco cubierto de runas que aún brillan. Aquí se enseñó algo, hace siglos.",
+    opciones: deClase([
+      { txt: "Descifrar las runas", stat: "raz", cd: 14, ok: { t: "Las runas se ordenan en tu cabeza: aprendes algo nuevo.", fx: { talento: 1, xp: 4 } }, ko: { t: "Las runas se defienden con un fogonazo.", fx: { almaTodos: -4 } } },
+      { txt: "Leer el idioma perdido", clase: ["mago", "brujo"], stat: null, ok: { t: "Lo entiendes todo: una lección olvidada.", fx: { talento: 1, xp: 6 } } },
+      { txt: "Buscar compartimentos secretos", clase: ["picaro", "explorador"], stat: null, ok: { t: "Una losa suelta esconde un alijo.", fx: { oro: 15, botin: true } } },
+      { txt: "Pasar de largo", stat: null, ok: { t: "No todo hay que tocarlo.", fx: {} } }]) };
   if (tipo === "altar") return { tipo: "prueba", fondo: azarDe(A.fondos), titulo: "Un altar maldito",
     texto: "Una piedra negra late como un corazón. Promete poder a cambio de algo vuestro.",
     opciones: [
@@ -1436,6 +1562,7 @@ function elegirNodo(j) {
   cola.push({ nodo: nodo.tipo });
   S.siguiente = cola;
   log(`${S.players[S.turno].nombre} elige el camino: «${nodo.pista || NOMBRE_NODO[nodo.tipo]}».`, "esc");
+  if (nodo.rasgo) aplicarRasgo(nodo);
   procesarSiguiente();
 }
 function escenaHistoria(parte) {
@@ -1463,9 +1590,10 @@ function procesarSiguiente() {
   S.modo = "escena"; S.fase = "elegir"; S.resultado = null; S.botin = [];
   const paisaje = fondoNodo(S.mapa.fila, S.mapa.col);
   if (sig.historia) { S.esc = escenaHistoria(sig.historia); S.esc.fondo = paisaje; log(`Historia · ${S.esc.titulo}`, "esc"); }
-  else if (sig.viaje) { const e = escenaViaje(); if (!e) return procesarSiguiente(); S.esc = e; e.fondo = paisaje; log(`Por el camino · ${e.titulo}`, "esc"); }
+  else if (sig.viaje) { const e = escenaViaje(); if (!e) return procesarSiguiente(); S.esc = opcionDeClase(e); e.fondo = paisaje; log(`Por el camino · ${e.titulo}`, "esc"); }
   else {
     S.esc = crearEscena(sig.nodo);
+    if (S.esc.tipo === "prueba") opcionDeClase(S.esc);
     if (sig.nodo !== "jefe" && S.esc.tipo !== "tienda") S.esc.fondo = paisaje;
     log(`${NOMBRE_NODO[sig.nodo]} · ${S.esc.titulo}`, "esc");
     if (S.esc.tipo === "combate") return iniciarCombate(S.esc);
@@ -1619,13 +1747,13 @@ function rachar(i, q) {
   const c = S.combate;
   if (!c) return 0;
   c.racha = c.racha || {};
-  const antes = c.racha[i] || 0, ahora = q === 2 ? Math.min(5, antes + 1) : q === 0 ? 0 : antes;
+  const antes = c.racha[i] || 0, ahora = q === 2 ? Math.min(5 + pasivas(S.players[i]).racha, antes + 1) : q === 0 ? 0 : antes;
   c.racha[i] = ahora;
   if (ahora >= 3 && ahora > antes) fx({ tipo: "numero", objetivo: "h" + i, texto: `RACHA ×${ahora}`, color: RP.fuego[3], fila: 2 });
   if (antes >= 3 && !ahora) log(`${S.players[i].nombre} pierde la racha.`, "esc");
   return ahora;
 }
-const bonoRacha = i => Math.min(3, (S.combate && S.combate.racha && S.combate.racha[i]) || 0);
+const bonoRacha = i => Math.min(3 + pasivas(S.players[i]).racha, (S.combate && S.combate.racha && S.combate.racha[i]) || 0);
 const ESTADOS = {
   veneno: { nombre: "Veneno", verbo: "envenena", color: "#7bdc5a", desc: "Pierde PG al empezar su turno." },
   quemadura: { nombre: "Quemadura", verbo: "quema", color: "#ff8a3d", desc: "Pierde 1d6 PG por turno y no puede regenerarse." },
@@ -1635,10 +1763,14 @@ const ESTADOS = {
   debil: { nombre: "Debilitado", verbo: "debilita", color: "#b9a0ff", desc: "−2 para atacar." },
   maldito: { nombre: "Maldito", verbo: "maldice", color: "#c27bff", desc: "Recibe +2 de cada golpe." },
   ciego: { nombre: "Cegado", verbo: "ciega", color: "#d6daf0", desc: "Falla la mitad de sus ataques." },
-  regen: { nombre: "Regeneración", verbo: "regenera", color: "#3ddc97", desc: "Recupera 3 PG por turno." }
+  regen: { nombre: "Regeneración", verbo: "regenera", color: "#3ddc97", desc: "Recupera 3 PG por turno." },
+  provocando: { nombre: "Desafiante", verbo: "desafía", color: "#ff9f5a", desc: "Los enemigos van a por él y tiene +2 a la CA." },
+  roca: { nombre: "Piel de piedra", verbo: "endurece", color: "#c9b8a0", desc: "Recibe 3 de daño menos por golpe." },
+  inspirado: { nombre: "Inspirado", verbo: "inspira", color: "#ffd76a", desc: "+2 para atacar y +2 al daño." }
 };
+const BUENOS = ["regen", "provocando", "roca", "inspirado"];
 const TIMIDOS = ["paralisis", "congelado"];
-const FIN_DE_TURNO = ["ciego", "debil", "maldito"];
+const FIN_DE_TURNO = ["ciego", "debil", "maldito", "provocando", "roca", "inspirado"];
 function finTurnoEstados(obj) {
   const e = obj && obj.est;
   if (!e) return;
@@ -1924,6 +2056,12 @@ function nuevaRonda() {
   S.players.forEach((p, i) => { if (p.alma > 0 && p.est && (p.est.paralisis || p.est.congelado)) c.planes[i] = { tipo: "nada" }; });
   c.planFin = S.online && S.players.length > 1 ? Date.now() + PLAN_MS : null;
   c.objetivo = objetivoValido(c.objetivo);
+  if (c.ronda > 1) S.players.forEach((x, i) => {
+    if (x.alma <= 0) return;
+    const ps = pasivas(x);
+    if (ps.regen) { const cu = curar(x, ps.regen); if (cu) fx({ tipo: "numero", objetivo: "h" + i, texto: "+" + cu, color: RP.hoja[4] }); }
+    if (ps.meditar) x.pm = Math.min(pmMax(x), (x.pm || 0) + ps.meditar);
+  });
   if (c.suceso && c.ronda > c.suceso.hasta) { log(`${SUCESOS_CAMPO[c.suceso.k].nombre}: la ocasión se pierde.`, "esc"); c.suceso = null; }
   if (!c.suceso && c.ronda >= 2 && (c.sucesos || 0) < 2 && Math.random() < 0.32) {
     const pool = Object.keys(SUCESOS_CAMPO).filter(k => SUCESOS_CAMPO[k].actos.includes(Math.max(0, S.acto)));
@@ -2091,7 +2229,11 @@ function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   if (clase !== "fisica") fx({ tipo: "magia", objetivo: o, rampa: rampa || (clase === "sagrada" ? RP.bronce : RP.magia) });
   fx({ tipo: "numero", objetivo: o, texto: "-" + dmg, color: crit ? RP.bronce[4] : mult > 1 || combo ? RP.fuego[3] : "#fff7ea", grande: crit || mult > 1 || combo });
   if (combo) fx({ tipo: "numero", objetivo: o, texto: "COMBO", color: RP.bronce[4], fila: 2 });
-  if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o });
+  if (r.hp <= 0) {
+    fx({ tipo: "muerte", objetivo: o });
+    const ph = porHeroe >= 0 && S.players[porHeroe], vamp = ph ? pasivas(ph).vampiro : 0;
+    if (vamp && ph.alma > 0) { const cu = curar(ph, vamp); if (cu) { fx({ tipo: "cura", objetivo: "h" + porHeroe }); fx({ tipo: "numero", objetivo: "h" + porHeroe, texto: "+" + cu, color: RP.hoja[4], fila: 1 }); } }
+  }
   else comprobarFase(k);
   return `${dmg} de daño${c.rivales.length > 1 ? ` a ${r.nombre}` : ""}${nota}${combo ? " · ¡COMBO!" : ""}${r.hp <= 0 && c.rivales.length > 1 ? " · ¡cae!" : ""}`;
 }
@@ -2116,6 +2258,9 @@ function danarHeroe(i, dmg, directo, rk = -1) {
   if (tiene("piedra")) dmg = Math.max(1, dmg - 1);
   if (p.est && p.est.maldito) dmg += 2;
   if (p.est && p.est.congelado) dmg = Math.round(dmg * 1.5);
+  const red_ = pasivas(p).reduccion;
+  if (red_) dmg = Math.max(1, dmg - red_);
+  if (p.est && p.est.roca) dmg = Math.max(0, dmg - 3);
   p.alma = Math.max(0, p.alma - dmg);
   if (S.stats && S.stats[i]) S.stats[i].recibido += dmg;
   fx({ tipo: "golpe", objetivo: "h" + i });
@@ -2180,7 +2325,8 @@ function accion(tipo, arg) {
     };
     if (h.efecto === "dano") {
       const extraArma = (h.tipo === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" && h.tipo === "arcana" ? 2 : 0))
-        + (tiene("filo") && h.tipo === "fisica" ? 2 : 0) + (tiene("arcano") && h.tipo !== "fisica" ? 2 : 0) + bonoRacha(S.turno);
+        + (tiene("filo") && h.tipo === "fisica" ? 2 : 0) + (tiene("arcano") && h.tipo !== "fisica" ? 2 : 0) + bonoRacha(S.turno)
+        + (pasivas(p).dano[h.tipo] || 0) + (p.est.inspirado ? 2 : 0) + (p.mejora || 0) + (h.rabia ? Math.floor((maxAlma(p) - p.alma) / 3) : 0);
       const ritmo = q === 2 ? " · ¡perfecto!" : q === 0 ? " · fuera de ritmo" : "";
       const [forma, rampa] = formaAtaque(p, h);
       const golpes = (crit, mult = 1) => {
@@ -2194,7 +2340,9 @@ function accion(tipo, arg) {
           for (let g = 0; g < (h.golpes || 1) && rr.hp > 0; g++)
           {
             const tv = tirarVer(h.dado[0] * (crit ? 2 : 1), h.dado[1], m + (h.bono || 0) + extraArma);
-            const final = Math.round(tv.total * mult * reparto);
+            const herido = h.ejecuta && rr.hp <= rr.hpMax * h.ejecuta;
+            const final = Math.round(tv.total * mult * reparto * (herido ? 2 : 1));
+            if (herido && g === 0) fx({ tipo: "numero", objetivo: "e" + k, texto: "¡EJECUCIÓN!", color: RP.sangre[4], fila: 2 });
             if (!visto) { visto = true; fx({ tipo: "dano", dados: tv.dados, caras: tv.caras, bono: tv.bono, total: final, color: h.tipo, crit, quien: p.nombre, accion: h.nombre }); }
             const antesG = rr.hp;
             partes.push(danarRival(k, final, h.tipo, crit, h.noMuerto && rr.nomuerto ? h.noMuerto : 1, h.tipo === "arcana" ? rampa : undefined, S.turno));
@@ -2205,8 +2353,9 @@ function accion(tipo, arg) {
               if (espe && rr.hp > 0 && Math.random() < espe[2] && ponerEstado(rr, espe[0], espe[1], false, "e" + k)) { marcar(rr); partes.push(`${arma.nombre}: ${ESTADOS[espe[0]].nombre.toLowerCase()}`); }
             }
           }
+          if (h.roba && antes > rr.hp) { const n = h.roba[0] + Math.floor(Math.random() * (h.roba[1] - h.roba[0] + 1)); p.oro += n; fx({ tipo: "numero", objetivo: yo, texto: `+${n} po`, color: RP.bronce[4], fila: 1 }); partes.push(`birla ${n} po`); }
           /* Remate: un minijuego perfecto contra un enemigo casi muerto (no jefe) lo tumba de golpe. */
-          if (q === 2 && rr.hp > 0 && !rr.jefe && rr.hp <= Math.ceil(rr.hpMax * 0.22)) {
+          if (q === 2 && rr.hp > 0 && !rr.jefe && rr.hp <= Math.ceil(rr.hpMax * Math.max(0.22, pasivas(p).remate))) {
             const quedaba = rr.hp;
             rr.hp = 0;
             if (S.stats && S.stats[S.turno]) { S.stats[S.turno].dano += quedaba; S.stats[S.turno].bajas++; }
@@ -2230,7 +2379,7 @@ function accion(tipo, arg) {
         fx({ tipo: "numero", objetivo: "e" + t, texto: "FALLO", color: RP.hueso[3] }); log(tx, "ko"); mostrarTirada(tx, false);
         return fin();
       }
-      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0) - (p.est.debil ? 2 : 0);
+      const mod = m + (arma.golpe || 0) + (h.tipo === "fisica" && p.clase === "explorador" ? 2 : 0) + (tiene("ojo") ? 2 : 0) - (p.est.debil ? 2 : 0) + (p.est.inspirado ? 2 : 0);
       const bono = usarOlivo() + (q === 2 ? 5 : q === 1 ? 2 : 0);
       const { r, nota } = tiradaD20(p);
       const total0 = r + mod + bono, crit0 = r >= Math.min(critMin(p), h.critico || 20);
@@ -2247,7 +2396,7 @@ function accion(tipo, arg) {
       return;
     }
     if (h.efecto === "cura") {
-      const base = Math.max(1, tirar(h.dado[0], h.dado[1], m) + (arma.cura || 0));
+      const base = Math.max(1, tirar(h.dado[0], h.dado[1], m) + (arma.cura || 0) + pasivas(p).cura);
       const n = Math.max(1, Math.round((p.clase === "clerigo" ? Math.ceil(base * 1.5) : base) * (q === 2 ? 1.4 : q === 0 ? 0.75 : 1)));
       const objetivos = h.a === "grupo" ? S.players : h.a === "yo" ? [p] : [masHerido()];
       const partes = objetivos.map(o => {
@@ -2255,10 +2404,26 @@ function accion(tipo, arg) {
         if (S.stats) S.stats[S.turno].curado += real;
         if (h.regen && o.alma > 0) { o.est = o.est || {}; o.est.regen = Math.max(o.est.regen || 0, h.regen); }
         if (h.a === "grupo" || o === p) ["veneno", "quemadura", "sangrado"].forEach(k => { if (o.est) delete o.est[k]; });
+        if (h.limpia && o.est) Object.keys(o.est).forEach(k => { if (!BUENOS.includes(k)) delete o.est[k]; });
         fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
         return `${o.nombre} +${real}`;
       });
       const tx = `${p.nombre} usa ${h.nombre}${q === 2 ? " · ¡perfecto!" : q === 0 ? " · pulso tembloroso" : ""} → ${partes.join(", ")} PG`;
+      log(tx, "ok"); mostrarTirada(tx, true);
+      return fin();
+    }
+    if (["provocar", "roca", "inspirar", "mana", "pacto", "trampa"].includes(h.efecto)) {
+      let tx = "";
+      if (h.efecto === "provocar") { p.est.provocando = h.turnos || 3; fx({ tipo: "numero", objetivo: yo, texto: "¡A POR MÍ!", color: RP.fuego[3], fila: 1 }); tx = `${p.nombre} desafía a los enemigos: irán a por él.`; }
+      if (h.efecto === "roca") { p.est.roca = h.turnos || 3; fx({ tipo: "magia", objetivo: yo, rampa: RP.piedra }); tx = `${p.nombre} usa ${h.nombre}: recibirá 3 de daño menos por golpe.`; }
+      if (h.efecto === "inspirar") { S.players.forEach((x, i) => { if (x.alma > 0) { x.est = x.est || {}; x.est.inspirado = 3; fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.bronce }); } }); tx = `${p.nombre} usa ${h.nombre}: el grupo, inspirado (+2 ataque y daño).`; }
+      if (h.efecto === "mana") {
+        const otros = S.players.filter(x => x.alma > 0 && x !== p), q2 = (otros.length ? otros : [p]).reduce((a, x) => ((x.pm || 0) / pmMax(x) < (a.pm || 0) / pmMax(a) ? x : a));
+        const antes = q2.pm || 0; q2.pm = Math.min(pmMax(q2), antes + 5);
+        fx({ tipo: "magia", objetivo: "h" + idx(q2), rampa: RP.mar }); tx = `${p.nombre} da maná a ${q2.nombre}: +${q2.pm - antes} PM.`;
+      }
+      if (h.efecto === "pacto") { const paga = Math.min(4, p.alma - 1); p.alma -= paga; const antes = p.pm || 0; p.pm = Math.min(pmMax(p), antes + 6); fx({ tipo: "numero", objetivo: yo, texto: "-" + paga, color: RP.sangre[4] }); fx({ tipo: "magia", objetivo: yo, rampa: RP.sangre }); tx = `${p.nombre} sella un pacto de sangre: −${paga} PG, +${p.pm - antes} PM.`; }
+      if (h.efecto === "trampa") { c.trampa = { por: S.turno }; tx = `${p.nombre} prepara una trampa de cepo. El próximo enemigo que actúe la pisará.`; }
       log(tx, "ok"); mostrarTirada(tx, true);
       return fin();
     }
@@ -2373,6 +2538,8 @@ function accion(tipo, arg) {
 function heroeAlAzarVivo() {
   let l = vivos();
   if (S.combate && S.combate.ronda === 1) { const vis = l.filter(i => !objEspecial(S.players[i], "sombras")); if (vis.length) l = vis; }
+  const prov = l.filter(i => S.players[i].est && S.players[i].est.provocando);
+  if (prov.length && Math.random() < 0.8) l = prov;
   return l.length ? l[Math.floor(Math.random() * l.length)] : -1;
 }
 const esperar = ms => new Promise(res => setTimeout(res, RAPIDO ? 10 : reducido ? Math.min(ms, 150) : ms));
@@ -2413,6 +2580,15 @@ async function turnoEnemigo(ri, enRonda = false) {
   guardar(); render();
   await esperar(450);
   if (!sigue()) return;
+  if (c.trampa && r.hp > 0) {
+    const por = c.trampa.por; c.trampa = null;
+    fx({ tipo: "golpe", objetivo: o });
+    const t = `${r.nombre} pisa la trampa de cepo → ${danarRival(ri, tirar(2, 6), "fisica", false, 1, undefined, por)}`;
+    const para = r.hp > 0 && Math.random() < 0.6 && ponerEstado(r, "paralisis", 1, false, o);
+    log(t + (para ? ". ¡Queda atrapado!" : ""), "ok");
+    await esperar(500);
+    if (!sigue()) return;
+  }
   const atk = r.atk + r.atkMod - (r.est.debil ? 2 : 0);
   const quemandose = !!r.est.quemadura;
   const salta = tickEstados(r, false, o);
@@ -2459,7 +2635,9 @@ async function turnoEnemigo(ri, enRonda = false) {
         fx({ tipo: "ataque", actor: o });
         if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); await esperar(300); if (!sigue()) return; continue; }
         const rr = d(20), def = ca(t);
-        const ok = (rr === 20 || (rr !== 1 && rr + atk >= def)) && !(r.est.ciego && Math.random() < 0.5);
+        const esquiva = rr !== 20 && Math.random() < pasivas(t).esquivar;
+        const ok = (rr === 20 || (rr !== 1 && rr + atk >= def)) && !(r.est.ciego && Math.random() < 0.5) && !esquiva;
+        if (esquiva) log(`${t.nombre} se escurre en el último momento.`, "ok");
         mostrarTirada.ultimo = rr;
         if ($("#dado")) ESCENARIO.dibujarDado($("#dado"), rr);
         if (ok) {
@@ -2550,6 +2728,8 @@ function victoria() {
   S.players.forEach(p => { if (p.clase === "brujo" && p.alma > 0) { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   if (tiene("respiro")) { S.players.forEach(p => { if (p.alma > 0) curar(p, Math.ceil(maxAlma(p) * 0.3)); }); extra.push("Segundo respiro: +30 % PG"); }
   if (c.combos) extra.push(`${c.combos} combo${c.combos > 1 ? "s" : ""}`);
+  const oroT = S.players.reduce((a, p) => a + pasivas(p).oro, 0);
+  if (oroT) { S.players.forEach(p => { p.oro += oroT; }); extra.push(`Bolsillos hondos: +${oroT} po c/u`); }
   if (S.mascota && MASCOTAS_DEF[S.mascota.clave] && MASCOTAS_DEF[S.mascota.clave].oro) { const o = MASCOTAS_DEF[S.mascota.clave].oro; S.players.forEach(p => { p.oro += o; }); extra.push(`El gato trae ${o} po c/u`); }
   if (c.bloqueos) extra.push(`${c.bloqueos} bloqueo${c.bloqueos > 1 ? "s" : ""}`);
   /* Logros y runas (cada móvil los guarda para sí al ver el efecto). */
@@ -2636,7 +2816,8 @@ function iconoNodo(tipo) {
 }
 function pintarIconos(raiz) {
   raiz.querySelectorAll("canvas[data-icono]").forEach(cv => {
-    if (ESCENARIO.icono(cv, cv.dataset.icono, +cv.dataset.tam || 28)) return;
+    const ALIAS = { forja: "arma_fisica", santuario: "bendicion", ruinas: "runa" };
+    if (ESCENARIO.icono(cv, ALIAS[cv.dataset.icono] || cv.dataset.icono, +cv.dataset.tam || 28)) return;
     const img = iconoNodo(cv.dataset.icono), dpr = window.devicePixelRatio || 1;
     const s = Math.max(1, Math.round(((+cv.dataset.tam || 28) * dpr) / 14));
     cv.width = cv.height = 14 * s; cv.style.width = cv.style.height = (14 * s) / dpr + "px";
@@ -2658,7 +2839,7 @@ function renderBloqueo() {
   renderBloqueo.n = b.n;
   vibrar(25);
   const enviar = q => (S.online && !esHost() ? enviarBloqueo(`${q}:${b.n}`) : ejecutar("bloquear", `${q}:${b.n}`));
-  minijuego(b.tipo || "bloqueo", { dur: b.dur, dir: b.dir, semilla: b.semilla, sub: `¡Atacan a ${p.nombre}!` }, enviar);
+  minijuego(b.tipo || "bloqueo", { dur: b.dur, dir: b.dir, semilla: b.semilla, sub: `¡Atacan a ${p.nombre}!`, generoso: pasivas(p).defensa }, enviar);
 }
 function render() {
   if (S) vista = "juego";
@@ -2774,7 +2955,7 @@ function cambiarSeleccion(campo, paso) {
 /* ---------- Pantalla de juego ---------- */
 function limitesJuego() {
   const ancho = $("#p-juego").clientWidth;
-  const f = S && S.modo === "mapa" && window.innerHeight < 720 ? 0.26 : 0.3;
+  const f = S && S.modo === "mapa" && window.innerHeight < 720 ? 0.235 : 0.3;
   return [ancho - 12, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
 }
 function renderJuego() {
@@ -2825,7 +3006,7 @@ function sincronizarEscenario() {
     rivales = [];
     if (n) {
       fondo = fondoNodo(f, j); marcha = true;
-      niebla = n.tipo === "jefe" ? 0.3 : n.hecho ? 0 : 0.75;
+      niebla = n.tipo === "jefe" ? 0.3 : n.hecho ? 0 : hayClase("explorador") ? 0.3 : 0.75;
       if (n.tipo === "jefe") rivales = [{ tipo: "enemigo", clave: ACTOS[S.acto].jefe, silueta: true }];
     } else {
       fondo = typeof FONDOS_HD !== "undefined" && FONDOS_HD.encrucijada ? "encrucijada" : fondoNodo(S.mapa.fila, S.mapa.col);
@@ -2908,22 +3089,29 @@ function renderMapa() {
   $("#mapa").innerHTML = verGrafo ? `<svg class="lineas" aria-hidden="true"></svg>${filas}` : "";
   if (verGrafo) { pintarIconos($("#mapa")); requestAnimationFrame(dibujarLineas); }
   const nombres = { 1: ["Seguir adelante"], 2: ["Izquierda", "Derecha"], 3: ["Izquierda", "Centro", "Derecha"], 4: ["Muy a la izquierda", "Izquierda", "Derecha", "Muy a la derecha"] }[libres.length] || [];
-  const visto = caminoMirado();
+  const visto = caminoMirado(), rastreador = hayClase("explorador");
   const caminos = libres.map((j, k) => {
     const n = m.filas[m.fila + 1][j], vt = votosDe("nodo", j);
-    const jefe = n.tipo === "jefe", sel = visto === j;
+    const jefe = n.tipo === "jefe", sel = visto === j, sabe = rastreador && !jefe;
     /* Primer toque: mirar el camino en el escenario. Segundo: ir (o votar). */
     const accion = sel ? (mio ? `data-juego="nodo" data-v="${j}"` : "disabled") : `data-ui="ver-camino" data-v="${j}"`;
     return `<button type="button" class="camino${jefe ? " jefe" : ""}${vt.mio ? " votado" : ""}${sel ? " visto" : ""}" ${accion}>
-      <canvas data-icono="${jefe ? "jefe" : n.hecho ? n.tipo : "huellas"}" data-tam="22" aria-hidden="true"></canvas>
-      <span class="c-txt"><b>${jefe ? `${ENEMIGOS[ACTOS[S.acto].jefe].nombre}` : nombres[k] || "Camino"}</b><span>${jefe ? "El final del acto. Preparaos." : `«${esc(n.pista || "Un sendero cualquiera")}»`}</span></span>
+      <canvas data-icono="${jefe ? "jefe" : n.hecho || sabe ? n.tipo : "huellas"}" data-tam="22" aria-hidden="true"></canvas>
+      <span class="c-txt"><b>${jefe ? `${ENEMIGOS[ACTOS[S.acto].jefe].nombre}` : nombres[k] || "Camino"}${sabe ? ` <em class="c-tipo">${NOMBRE_NODO[n.tipo]}</em>` : ""}${n.rasgo && RASGOS[n.rasgo] ? ` <em class="rasgo r-${n.rasgo}">${RASGOS[n.rasgo].nombre}</em>` : ""}</b><span>${jefe ? "El final del acto. Preparaos." : `«${esc(n.pista || "Un sendero cualquiera")}»`}</span></span>
       ${vt.n ? `<i>${vt.n} voto${vt.n > 1 ? "s" : ""}</i>` : sel && mio ? `<i class="ir">${hayVotacion() ? "Votar" : "Ir"} ▸</i>` : ""}</button>`;
   }).join("");
   const comida = S.zurron.racion || 0, coste = costeAcampar(), caidos = S.players.filter(x => x.alma <= 0).length;
   const motivo = S.descanso === m.fila ? "ya habéis descansado aquí" : comida < coste ? "no queda comida" : caidos ? `levanta a ${caidos} caído${caidos > 1 ? "s" : ""}` : "cura y recarga el maná";
   $("#panel").innerHTML = `<div class="mapa-cab">${hayVotacion() ? lineaVotacion() : quienLinea(p, visto === null ? "Toca un camino para verlo" : "Toca otra vez para ir")}
       <button type="button" class="boton sec mini" data-ui="grafo">${verGrafo ? "Ver camino" : "Mapa"}</button></div>
-    <div class="caminos">${caminos}</div>
+    <div class="caminos">${caminos}</div>${(() => {
+      const v = [];
+      const ex = hayClase("explorador"), pi = hayClase("picaro", "explorador"), cl = hayClase("clerigo", "explorador");
+      if (ex) v.push(`${esc(ex.nombre)} lee las huellas`);
+      if (pi) v.push(`${esc(pi.nombre)} huele las trampas`);
+      if (cl) v.push(`${esc(cl.nombre)} conoce las hierbas`);
+      return v.length ? `<p class="ventajas">${v.join(" · ")}</p>` : "";
+    })()}
     <button type="button" class="acampar" data-juego="acampar" ${puedeAcampar() && turnoMio() && !esperandoHost ? "" : "disabled"}><canvas data-icono="hoguera" data-tam="22" aria-hidden="true"></canvas><span class="c-txt"><b>Acampar</b><span>−${coste} comida (tenéis ${comida}) · ${motivo}</span></span></button>`;
   pintarIconos($("#panel"));
 }
@@ -2976,6 +3164,21 @@ function renderEscena() {
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-juego="reintentar">Volver al inicio del acto</button>` : `<p class="espera">El anfitrión decide.</p>`}</div>`;
     return;
   }
+  if (S.aprender.length && S.aprender[0].talento) {
+    const a = S.aprender[0], q = S.players[a.i], mia = !S.online || q.uid === miId;
+    const ops = opcionesTalento(q);
+    el.innerHTML = `<p class="sello ok">¡Nivel ${q.nivel}!</p><h2>${esc(q.nombre)} elige un talento</h2>
+      <p class="quien${mia ? "" : " espera"}">${mia ? "Cada rama se abre paso a paso. Elige con cabeza: no llegarás a todo." : `${esc(q.nombre)} está eligiendo en su móvil…`}</p>
+      <div class="talentos-op">${ops.map(id => {
+        const n = nodoTal(q.clase, id), R_ = n.rama >= 0 ? TALENTOS[q.clase][n.rama] : null;
+        return `<button type="button" class="talento-op ${n.hab ? "t-hab" : "t-pas"}" data-juego="talento" data-v="${id}" ${mia ? "" : "disabled"}>
+          <span class="t-rama">${R_ ? `${esc(R_.nombre)} · ${n.k + 1}/4` : "Entrenamiento"}</span><b>${esc(n.nombre)}</b>
+          <small>${n.hab ? `<i class="t-tag">Habilidad</i> ${resumenHab(n.hab, q)}` : `<i class="t-tag pas">Pasiva</i> ${esc(n.desc)}`}</small>
+          ${n.hab ? `<small class="t-desc">${esc(n.desc)}</small>` : ""}</button>`;
+      }).join("")}</div>
+      ${htmlArbol(q, true)}`;
+    return;
+  }
   if (S.aprender.length) {
     const a = S.aprender[0], q = S.players[a.i], nueva = H(a.hab);
     const mia = !S.online || q.uid === miId;
@@ -3019,7 +3222,7 @@ function renderEscena() {
   if (sc.tipo === "prueba") {
     const cabH = sc.historia && sc.pnj ? `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(sc.pnj)}:${sc.pnj}"></canvas><h2>${sc.titulo}</h2></div>` : cab;
     el.innerHTML = `${sc.historia ? `<p class="sello historia">Historia</p>` : sc.viaje ? `<p class="sello viaje">Por el camino</p>` : ""}${cabH}${parrafo(sc.texto)}${quienV("Decide")}<div class="menu">${sc.opciones.map((op, i) => {
-      const chip = op.stat ? `${ABREV[op.stat]}${fmt(stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0))} · CD ${op.cd}` : "";
+      const chip = op.stat ? `${ABREV[op.stat]}${fmt(stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0))} · CD ${op.cd}` : op.etiqueta || "";
       const pago = op.ok && op.ok.fx && op.ok.fx.oro < 0 ? -op.ok.fx.oro : 0, sinOro = pago && S.players.some(x => x.alma > 0 && x.oro < pago);
       return boton(`data-juego="op" data-v="${i}"${votosDe("op", i).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("op", i, sinOro ? `faltan po (${pago} c/u)` : chip), "", offV || sinOro);
     }).join("")}</div>`;
@@ -3166,6 +3369,16 @@ function renderModal() {
   el.innerHTML = `<button type="button" class="cerrar" data-ui="cerrar" aria-label="Cerrar">×</button>${html}`;
   pintarRetratos(el);
 }
+/* Árbol de talentos: tres columnas (ramas) con cuatro nodos; los cogidos brillan y el siguiente se marca. */
+function htmlArbol(p, compacto = false) {
+  const ramas = TALENTOS[p.clase] || [], tom = new Set(p.talentos || []);
+  const entrenos = (p.talentos || []).filter(x => x === "e").length;
+  return `<div class="arbol${compacto ? " compacto" : ""}">${ramas.map((r, ri) => `<div class="rama"><p class="r-cab"><b>${esc(r.nombre)}</b>${compacto ? "" : `<small>${esc(r.desc)}</small>`}</p>
+    ${r.nodos.map((_, k) => {
+      const id = `${ri}.${k}`, n = nodoTal(p.clase, id), cogido = tom.has(id), siguiente = !cogido && (k === 0 || tom.has(`${ri}.${k - 1}`));
+      return `<span class="nodo-t${cogido ? " cogido" : siguiente ? " siguiente" : ""}${n.hab ? "" : " pas"}" title="${esc(n.nombre)}: ${esc(n.desc)}"><i>Nv ${n.nivel}</i>${esc(n.nombre)}</span>`;
+    }).join("")}</div>`).join("")}</div>${entrenos ? `<p class="quien">Entrenamientos: ${entrenos} (+${3 * entrenos} PG, +${entrenos} PM)</p>` : ""}`;
+}
 function htmlFicha(p) {
   if (!p) return "";
   const rz = RAZAS[p.raza], cl = CLASES[p.clase], max = maxAlma(p), sig = NIVELES[p.nivel];
@@ -3176,7 +3389,7 @@ function htmlFicha(p) {
     <span class="barra-xp grande"><i style="width:${pctXp(p)}%"></i></span>
     <h3>Habilidades (${p.habs.length}/4)</h3>
     <ul class="lista-habs">${p.habs.map(id => `<li><p><b>${H(id).nombre}</b><span>${resumenHab(id, p)}${H(id).usos ? ` · ${H(id).usos} usos` : ""}</span></p><small>${H(id).desc}</small></li>`).join("")}</ul>
-    ${proximaHab(p) ? `<p class="proxima">Nivel ${proximaHab(p).nivel}: aprenderá <b>${proximaHab(p).ids.map(x => H(x).nombre).join(", ")}</b></p>` : ""}
+    <h3>Talentos</h3>${htmlArbol(p)}
     <dl class="habilidades"><dt>${cl.pasiva}</dt><dd>${cl.pasivaDesc}</dd><dt>${rz.pasiva}</dt><dd>${rz.pasivaDesc}</dd></dl>
     <ul class="equipo">${Object.keys(RANURAS).map(k => `<li><span class="etiqueta">${RANURAS[k]}</span> ${p.equipo[k] ? OBJETOS[p.equipo[k]].nombre : "—"}</li>`).join("")}</ul>`;
 }
@@ -3248,6 +3461,7 @@ function ejecutar(k, v) {
     case "abrir": return abrirCofre();
     case "equipar": { const [k, i] = String(v).split(":"); return equipar(k, +i); }
     case "aprender": return aprender(+v);
+    case "talento": return elegirTalento(v);
     case "bendicion": return elegirBendicion(v);
     case "bloquear": return bloquear(v);
     case "acampar": return acampar();
@@ -3288,7 +3502,7 @@ document.addEventListener("click", ev => {
     if (k === "hab" && necesitaCertero(v)) {
       const p = S.players[heroeVista()], h = H(p.habs[+v]);
       const rv = S.combate.rivales[t];
-      return minijuego(tipoMinijuego(p, h), { sub: `${p.nombre} · ${h.nombre}`, rival: rv ? `enemigo:${rv.clave}` : "", semilla: Date.now() }, q => { if (S && S.combate) mandar(`${v}:${q}:${t}`); });
+      return minijuego(tipoMinijuego(p, h), { sub: `${p.nombre} · ${h.nombre}`, rival: rv ? `enemigo:${rv.clave}` : "", semilla: Date.now(), generoso: pasivas(p).ataqueMini }, q => { if (S && S.combate) mandar(`${v}:${q}:${t}`); });
     }
     if (k === "hab") return mandar(`${v}:1:${t}`);
     if (k === "suceso") { const sc = S.combate.suceso, SC = sc && SUCESOS_CAMPO[sc.k], rv = S.combate.rivales[t]; if (!SC) return; return minijuego(SC.mini, { sub: `${SC.nombre} · ${SC.verbo}`, rival: rv ? `enemigo:${rv.clave}` : "" }, q => { if (S && S.combate) mandar(`${q}:${t}`); }); }
@@ -3355,7 +3569,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (/^#prueba/.test(location.hash)) window.__dym = { mini: (t, o) => minijuego(t, o || {}, q => { window.__dym.q = q; }), estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo(), interno: () => ({ resolviendo, ocupado, tiradaEnCurso, terminar: !!terminarAccion, ventana: !!ventana, certeroActivo, vista, esperandoHost }) };
+if (/^#prueba/.test(location.hash)) window.__dym = { xp: n => { ganarXp(n); render(); }, mini: (t, o) => minijuego(t, o || {}, q => { window.__dym.q = q; }), estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo(), interno: () => ({ resolviendo, ocupado, tiradaEnCurso, terminar: !!terminarAccion, ventana: !!ventana, certeroActivo, vista, esperandoHost }) };
 render();
 conectar();
 })();
