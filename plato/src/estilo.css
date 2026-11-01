@@ -960,3 +960,27 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 .capa { backdrop-filter: none; }
 .nodo { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px var(--line-2); }
 .chip-jugador.sel, .heroe.activo { background: none; }
+.planes-aliados { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11.5px; color: var(--muted); }
+.planes-aliados b { color: var(--accent); font-weight: 600; }
+.riv .apuntan { font-style: normal; font-size: 11px; font-weight: 700; color: var(--gold); margin-right: 4px; }
+
+/* ---------- Compactación en móviles bajos ---------- */
+@media (max-height: 700px) {
+  .talento-op { padding: 7px 11px; gap: 1px; }
+  .talento-op .t-desc { display: none; }
+  .talento-op b { font-size: 14px; }
+  .panel h2, .modal h2 { font-size: 23px; }
+  .panel { gap: 8px; padding: 12px; }
+  .panel .texto { padding: 6px 10px; font-size: 13.5px; }
+  .opcion { min-height: 44px; padding: 7px 10px 7px 12px; }
+}
+@media (max-height: 600px) {
+  .sel-info { padding: 6px 4px; gap: 3px; }
+  .sel-info p { font-size: 12px; }
+  .sel-info .sel-tit strong { font-size: 15px; }
+  .sel-stats b { font-size: 14px; }
+  .sel-stats span { padding: 2px 0; }
+  .sel-dif button { padding: 6px 2px; }
+  .boton.grande { padding: 11px 16px; }
+  .habs-ini span { display: none; }
+}

@@ -171,6 +171,10 @@ const ESCENARIO = (() => {
     const ctx = lienzo.getContext("2d");
     let vista = { fondo: "taberna", heroes: [], rival: null, activo: -1 };
     const efectos = [];
+    /* Partículas: chispas de impacto, polvo, humo de muerte, destellos de conjuro. */
+    const parts = [];
+    let temblor = 0;
+    const chispa = (x, y, o) => { if (parts.length < 160) parts.push(Object.assign({ x, y, vx: 0, vy: 0, g: 0.12, vida: 420, t0: performance.now(), color: "#fff7ea", tam: 1 }, o)); };
     /* Altura visible de cada actor en el último fotograma (para colocar números y efectos). */
     const marcas = {};
 
@@ -214,15 +218,27 @@ const ESCENARIO = (() => {
       if (reducido && e.tipo !== "numero") return;
       if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
       if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 260, ataque: 320, magia: 700, cura: 700, muerte: 800, proyectil: 300, tajo: 260, destello: 380, salto: 900 }[e.tipo] || 500 }, e));
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900 }[e.tipo] || 500 }, e));
+      if (e.tipo === "golpe" && e.fuerte) temblor = performance.now() + 260;
     }
     function desplazamiento(id, ahora) {
       let dx = 0, dy = 0, blanco = false;
       for (const e of efectos) {
         const p = (ahora - e.t0) / e.dur;
         if (p < 0 || p > 1) continue;
-        if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 14) * (id[0] === "e" ? -1 : 1);
-        if (e.tipo === "golpe" && e.objetivo === id) { blanco = p < 0.45; dx += p < 0.8 ? (Math.floor(p * 12) % 2 ? 2 : -2) : 0; }
+        if (e.tipo === "ataque" && e.actor === id) {
+          /* Coge impulso hacia atrás, embiste rápido y vuelve. */
+          const dir = id[0] === "e" ? -1 : 1;
+          const desp = p < 0.22 ? -4 * (p / 0.22) : p < 0.45 ? -4 + 24 * ((p - 0.22) / 0.23) : p < 0.6 ? 20 : 20 * (1 - (p - 0.6) / 0.4);
+          dx += Math.round(desp) * dir;
+          if (p > 0.22 && p < 0.5) dy -= 2;
+        }
+        if (e.tipo === "golpe" && e.objetivo === id) {
+          /* Destello blanco, sacudida y retroceso hacia atrás. */
+          blanco = p < 0.4;
+          const atras = id[0] === "e" ? 1 : -1;
+          dx += Math.round((p < 0.5 ? p / 0.5 : 1 - (p - 0.5) / 0.5) * (e.fuerte ? 7 : 4)) * atras + (p < 0.7 ? (Math.floor(p * 14) % 2 ? 1 : -1) : 0);
+        }
         if (e.tipo === "salto" && (e.actor === id || (e.actor === "h*" && id[0] === "h"))) dy -= Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 8);
       }
       return [dx, dy, blanco];
@@ -289,8 +305,36 @@ const ESCENARIO = (() => {
       b.globalAlpha = 1;
     }
 
+    function lanzarParticulas(e, ahora) {
+      if (e.lanzado) return;
+      e.lanzado = true;
+      const id = e.objetivo || e.actor, [x, y] = posicion(id), al = alto(id), cy = y - al * 0.55;
+      if (e.tipo === "golpe") {
+        const n = e.fuerte ? 14 : 8, col = e.clase === "arcana" ? ["#d7c9ff", "#9a7bff"] : e.clase === "sagrada" ? ["#fff3b0", "#ffd24a"] : ["#fff7ea", "#ffcf6a", "#ff8a3d"];
+        for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2 + Math.random() * 0.4, v = 0.8 + Math.random() * (e.fuerte ? 2.4 : 1.6); chispa(x, cy, { vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.8, color: col[k % col.length], vida: 300 + Math.random() * 260, tam: k % 4 === 0 ? 2 : 1 }); }
+        if (String(id)[0] === "h") for (let k = 0; k < 5; k++) chispa(x - 4 + k * 2, cy + 2, { vx: (Math.random() - 0.5) * 1.2, vy: -0.4 - Math.random(), color: "#c8352a", vida: 420, g: 0.15, tam: 1 });
+      }
+      if (e.tipo === "muerte") for (let k = 0; k < 22; k++) chispa(x - 14 + Math.random() * 28, y - Math.random() * al, { vx: (Math.random() - 0.5) * 0.5, vy: -0.25 - Math.random() * 0.6, g: -0.004, color: k % 3 ? "rgba(70,60,80,0.8)" : "#9a8fa8", vida: 900 + Math.random() * 500, tam: 2 });
+      if (e.tipo === "cura") for (let k = 0; k < 7; k++) chispa(x - 10 + Math.random() * 20, y - Math.random() * al * 0.7, { vx: 0, vy: -0.45 - Math.random() * 0.3, g: 0, color: "#8ff08a", vida: 800, cruz: true });
+      if (e.tipo === "proyectil" && e.actor) { const [ax, ay] = posicion(e.actor), aal = alto(e.actor); for (let k = 0; k < 8; k++) chispa(ax + (Math.random() - 0.5) * 16, ay - aal * 0.4 + (Math.random() - 0.5) * 12, { vx: 0, vy: -0.6 - Math.random() * 0.5, g: 0, color: e.forma === "flecha" ? "#e9d8b0" : e.forma === "luz" ? "#ffe9a0" : "#c8b5ff", vida: 420 }); }
+      if (e.tipo === "ataque" && String(e.actor)[0] !== "m") { const [ax, ay] = posicion(e.actor); for (let k = 0; k < 4; k++) chispa(ax + (Math.random() - 0.5) * 10, ay - 1, { vx: (Math.random() - 0.5) * 0.8, vy: -0.3, g: 0.02, color: "rgba(160,130,100,0.7)", vida: 380, tam: 2 }); }
+    }
+    function pintarParticulas(ahora) {
+      for (let k = parts.length - 1; k >= 0; k--) {
+        const q = parts[k], t = ahora - q.t0;
+        if (t > q.vida) { parts.splice(k, 1); continue; }
+        const f = t / 16.7;
+        const x = Math.round(q.x + q.vx * f), y = Math.round(q.y + q.vy * f + 0.5 * q.g * f * f);
+        if (t > q.vida * 0.7 && Math.floor(t / 50) % 2) continue;
+        b.fillStyle = q.color;
+        if (q.cruz) { b.fillRect(x - 1, y, 3, 1); b.fillRect(x, y - 1, 1, 3); }
+        else b.fillRect(x, y, q.tam, q.tam);
+      }
+    }
     function pintar(ahora) {
       b.clearRect(0, 0, W, H);
+      b.save();
+      if (temblor > ahora && !reducido) b.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
       pintarFondo(ahora);
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
@@ -329,6 +373,7 @@ const ESCENARIO = (() => {
           sombraSuelo(a.fx, a.fy, Math.max(16, v.ancho * 0.8));
           const img = blanco ? v.blanco : a.h.piedra ? v.piedra : v.normal;
           const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
+          if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = 0.25; b.drawImage(img, x - Math.sign(dx) * 6, y); b.globalAlpha = 1; }
           b.drawImage(img, x, y);
           const cima = y + v.cima;
           marcas[a.id] = { alto: v.pie - v.cima };
@@ -344,13 +389,19 @@ const ESCENARIO = (() => {
           else if (!reducido) iy += Math.floor((ahora / 640) % 2);
           const muerte = efectos.find(e => e.tipo === "muerte" && e.objetivo === a.id);
           if (r.derrotado && !muerte) continue;
+          let alfa = 1;
           if (muerte) {
             const p = (ahora - muerte.t0) / muerte.dur;
             if (p > 1) continue;
-            if (Math.floor(p * 10) % 2) continue;
+            if (p < 0.25 && Math.floor(p * 16) % 2) continue;
+            alfa = p < 0.25 ? 1 : Math.max(0, 1 - (p - 0.25) / 0.75);
+            iy += Math.round(Math.max(0, p - 0.25) * 10);
           }
           if (r.tipo === "enemigo" && !r.silueta) sombraSuelo(a.fx, a.fy, Math.max(18, v.ancho * 0.8));
+          b.globalAlpha = alfa;
+          if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = alfa * 0.25; b.drawImage(v.normal, ix - Math.sign(dx) * 6, iy); b.globalAlpha = alfa; }
           b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
+          b.globalAlpha = 1;
           const cima = iy + v.cima;
           marcas[a.id] = { alto: v.pie - v.cima };
           if (r.tipo === "enemigo" && r.max) {
@@ -371,6 +422,7 @@ const ESCENARIO = (() => {
         if (p < 0) continue;
         const [x, y] = posicion(e.objetivo || e.actor);
         const al = alto(e.objetivo || e.actor);
+        if (!reducido && ["golpe", "muerte", "cura", "proyectil", "ataque"].includes(e.tipo)) lanzarParticulas(e, ahora);
         if (e.tipo === "numero") {
           const sube = Math.round(Math.min(1, p * 1.6) * 14);
           const esc = e.grande ? 2 : 1;
@@ -414,6 +466,8 @@ const ESCENARIO = (() => {
           }
         }
       }
+      pintarParticulas(ahora);
+      b.restore();
       b.drawImage(capaVineta(), 0, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(buf, 0, 0, lienzo.width, lienzo.height);

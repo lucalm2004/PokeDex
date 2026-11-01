@@ -33,6 +33,11 @@ const DATOS = (() => {
       pasiva: "Afortunado", pasivaDesc: "Si saca un 1 natural, repite la tirada.",
       lore: "Gente pequeña de las colinas. Les gustan las comidas largas, las pipas y volver a casa enteros."
     },
+    satiro: {
+      nombre: "Sátiro", mods: { elo: 2, tem: 1 }, alma: 0, bloqueada: true,
+      pasiva: "Alegría salvaje", pasivaDesc: "Tras cada victoria, todo el grupo recupera 2 PM.",
+      lore: "Bajan de los bosques feéricos con una flauta y ninguna prisa. Donde hay fiesta, hay un sátiro."
+    },
     semiorco: {
       nombre: "Semiorco", mods: { ani: 2 }, alma: 2,
       pasiva: "Aguante implacable", pasivaDesc: "La primera vez que cae en cada combate, se queda con 1 PG.",
@@ -302,6 +307,12 @@ const DATOS = (() => {
     fenix: { nombre: "Amuleto del fénix", tipo: "talisman", precio: 95, especial: "fenix", desc: "Una vez por combate, si fueras a caer, te quedas con 1 PG." },
     espinas: { nombre: "Armadura de espinas", tipo: "armadura", precio: 65, ca: 2, especial: "espinas", desc: "+2 CA. Quien te golpea recibe 2 de daño." },
     estelar: { nombre: "Hoja estelar", tipo: "arma", precio: 160, golpe: 3, fis: 5, arc: 3, rareza: "legendario", desc: "+3 para atacar, +5 físico y +3 mágico." },
+    amanecer: { nombre: "Hoja del amanecer", tipo: "arma", precio: 150, golpe: 1, fis: 3, especial: "amanecer", rareza: "legendario", desc: "+1 para atacar y +3 físico. Cada tajo suma 1d6 de luz (doble contra no muertos)." },
+    tormentas: { nombre: "Báculo de las tormentas", tipo: "arma", precio: 150, golpe: 1, arc: 3, especial: "tormentas", rareza: "legendario", desc: "+3 mágico. Tus hechizos pueden saltar a otro enemigo como un rayo." },
+    egida: { nombre: "Égida del dragón", tipo: "armadura", precio: 150, ca: 3, alma: 6, especial: "egida", rareza: "legendario", desc: "+3 CA, +6 PG, 1 de daño menos por golpe y el fuego no te quema." },
+    astral: { nombre: "Manto astral", tipo: "armadura", precio: 140, ca: 2, especial: "astral", rareza: "legendario", desc: "+2 CA y un 20 % de que los ataques te atraviesen sin tocarte." },
+    rey_loco: { nombre: "Corona del rey loco", tipo: "talisman", precio: 140, especial: "rey_loco", rareza: "legendario", desc: "Minijuegos un 25 % más fáciles y racha máxima +2." },
+    reloj: { nombre: "Reloj de arena roto", tipo: "talisman", precio: 140, especial: "reloj", rareza: "legendario", desc: "Una vez por combate, si fueras a caer, el tiempo se rebobina y recuperas la mitad de tus PG." },
     vacio: { nombre: "Corona del vacío", tipo: "talisman", precio: 150, stat: "elo", ca: 2, critico: 19, rareza: "legendario", desc: "+1 Carisma, +2 CA y críticos con 19." },
     corona: { nombre: "Corona del rey muerto", tipo: "talisman", precio: 100, stat: "raz", ca: 1, desc: "+1 a Inteligencia y +1 a la CA." }
   });
@@ -311,8 +322,8 @@ const DATOS = (() => {
     ["daga", "cuero", "hacha", "sortija", "espada", "diadema", "broche", "guanteletes", "amuleto", "varita", "ponzona", "eco"],
     ["martillo", "grimorio", "malla", "elfica", "laud", "capa", "arco", "sortija", "cetro", "colmillo", "llama", "baculo_mana", "espinas"],
     ["martillo", "grimorio", "cetro", "elfica", "capa", "vorpal", "baculo", "corona", "mithril", "botas", "helado", "capa_sombras", "fenix", "colmillo"],
-    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas", "fenix", "helado", "espinas"],
-    ["flamigera", "escamas", "estelar", "vacio", "vorpal", "baculo", "piedra", "corona", "fenix", "capa_sombras"]
+    ["flamigera", "escamas", "vorpal", "baculo", "mithril", "piedra", "corona", "botas", "fenix", "helado", "espinas", "amanecer", "tormentas", "astral"],
+    ["flamigera", "escamas", "estelar", "vacio", "vorpal", "baculo", "piedra", "corona", "fenix", "capa_sombras", "egida", "rey_loco", "reloj", "amanecer", "tormentas", "astral"]
   ];
   const RANURAS = { arma: "Arma", armadura: "Armadura", talisman: "Objeto mágico" };
 
