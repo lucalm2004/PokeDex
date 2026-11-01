@@ -507,9 +507,9 @@
         if (x > 192) continue;
         conBorde(g, NE[0], tmp => {
           const c = capa().ell(x, y, 2, 2);
-          cada(c, (px, py) => tmp.set(px, py, ram[c.tiene(px - 1, py) && c.tiene(px, py - 1) && c.tiene(px + 1, py) && c.tiene(px, py + 1) ? 1 : 2], ram));
+          cada(c, (px, py) => tmp.set(px, py, ram[c.tiene(px - 1, py) && c.tiene(px, py - 1) && c.tiene(px + 1, py) && c.tiene(px, py + 1) ? 0 : 1], ram));
           const rx = Math.round(x), ry = Math.round(y);
-          tmp.set(rx, ry, ram[0], ram).set(rx - 1, ry - 1, ram[luzSot(x, y) > 0.5 ? 4 : 3], ram).set(rx + 1, ry + 1, ram[1], ram);
+          tmp.set(rx - 1, ry - 1, ram[luzSot(x, y) > 0.55 ? 4 : 3], ram).set(rx - 1, ry, ram[2], ram).set(rx, ry - 1, ram[2], ram);
         });
       }
     }
@@ -869,6 +869,20 @@
       capa().ell(240, 60, 3, 1).pintar(tmp, OC, { plano: 0 });
     });
     barrilMina(g, 4, 78);
+    // polea con su cubo colgado del entibado de la derecha
+    conBorde(g, NE[0], tmp => {
+      capa().ell(216, 30, 3.5, 3.5).pintar(tmp, M, { relieve: 2, max: 3 });
+      tmp.set(216, 30, HI[3], HI);
+      for (let y = 30; y < 58; y++) tmp.set(219, y, y % 3 ? OC[2] : OC[1], OC);
+      for (let y = 34; y < 46; y++) tmp.set(213, y, y % 3 ? OC[2] : OC[1], OC);
+      capa().poly([[214, 58], [224, 58], [223, 66], [215, 66]]).pintar(tmp, M, { relieve: 1.5, max: 3, sesgo: -0.1 });
+      for (let x = 214; x < 225; x++) tmp.set(x, 59, HI[2], HI).set(x, 64, HI[1], HI);
+      capa().curva(214, 58, 219, 53, 224, 58, 1).pintar(tmp, HI, { plano: 2 });
+      for (const [x, y] of [[217, 57], [220, 56]]) tmp.set(x, y, B[3], B);
+    });
+    // piedras sueltas por el suelo
+    for (const [x, y, rx, ry] of [[14, 101, 3, 2], [22, 104, 2, 1.4], [168, 100, 2.5, 1.6], [96, 100, 2, 1.3], [242, 102, 3.5, 2.2], [250, 108, 2, 1.4], [152, 104, 1.6, 1.1]])
+      conBorde(g, CENIZA[0], tmp => capa().ell(x, y, rx, ry).pintar(tmp, TIERRA, { relieve: 1.5, sesgo: -0.1 + luzMina(x, y - 30) * 0.3 }));
   }
   /* Racimo de cristales prismáticos que asoma de la roca. */
   function cristales(g, x, y, lado, n) {
