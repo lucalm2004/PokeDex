@@ -704,6 +704,16 @@ h1, h2, h3 { text-wrap: balance; }
 .equipo-btn small { font-size: 11px; font-weight: 600; opacity: .8; }
 .equipo-btn:disabled { opacity: .5; animation: none; }
 
+/* Rondas simultáneas */
+.planes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.planes span { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--bg); color: var(--faint); box-shadow: inset 0 0 0 1px var(--line); }
+.planes span.ok { color: var(--ok); box-shadow: inset 0 0 0 1px rgba(61, 220, 151, .5); }
+.planes span.mio { color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.planes span.mio.ok { color: var(--ok); }
+.cuenta-plan { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.resolver-ya { width: 100%; }
+.planeado { font-style: normal; color: var(--ok); font-size: 11px; margin-left: 2px; }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
@@ -7241,6 +7251,7 @@ function permitido(k, uid) {
   if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
   if (k === "bloquear") return !!S.bloqueo && S.players[S.bloqueo.i].uid === uid;
   if (k === "votar") return S.players.some(p => p.uid === uid);
+  if (S.combate && S.combate.fase === "plan" && ["hab", "equipo", "objeto", "accion"].includes(k)) return heroePlan(uid) >= 0;
   const p = S.players[S.turno];
   return !!p && p.uid === uid;
 }
@@ -7291,7 +7302,16 @@ function lineaVotacion() {
   return `<p class="votacion"><b>Votación</b> · ${n}/${total} votos${vt ? ` · <span class="cuenta-voto">${Math.max(0, Math.ceil((vt.fin - Date.now()) / 1000))} s</span>` : " · toca una opción para votar"}</p>`;
 }
 setInterval(() => {
-  if (!S || !S.votacion) return;
+  if (!S) return;
+  const cb = S.combate, mando = !S.online || esHost();
+  if (cb && cb.fase === "plan" && cb.planFin) {
+    const el = document.querySelector(".cuenta-plan");
+    if (el) el.textContent = `${Math.max(0, Math.ceil((cb.planFin - Date.now()) / 1000))} s`;
+    if (mando && !resolviendo && Date.now() > cb.planFin + 300) resolverRonda();
+  }
+  /* Si el anfitrión recargó a mitad de una resolución, la ronda vuelve a empezar. */
+  if (cb && cb.fase === "resolver" && !resolviendo && mando && !ocupado && vista === "juego") { cb.planes = {}; nuevaRonda(); }
+  if (!S.votacion) return;
   const c = document.querySelector(".cuenta-voto");
   if (c) c.textContent = `${Math.max(0, Math.ceil((S.votacion.fin - Date.now()) / 1000))} s`;
   if (esHost() && Date.now() > S.votacion.fin + 500) cerrarVotacion();
@@ -7479,8 +7499,8 @@ function minijuego(tipo, o, cb) {
 }
 function necesitaCertero(v) {
   const c = S && S.combate;
-  if (!c || c.enemigoActua) return false;
-  const p = S.players[S.turno], id = p && p.habs[+v], h = id && H(id);
+  if (!c || c.fase !== "plan") return false;
+  const p = S.players[heroeVista()], id = p && p.habs[+v], h = id && H(id);
   return !!h && h.efecto === "dano" && (p.pm || 0) >= costeHab(p, h);
 }
 function sonar(k) { if (SONIDO.on && SONIDOS[k]) try { SONIDOS[k](); } catch (e) {} }
@@ -7709,13 +7729,15 @@ function mostrarDano(e) {
     setTimeout(() => { if (tiradaN === n) el.hidden = true; }, 1300);
   }, 380);
 }
+let tiradaEnCurso = false;
 function tirarDado(final, caras, cb, det) {
   const cv = $("#dado");
-  ocupado = true; document.body.classList.add("ocupado");
+  ocupado = true; document.body.classList.add("ocupado"); tiradaEnCurso = true;
   mostrarTirada.det = det ? Object.assign({ n: final }, det) : null;
   const terminar = () => {
     if (cv) ESCENARIO.dibujarDado(cv, final);
-    ocupado = false; document.body.classList.remove("ocupado");
+    tiradaEnCurso = false;
+    if (!resolviendo) { ocupado = false; document.body.classList.remove("ocupado"); }
     cb();
   };
   if (!reducido && !RAPIDO && det && vista === "juego" && $("#tirada")) return animarTirada(final, det, 760, terminar);
@@ -8383,10 +8405,119 @@ function iniciarCombate(sc) {
     else if (A.efecto === "fuerte") { r.atk += A.valor || 2; log(A.texto, "ko"); }
   });
   if (S.memoria && S.memoria.aliado && Math.random() < 0.4) { fx({ tipo: "tajo", objetivo: "e0" }); log(`¡Thrain irrumpe con su hacha! → ${danarRival(0, tirar(2, 8), "fisica", false)}`, "ok"); }
+  c.fase = "plan"; c.planes = {};
   if (todosCaidos()) return victoria();
-  prepararTurno();
+  nuevaRonda();
 }
 function avanzar() { const c = S.combate; c.pos++; if (c.pos >= c.orden.length) { c.pos = 0; c.ronda++; } }
+
+/* ---------- Rondas simultáneas: todos planean a la vez (cada uno en su móvil) y la ronda se resuelve por iniciativa ---------- */
+const PLAN_MS = 30000;
+let resolviendo = false, terminarAccion = null;
+/* Héroe que le toca planear a este jugador (o -1). En local, el que marca S.turno. */
+function heroePlan(uid) {
+  const c = S && S.combate;
+  if (!c || c.fase !== "plan") return -1;
+  const libre = (p, i) => p.alma > 0 && !c.planes[i];
+  if (!S.online) { if (S.players[S.turno] && libre(S.players[S.turno], S.turno)) return S.turno; return S.players.findIndex(libre); }
+  return S.players.findIndex((p, i) => libre(p, i) && p.uid === uid);
+}
+/* Héroe cuya ficha se muestra en este móvil. */
+function heroeVista() {
+  const c = S.combate;
+  if (!c || c.fase !== "plan") return S.turno;
+  const h = heroePlan(miId);
+  if (h >= 0) return h;
+  if (S.online) { const i = S.players.findIndex(p => p.alma > 0 && p.uid === miId); if (i >= 0) return i; }
+  return S.turno;
+}
+function nuevaRonda() {
+  const c = S.combate;
+  if (!c) return;
+  c.fase = "plan"; c.planes = {}; c.pos = 0; c.enemigoActua = false; c.actua = -1;
+  S.players.forEach((p, i) => { if (p.alma > 0 && p.est && (p.est.paralisis || p.est.congelado)) c.planes[i] = { tipo: "nada" }; });
+  c.planFin = S.online && S.players.length > 1 ? Date.now() + PLAN_MS : null;
+  c.objetivo = objetivoValido(c.objetivo);
+  const sig = S.players.findIndex((x, k) => x.alma > 0 && !c.planes[k]);
+  S.turno = sig >= 0 ? sig : siguienteVivo(0);
+  submenu = null;
+  guardar(); render();
+  comprobarPlanes();
+}
+function planPorDefecto(i) {
+  const c = S.combate, p = S.players[i];
+  const slot = p.habs.findIndex(id => H(id).efecto === "dano" && (p.pm || 0) >= costeHab(p, H(id)));
+  if (slot >= 0) return { tipo: "hab", arg: `${slot}:1:${objetivoValido(c.objetivo)}` };
+  const cura = p.habs.findIndex(id => H(id).efecto === "cura" && (p.pm || 0) >= costeHab(p, H(id)));
+  if (cura >= 0 && S.players.some(x => x.alma > 0 && x.alma < maxAlma(x) * 0.5)) return { tipo: "hab", arg: `${cura}:1:${objetivoValido(c.objetivo)}` };
+  return { tipo: "accion", arg: "forcejeo" };
+}
+function planificar(i, tipo, arg) {
+  const c = S.combate, p = S.players[i];
+  if (!c || c.fase !== "plan" || i < 0 || !p || p.alma <= 0 || c.planes[i]) return;
+  if (tipo === "hab") { const h = H(p.habs[+String(arg).split(":")[0]]); if (!h || (p.pm || 0) < costeHab(p, h)) return; }
+  if (tipo === "equipo" && ((c.equipo || 0) < 100 || Object.values(c.planes).some(x => x.tipo === "equipo"))) return;
+  if (tipo === "objeto" && !S.zurron[String(arg).split(":")[0]]) return;
+  if (tipo === "accion" && arg === "anillo" && (!S.anillo || c.anilloUsado)) return;
+  c.planes[i] = { tipo, arg };
+  const sig = S.online ? S.players.findIndex((x, k) => x.alma > 0 && !c.planes[k]) : heroePlan(miId);
+  if (sig >= 0) S.turno = sig;
+  submenu = null;
+  guardar(); render();
+  comprobarPlanes();
+}
+/* Cuando todos los que pueden han planeado (en línea, los conectados), se resuelve. */
+function comprobarPlanes() {
+  const c = S && S.combate;
+  if (!c || c.fase !== "plan" || resolviendo || (S.online && !esHost())) return;
+  const conectados = S.online ? new Set([miId, ...red.peers.map(p => p.presence && p.presence.id).filter(Boolean)]) : null;
+  const pendientes = S.players.filter((p, i) => p.alma > 0 && !c.planes[i] && (!conectados || conectados.has(p.uid)));
+  if (!pendientes.length) resolverRonda();
+}
+async function resolverRonda() {
+  const S0 = S, c = S.combate;
+  if (!c || c.fase !== "plan" || resolviendo) return;
+  const sigue = () => S === S0 && S.combate === c;
+  const bloquear = () => { ocupado = true; document.body.classList.add("ocupado"); };
+  const soltar = () => { resolviendo = false; ocupado = false; document.body.classList.remove("ocupado"); };
+  resolviendo = true; c.fase = "resolver"; c.planFin = null;
+  S.players.forEach((p, i) => { if (p.alma > 0 && !c.planes[i]) c.planes[i] = Object.assign({ auto: true }, planPorDefecto(i)); });
+  bloquear();
+  fx({ tipo: "anuncio", texto: `Ronda ${c.ronda}`, sub: "¡Se resuelve!", tono: "turno" });
+  guardar(); render();
+  await esperar(650);
+  for (c.pos = 0; c.pos < c.orden.length; c.pos++) {
+    if (!sigue()) return;
+    if (todosCaidos() || !vivos().length) break;
+    bloquear();
+    const a = c.orden[c.pos];
+    if (a.t === "m") { mascotaActua(); guardar(); render(); await esperar(750); continue; }
+    if (a.t === "e") { if (c.rivales[a.r].hp <= 0) continue; await turnoEnemigo(a.r, true); continue; }
+    const p = S.players[a.i];
+    if (p.alma <= 0) continue;
+    S.turno = a.i; c.actua = -1;
+    if (tickEstados(p, true, "h" + a.i) || p.alma <= 0) { if (p.alma <= 0) log(`¡${p.nombre} cae!`, "ko"); guardar(); render(); await esperar(650); continue; }
+    const plan = c.planes[a.i] || planPorDefecto(a.i);
+    if (plan.tipo === "nada") continue;
+    render();
+    await new Promise(res => {
+      let hecho = false;
+      terminarAccion = () => { hecho = true; terminarAccion = null; res(); };
+      accion(plan.tipo, plan.arg);
+      if (!hecho && !tiradaEnCurso && terminarAccion) { terminarAccion = null; res(); }
+    });
+    if (!sigue()) return;
+    guardar(); render();
+    await esperar(700);
+  }
+  if (!sigue()) return;
+  c.enemigoActua = false; c.actua = -1;
+  soltar();
+  if (todosCaidos()) return victoria();
+  if (!vivos().length) return derrota();
+  c.ronda++;
+  nuevaRonda();
+}
 function prepararTurno() {
   const c = S.combate;
   for (let guarda = 0; guarda < 60; guarda++) {
@@ -8477,10 +8608,19 @@ function formaAtaque(p, h) {
   return ["orbe", p.clase === "mago" ? RP.fuego : p.clase === "bardo" ? RP.mar : RP.magia];
 }
 function accion(tipo, arg) {
-  if (ocupado || !S.combate || S.combate.enemigoActua || !puedoActuar()) return;
-  const c = S.combate, p = S.players[S.turno], yo = "h" + S.turno;
+  const c = S && S.combate;
+  if (!c) return;
+  /* Las jugadas llevan la ronda al final (#n) para descartar las que lleguen tarde. */
+  let ronda = null;
+  if (typeof arg === "string" && arg.includes("#")) { const k = arg.lastIndexOf("#"); ronda = +arg.slice(k + 1); arg = arg.slice(0, k); }
+  if (c.fase === "plan" && !resolviendo) {
+    if (ronda !== null && ronda !== c.ronda) return;
+    return planificar(heroePlan(remoto || miId), tipo, arg);
+  }
+  if (!resolviendo || c.enemigoActua) return;
+  const p = S.players[S.turno], yo = "h" + S.turno;
   const arma = obj(p.equipo.arma) || {};
-  const fin = () => { submenu = null; if (todosCaidos()) return victoria(); avanzar(); prepararTurno(); };
+  const fin = () => { submenu = null; const r = terminarAccion; terminarAccion = null; if (r) r(); };
   const marcar = r => { r.marca = { por: S.turno }; };
   if (tipo === "hab") {
     const [slot, qs, ts] = String(arg).split(":");
@@ -8693,7 +8833,7 @@ function bloquear(v) {
   S.bloqueo.q = Math.max(0, Math.min(2, +v || 0));
   if (ventana) ventana.cerrar();
 }
-async function turnoEnemigo(ri) {
+async function turnoEnemigo(ri, enRonda = false) {
   const S0 = S, c = S.combate, r = c.rivales[ri], e = ENEMIGOS[r.clave], o = "e" + ri;
   const sigue = () => S === S0 && S.combate === c;
   c.enemigoActua = true; c.actua = ri;
@@ -8806,6 +8946,7 @@ async function turnoEnemigo(ri) {
     }
   }
   c.enemigoActua = false; c.actua = -1;
+  if (enRonda) { guardar(); render(); return; }
   ocupado = false; document.body.classList.remove("ocupado");
   if (todosCaidos()) return victoria();
   if (!vivos().length) return derrota();
@@ -9067,10 +9208,11 @@ function renderJuego() {
   /* Cada pantalla nueva del panel entra con una pequeña animación; en combate, aviso de turno. */
   const clave = [S.modo, S.esc && S.esc.titulo, S.fase, !!S.combate, S.aprender.length, !!S.ofertaB, S.final, S.derrota].join("|");
   if (clave !== renderJuego.clave) { renderJuego.clave = clave; const pn = $("#panel"); pn.classList.remove("entra"); void pn.offsetWidth; pn.classList.add("entra"); clearTimeout(renderJuego.te); renderJuego.te = setTimeout(() => pn.classList.remove("entra"), 450); }
-  const turnoClave = S.combate && !S.combate.enemigoActua ? `${S.combate.ronda}:${S.combate.pos}` : "";
+  const cb = S.combate;
+  const turnoClave = cb && cb.fase === "plan" ? `plan:${cb.ronda}:${S.online ? "" : S.turno}` : "";
   if (turnoClave && turnoClave !== renderJuego.turno) {
-    const p = S.players[S.turno];
-    if (p && (!S.online || p.uid === miId)) anunciar({ texto: S.online ? "¡Tu turno!" : `Turno de ${p.nombre}`, sub: S.online ? p.nombre : "", tono: "turno" });
+    const h = heroePlan(miId);
+    if (h >= 0) anunciar({ texto: S.online ? "¡Elige tu acción!" : `Ronda ${cb.ronda} · ${S.players[h].nombre}`, sub: S.online ? `${S.players[h].nombre} · ronda ${cb.ronda}` : "Elige su acción", tono: "turno" });
   }
   renderJuego.turno = turnoClave;
   const u = S.log[S.log.length - 1];
@@ -9087,20 +9229,21 @@ function sincronizarEscenario() {
   else if (sc && sc.pnj) rivales = [{ tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" }];
   const fondo = (sc && sc.fondo) || ACTOS[Math.max(0, S.acto)].fondos[0];
   escJuego.mostrar({
-    fondo, rivales, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
+    fondo, rivales, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
     heroes: S.players.map((p, i) => ({ look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
 }
 function renderGrupo() {
   if (!S) return;
   $("#grupo").innerHTML = S.players.map((p, i) => {
-    const activo = i === S.turno && !S.final && !S.derrota && !(S.combate && S.combate.enemigoActua);
+    const cb = S.combate, planeado = cb && cb.fase === "plan" && cb.planes && cb.planes[i] && cb.planes[i].tipo !== "nada";
+    const activo = (cb ? i === heroeVista() : i === S.turno) && !S.final && !S.derrota && !(cb && cb.enemigoActua);
     const max = maxAlma(p), pct = Math.round((100 * p.alma) / max);
     const conectado = !S.online || p.uid === miId || red.peers.some(x => x.presence && x.presence.id === p.uid);
     const g = GESTOS[i] && GESTOS[i].hasta > performance.now() ? " " + GESTOS[i].clase : "";
     return `<button type="button" class="heroe${g}${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookConGesto(i)))}'></canvas>
-      <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
+      <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}${planeado ? ' <i class="planeado" title="Acción elegida">✓</i>' : ""}</strong>
       <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
       <span class="barra-pm" title="Maná ${p.pm || 0}/${pmMax(p)}"><i style="width:${Math.round((100 * (p.pm || 0)) / pmMax(p))}%"></i></span>
       <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span>
@@ -9305,9 +9448,11 @@ function intencion(c, k) {
   if (r.jefe && r.fase === 1 && FASES[r.clave]) partes.push("a media vida, <b>¡fase 2!</b>");
   return partes.join(" · ");
 }
-function renderCombate(el, sc, p, mio) {
+function renderCombate(el, sc, p0, mio0) {
   const c = S.combate;
   if (!c) { el.innerHTML = `<h2>${sc.titulo}</h2>`; return; }
+  const plan = c.fase === "plan", pi = heroeVista(), p = S.players[pi];
+  const mio = plan && heroePlan(miId) === pi && !esperandoHost;
   const t = miObjetivo(), r = c.rivales[t], e = ENEMIGOS[r.clave];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
   const chips = [c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", `CA ${e.ca}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
@@ -9317,13 +9462,26 @@ function renderCombate(el, sc, p, mio) {
   const lista = c.rivales.map((x, k) => `<button type="button" class="riv${k === t ? " sel" : ""}${x.hp <= 0 ? " muerto" : ""}${k === c.actua ? " actua" : ""}" ${varios && x.hp > 0 ? `data-ui="objetivo" data-k="${k}"` : `data-ui="bestia" data-k="${x.clave}"`} ${x.hp <= 0 ? "disabled" : ""}>
       <span class="rn">${esc(x.nombre)}</span><span class="barra-rival"><i style="width:${Math.round((100 * x.hp) / x.hpMax)}%"></i></span><b>${x.hp}/${x.hpMax}</b></button>`).join("");
   const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : a.t === "m" ? " mascota" : ""}${(a.t === "h" && S.players[a.i].alma <= 0) || (a.t === "e" && c.rivales[a.r].hp <= 0) ? " caido" : ""}">${esc(a.t === "e" ? c.rivales[a.r].nombre.split(",")[0] : a.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : S.players[a.i].nombre)}</li>`).join("");
+  /* Estado de la ronda: quién ha elegido ya, cuenta atrás y botón del anfitrión para no esperar. */
+  const vivosH = S.players.map((x, i) => i).filter(i => S.players[i].alma > 0);
+  const fichas = vivosH.map(i => { const x = S.players[i], pl = c.planes && c.planes[i]; return `<span class="${pl ? "ok" : ""}${S.online && x.uid === miId ? " mio" : ""}">${esc(x.nombre)} ${pl ? (pl.tipo === "nada" ? "✕" : "✓") : "…"}</span>`; }).join("");
+  const faltan = vivosH.filter(i => !(c.planes && c.planes[i])).length;
+  const cabPlan = plan ? `<div class="planes">${fichas}${c.planFin ? `<b class="cuenta-plan">${Math.max(0, Math.ceil((c.planFin - Date.now()) / 1000))} s</b>` : ""}</div>` : "";
+  const linea = esperandoHost ? `<p class="quien espera">Enviando tu jugada…</p>` : mio ? `<p class="quien">${S.players.length > 1 ? `Acción de <b>${esc(p.nombre)}</b>` : "Elige tu acción"}${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2" : ""}</p>`
+    : plan ? `<p class="quien espera">${faltan ? `Esperando a ${faltan === 1 ? "un jugador" : faltan + " jugadores"}…` : "Todos listos. Resolviendo…"}</p>` : "";
+  const botonYa = plan && S.online && esHost() && faltan && vivosH.some(i => c.planes[i]) ? `<button type="button" class="boton sec mini resolver-ya" data-ui="resolver-ya">Resolver ya · los que faltan actúan solos</button>` : "";
   let menu;
   if (c.enemigoActua) {
     const b = S.bloqueo, q = b && S.players[b.i];
-    menu = `<p class="quien espera"><b>${esc(c.actua >= 0 ? c.rivales[c.actua].nombre : e.nombre)}</b> ataca…${q && !b.hecho && S.online && q.uid !== miId ? ` ${esc(q.nombre)} puede bloquear` : ""}</p>`;
+    menu = `<p class="quien espera"><b>${esc(c.actua >= 0 ? c.rivales[c.actua].nombre : e.nombre)}</b> ataca…${q && b.q === undefined && S.online && q.uid !== miId ? ` ${esc(q.nombre)} se defiende` : ""}</p>`;
+  }
+  else if (!plan) {
+    const quien = S.players[S.turno], pl = quien && c.planes && c.planes[S.turno];
+    const que = pl && pl.tipo === "hab" ? H(quien.habs[+String(pl.arg).split(":")[0]]).nombre : pl && pl.tipo === "equipo" ? "ataque en equipo" : pl ? pl.arg : "";
+    menu = `<p class="quien espera">Ronda ${c.ronda} · <b>${esc(quien ? quien.nombre : "")}</b>${que ? `: ${esc(que)}` : ""}…</p>`;
   }
   else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${S.zurron[k]}`, "", false)).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
-  else menu = `${turnoMio() && !esperandoHost ? "" : quienLinea(p, "Turno de")}<div class="menu dos acciones">${p.habs.map((id, k) => {
+  else menu = `${linea}${cabPlan}${botonYa}<div class="menu dos acciones">${p.habs.map((id, k) => {
       const h = H(id), coste = costeHab(p, h);
       const ef = h.efecto !== "dano" ? "" : r.debil === h.tipo || (h.noMuerto && r.nomuerto) ? "alto" : r.resiste === h.tipo ? "bajo" : "";
       const sub = resumenHab(id, p) + (h.area && varios ? ` <b class="ef area">a todos</b>` : "") + (ef === "alto" ? ` <b class="ef alto">¡Eficaz!</b>` : ef === "bajo" ? ` <b class="ef bajo">Poco eficaz</b>` : "");
@@ -9331,7 +9489,7 @@ function renderCombate(el, sc, p, mio) {
     }).join("")}</div>
     ${(() => {
       const A = ataqueEquipo(p);
-      if (!A || (c.equipo || 0) < 100) return "";
+      if (!A || (c.equipo || 0) < 100 || Object.values(c.planes || {}).some(x => x.tipo === "equipo")) return "";
       return `<button type="button" class="equipo-btn" data-juego="equipo" data-v="1" ${mio ? "" : "disabled"}><b>⚡ ${A.nombre}</b><small>Con ${esc(A.con.nombre)} · ${A.area ? "a todos · " : ""}${A.aplica ? ESTADOS[A.aplica[0]].verbo : A.cura ? "cura al grupo" : ""}${A.sello.nota ? ` · ${A.sello.nota}` : ""}</small></button>`;
     })()}
     ${p.habs.every(id => (p.pm || 0) < costeHab(p, H(id))) ? `<div class="menu">${boton('data-juego="accion" data-v="forcejeo" data-tipo="fisica"', "Forcejeo", "∞", `Sin maná: un golpe débil (1d4${fmt(stat(p, "ani"))})`, !mio)}</div>` : ""}
@@ -9357,7 +9515,7 @@ function renderModal() {
   if (modal.tipo === "altar") html = htmlAltar();
   if (modal.tipo === "tuto") html = `<h2>Cómo se juega</h2><ol class="tuto">
       <li><canvas data-icono="combate" data-tam="34"></canvas><div><b>Elige el camino</b><span>En el mapa, toca un círculo que brille. Arriba del todo espera el jefe.</span></div></li>
-      <li><canvas data-icono="evento" data-tam="34"></canvas><div><b>Ataca y defiende</b><span>Toca un enemigo para apuntarle y elige una habilidad. Para en el centro de la barra para un golpe perfecto. Cuando te ataquen, toca «¡BLOQUEA!».</span></div></li>
+      <li><canvas data-icono="evento" data-tam="34"></canvas><div><b>Ataca y defiende</b><span>Cada ronda, todos elegís la acción a la vez y luego se resuelve. Toca un enemigo para apuntarle, elige una habilidad y supera su minijuego. Cuando te ataquen, defiéndete a tiempo.</span></div></li>
       <li><canvas data-icono="tesoro" data-tam="34"></canvas><div><b>Sube de nivel y coge botín</b><span>Aprenderás habilidades nuevas y encontrarás objetos en cofres y enemigos. Toca un nombre para dárselo.</span></div></li>
     </ol><button type="button" class="boton" data-ui="cerrar">¡A jugar!</button>`;
   if (modal.tipo === "menu") html = `<h2>Menú</h2><div class="menu">
@@ -9420,6 +9578,7 @@ function htmlAyuda() {
     <li><b>Mapa:</b> en cada acto elegís camino entre combates, sucesos, una tienda y una hoguera. Al final espera el jefe. Son 4 actos: bosque, mazmorra, castillo y volcán.</li>
     <li><b>Habilidades:</b> cada héroe lleva hasta 4, como los movimientos de un Pokémon. Al subir de nivel aprende otras; si ya tiene 4, elige cuál olvida. Las de usos limitados se recargan en cada combate.</li>
     <li><b>Varios enemigos:</b> toca uno para que sea tu objetivo. Si un compañero lo aturde, envenena, maldice o debilita y tú le pegas después, haces un <b>COMBO</b> (×1,5).</li>
+    <li><b>Rondas simultáneas:</b> todos elegís vuestra acción a la vez, cada uno en su móvil (30 s en línea), y después la ronda se resuelve por orden de iniciativa como una escena. Nadie espera a nadie.</li>
     <li><b>Minijuegos de ataque:</b> cada ataque tiene el suyo: barra (cuerpo a cuerpo), diana (a distancia), runas en orden (magia) y anillo (sagrado). Bien: +2 a la tirada; perfecto: +5.</li>
     <li><b>Minijuegos de defensa:</b> si un ataque va a darte, bloquea cuando el anillo encaje, esquiva hacia la flecha (ataques especiales) o toca las runas para disipar (magia). Perfecto: casi sin daño.</li>
     <li><b>Dados:</b> se ve el d20 de cada tirada y los dados de daño. En los sucesos tira todo el grupo y cuenta la mejor.</li>
@@ -9480,15 +9639,20 @@ document.addEventListener("click", ev => {
     if (S && VOTABLES.has(k) && hayVotacion()) { v = `${k}|${v}`; k = "votar"; }
     if (!S || (ocupado && k !== "bloquear") || (esperandoHost && k !== "bloquear") || certeroActivo) return;
     if (k === "reintentar" ? S.online && !esHost() : !permitido(k, miId)) return;
-    const mandar = (vv = v) => (S.online && !esHost() ? (k === "bloquear" ? enviarBloqueo() : enviarJugada(k, vv)) : ejecutar(k, vv));
+    const enCombate = S.combate && ["hab", "equipo", "objeto", "accion"].includes(k);
+    const mandar = (vv = v) => {
+      if (enCombate) { if (!S.combate || S.combate.fase !== "plan") return; vv = `${vv}#${S.combate.ronda}`; }
+      return S.online && !esHost() ? (k === "bloquear" ? enviarBloqueo() : enviarJugada(k, vv)) : ejecutar(k, vv);
+    };
     if (k === "bloquear") return;
+    if (enCombate && heroePlan(miId) < 0) return;
     const t = S.combate ? miObjetivo() : 0;
     if (k === "hab" && necesitaCertero(v)) {
-      const p = S.players[S.turno], h = H(p.habs[+v]);
+      const p = S.players[heroeVista()], h = H(p.habs[+v]);
       return minijuego(tipoMinijuego(p, h), { sub: `${p.nombre} · ${h.nombre}` }, q => { if (S && S.combate) mandar(`${v}:${q}:${t}`); });
     }
     if (k === "hab") return mandar(`${v}:1:${t}`);
-    if (k === "equipo") { const p = S.players[S.turno], A = ataqueEquipo(p); return minijuego("pulso", { sub: `${p.nombre} y ${A ? A.con.nombre : ""} · ${A ? A.nombre : ""}` }, q => { if (S && S.combate) mandar(`${q}:${t}`); }); }
+    if (k === "equipo") { const p = S.players[heroeVista()], A = ataqueEquipo(p); return minijuego("pulso", { sub: `${p.nombre} y ${A ? A.con.nombre : ""} · ${A ? A.nombre : ""}` }, q => { if (S && S.combate) mandar(`${q}:${t}`); }); }
     if (k === "objeto") return mandar(`${v}:${t}`);
     return mandar();
   }
@@ -9517,7 +9681,8 @@ document.addEventListener("click", ev => {
     case "pestana": modal.pestana = ds.p; return renderModal();
     case "cronica": return abrirModal({ tipo: "cronica" });
     case "objetos": submenu = "objetos"; return renderEscena();
-    case "objetivo": objetivoLocal = +ds.k; if (S && S.combate && (!S.online || esHost()) && turnoMio()) S.combate.objetivo = +ds.k; renderEscena(); return sincronizarEscenario();
+    case "objetivo": objetivoLocal = +ds.k; if (S && S.combate && !S.online) S.combate.objetivo = +ds.k; renderEscena(); return sincronizarEscenario();
+    case "resolver-ya": if (S && S.combate && S.combate.fase === "plan" && (!S.online || esHost())) resolverRonda(); return;
     case "altar": return abrirModal({ tipo: "altar" });
     case "mejora": return comprarMejora(ds.k);
     case "dif": sel.dif = ds.k; escribir("dym-dif", ds.k); if (sel.online) publicarPresencia(); return renderSeleccion();

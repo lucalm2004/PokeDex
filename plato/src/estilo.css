@@ -693,6 +693,16 @@ h1, h2, h3 { text-wrap: balance; }
 .equipo-btn small { font-size: 11px; font-weight: 600; opacity: .8; }
 .equipo-btn:disabled { opacity: .5; animation: none; }
 
+/* Rondas simultáneas */
+.planes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.planes span { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--bg); color: var(--faint); box-shadow: inset 0 0 0 1px var(--line); }
+.planes span.ok { color: var(--ok); box-shadow: inset 0 0 0 1px rgba(61, 220, 151, .5); }
+.planes span.mio { color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.planes span.mio.ok { color: var(--ok); }
+.cuenta-plan { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.resolver-ya { width: 100%; }
+.planeado { font-style: normal; color: var(--ok); font-size: 11px; margin-left: 2px; }
+
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
 @keyframes hormigas { to { stroke-dashoffset: -24; } }
