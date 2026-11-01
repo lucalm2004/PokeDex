@@ -48,28 +48,30 @@ const INTERFAZ = (() => {
   const ORO = ["#4a2c0e", "#8a5a1c", "#c48a2c", "#f0c25a", "#fff0b0"];
   const BRONCE = ["#2e1b10", "#5c3a1f", "#8a5a30", "#b98448", "#e0b070"];
 
+  /* Remache de un píxel en cada esquina: el único adorno de la interfaz minimalista. */
+  const puntos = col => (g, px, py) => { g.set(px + 2, py + 2, col); };
   const TEXTURAS = {
-    /* Madera oscura con tablones horizontales, vetas y clavos; herrajes de hierro. */
+    /* Panel minimalista: fondo liso casi negro con un leve grano, borde de hierro fino y biselado. */
     panel: () => marco({
-      grosor: 4, luz: HIERRO[3], borde: HIERRO[2], sombra: HIERRO[0], interior: "#120c09", vetas: HIERRO[1],
-      fondo: (u, v) => {
-        const tablon = Math.floor(v / 8), filo = v % 8 === 7, desplaza = (u + tablon * 9) % 24;
-        if (filo) return "#140e0b";
-        if (desplaza === 0) return "#18110d";
-        const n = hash(u, v, tablon);
-        return n < 0.12 ? "#2a1f18" : n < 0.5 ? "#231914" : "#1f1612";
-      },
-      placa: placa(HIERRO, ORO)
+      grosor: 3, luz: "#5d5868", borde: "#38343f", sombra: "#0d0b10", interior: "#100d12",
+      fondo: (u, v) => (hash(u, v, 1) < 0.05 ? "#1d1820" : "#18141b"),
+      placa: puntos(ORO[3])
     }),
-    /* Losa de piedra tallada: botones. */
+    /* Versión translúcida para la interfaz que flota sobre el combate. */
+    hud: () => marco({
+      grosor: 3, luz: "rgba(255,240,210,0.45)", borde: "rgba(70,62,80,0.9)", sombra: "rgba(0,0,0,0.9)", interior: "rgba(0,0,0,0.55)",
+      fondo: (u, v) => (hash(u, v, 2) < 0.05 ? "rgba(24,19,28,0.8)" : "rgba(12,9,15,0.72)"),
+      placa: puntos(ORO[3])
+    }),
+    /* Botón: losa lisa con bisel claro arriba y sombra abajo. */
     boton: () => marco({
-      grosor: 3, luz: "#77728a", borde: "#4a4659", sombra: "#17151d", interior: "#211f2a",
-      fondo: (u, v) => { const n = hash(u, v, 3); return n < 0.08 ? "#3b3848" : n < 0.16 ? "#26242f" : "#2f2c3a"; }
+      grosor: 3, luz: "#7d7790", borde: "#45405a", sombra: "#120f18", interior: "#1d1a26",
+      fondo: (u, v) => (v < 2 ? "#3a3548" : hash(u, v, 3) < 0.05 ? "#332f40" : "#2b2737")
     }),
-    /* La misma losa hundida, al pulsar. */
+    /* El mismo botón hundido, al pulsar. */
     botonOn: () => marco({
-      grosor: 3, luz: "#17151d", borde: "#3a3747", sombra: "#5d596e", interior: "#17151d",
-      fondo: (u, v) => { const n = hash(u, v, 3); return n < 0.08 ? "#302d3c" : "#25232e"; }
+      grosor: 3, luz: "#120f18", borde: "#3a3548", sombra: "#615b74", interior: "#120f18",
+      fondo: () => "#221f2c"
     }),
     /* Marco dorado: lo elegido, lo activo. */
     sel: () => marco({
@@ -83,15 +85,10 @@ const INTERFAZ = (() => {
       fondo: (u, v) => { const n = hash(u, v, 9); return v < 3 ? "#b8323c" : n < 0.1 ? "#7a1a24" : "#93222e"; },
       placa: (g, px, py) => { g.set(px + 2, py + 2, ORO[4]).set(px + 3, py + 2, ORO[3]).set(px + 2, py + 3, ORO[3]).set(px + 3, py + 3, ORO[1]); }
     }),
-    /* Cuero curtido con costura: las fichas de los héroes. */
+    /* Ficha de héroe: translúcida con ribete de bronce fino. */
     carta: () => marco({
-      grosor: 3, luz: BRONCE[4], borde: BRONCE[2], sombra: BRONCE[0], interior: "#1a110c",
-      fondo: (u, v, x, y) => {
-        const costura = (x === 4 || y === 4 || x === N - 5 || y === N - 5) && (x + y) % 3 === 0;
-        if (costura) return "#8a6a48";
-        const n = hash(u, v, 11);
-        return n < 0.1 ? "#3a2619" : n < 0.4 ? "#2f1f15" : "#2a1b12";
-      }
+      grosor: 2, luz: BRONCE[4], borde: BRONCE[2], sombra: "rgba(0,0,0,0.9)", interior: "rgba(0,0,0,0.6)",
+      fondo: (u, v) => (v < 1 ? "rgba(70,48,30,0.75)" : "rgba(16,11,10,0.74)")
     }),
     /* Pergamino: los textos de la historia. */
     pergamino: () => marco({

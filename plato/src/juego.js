@@ -3131,6 +3131,8 @@ function renderJuego() {
   const historiaLarga = vivo && S.esc && S.fase !== "resultado" && (S.esc.historia || S.esc.viaje || (S.esc.tipo === "prueba" && (S.esc.opciones || []).length >= 4 && window.innerHeight < 700));
   const enPanel = enTienda || historiaLarga || !!S.final || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
+  const enCombateLleno = vivo && !!S.combate && !enPanel;
+  $("#p-juego").classList.toggle("modo-combate", enCombateLleno);
   $("#p-juego").classList.toggle("ver-grafo", enMapa && verGrafo);
   $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
@@ -3156,7 +3158,56 @@ function renderJuego() {
   renderJuego.turno = turnoClave;
   const u = S.log[S.log.length - 1];
   if (u && !$("#dado-info").textContent.trim()) $("#dado-info").textContent = u.t;
+  /* En combate el escenario ocupa toda la pantalla y la interfaz flota encima: se mide dónde empieza el HUD. */
+  if (enCombateLleno) { const g = $("#grupo").getBoundingClientRect(); escJuego.completa(Math.round(g.top - 4)); }
+  else escJuego.completa(null);
+  renderHudObjetivo();
 }
+/* Ficha flotante del enemigo al que apuntas: nombre, vida, rasgos y qué hará; sigue al enemigo en pantalla. */
+function renderHudObjetivo() {
+  let el = $("#hud-obj");
+  const c = S && S.combate;
+  if (!c || !$("#p-juego").classList.contains("modo-combate")) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement("div"); el.id = "hud-obj"; el.className = "hud-obj"; $("#caja-juego").appendChild(el); }
+  const t = miObjetivo(), r = c.rivales[t];
+  if (!r || r.hp <= 0) { el.hidden = true; return; }
+  const e = ENEMIGOS[r.clave], varios = c.rivales.filter(x => x.hp > 0).length > 1;
+  const rasgos = [r.mod ? r.mod.nombre : c.elite && !r.esbirro ? "élite" : "", r.debil ? `débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `resiste ${TIPOS_DANO[r.resiste]}` : "", r.jefe && r.fase === 2 ? "fase 2" : ""].filter(Boolean);
+  const ests = Object.keys(r.est || {}).filter(k => ESTADOS[k]).map(k => `<i style="--c:${ESTADOS[k].color}">${ESTADOS[k].nombre}</i>`).join("");
+  const html = `<p class="ho-cab"><b>${esc(r.nombre)}</b><span>CA ${caRival(r)}</span><button type="button" class="ho-info" data-ui="bestia" data-k="${r.clave}" aria-label="Bestiario">?</button></p>
+    <span class="ho-vida"><i style="width:${Math.round((100 * r.hp) / r.hpMax)}%"></i><em>${r.hp}/${r.hpMax}</em></span>
+    ${rasgos.length || ests ? `<p class="ho-rasgos">${rasgos.map(x => `<span>${esc(x)}</span>`).join("")}${ests}</p>` : ""}
+    ${c.fase === "plan" ? `<p class="ho-int">${intencion(c, t)}</p>` : ""}${varios && c.fase === "plan" ? `<p class="ho-ayuda">Toca otro enemigo para cambiar</p>` : ""}`;
+  if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+  if (el.dataset.t !== String(t)) { el.dataset.t = String(t); el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+  el.hidden = false;
+  posicionarHud();
+}
+function posicionarHud() {
+  const el = $("#hud-obj");
+  if (!el || el.hidden || !S || !S.combate || !escJuego) return;
+  const pos = escJuego.pantalla("e" + miObjetivo());
+  if (!pos) return;
+  const w = el.offsetWidth, h = el.offsetHeight, bar = $(".barra").getBoundingClientRect().bottom + 4;
+  const x = Math.max(6, Math.min(window.innerWidth - w - 6, pos.x - w / 2));
+  const y = Math.max(bar, pos.y - h - 14);
+  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  el.style.setProperty("--pico", `${Math.round(Math.max(10, Math.min(w - 10, pos.x - x)))}px`);
+}
+setInterval(posicionarHud, 200);
+/* En combate, tocar a un enemigo en el escenario le apunta; tocar a un héroe abre su ficha. */
+document.addEventListener("click", ev => {
+  const cv = ev.target.closest && ev.target.closest("#lienzo");
+  if (!cv || !S || !S.combate || !escJuego || !$("#p-juego").classList.contains("modo-combate")) return;
+  const r = cv.getBoundingClientRect(), id = escJuego.actorEn(ev.clientX - r.left, ev.clientY - r.top);
+  if (!id) return;
+  if (id[0] === "e") {
+    const k = +id.slice(1);
+    if (!S.combate.rivales[k] || S.combate.rivales[k].hp <= 0) return;
+    objetivoLocal = k; if (!S.online) S.combate.objetivo = k;
+    sonar("clic"); renderEscena(); sincronizarEscenario(); renderHudObjetivo();
+  } else if (id[0] === "h") abrirModal({ tipo: "ficha", i: +id.slice(1) });
+});
 function tipoRival(clave) { return typeof PNJ !== "undefined" && PNJ[clave] ? "pnj" : "enemigo"; }
 function sincronizarEscenario() {
   const sc = S.esc;

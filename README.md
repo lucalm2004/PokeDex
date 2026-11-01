@@ -33,6 +33,7 @@ Juego de rol por turnos al estilo de Dungeons & Dragons, dibujado en pixel art (
 - **Progreso entre partidas:** el altar desbloquea al sátiro, veteranía, compañero fiel y provisiones; el Salón de los héroes guarda las últimas aventuras y los récords.
 - **Animaciones y sonido:** impulso y embestida, chispas, retroceso, temblor en críticos, enemigos que se funden en humo; música medieval generativa (laúd, arpa, órgano, tambores) y efectos sintetizados.
 - **Dificultad medida con bots:** Aventurero casi sin caídas, Héroe 1–2 caídas por partida, Pesadilla 2–4.
+- **Combate a pantalla completa:** el escenario ocupa toda la pantalla (cielo y suelo se prolongan) y la interfaz flota encima con marcos pixel art minimalistas y translúcidos; una ficha emergente sigue al enemigo al que apuntas (vida, rasgos, qué hará) y se cambia de objetivo tocándolo en la escena. Ventanas, avisos y opciones entran con animaciones a pasos.
 - **Arte HD:** escenario de 256×144 con héroes, monstruos, PNJ y mascotas de 64×64, jefes de 96×96, fondos e iconos nuevos. En el mapa, al tocar un camino se ve su paisaje entre la niebla.
 - **Ataques en equipo:** según la clase y la raza de los dos héroes, o con la mascota.
 - **Maná, comida y descanso:** las habilidades fuertes gastan maná; acampar gasta comida, cura, levanta a los caídos y recarga el maná.

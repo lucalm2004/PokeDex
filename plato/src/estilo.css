@@ -1003,3 +1003,65 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 @media (max-height: 760px) { .juego .intencion { line-height: 1.4; padding: 5px 10px; min-height: 26px; } }
 /* La fila de Objetos/Concentrarse ya no es fija: tapaba la segunda fila de habilidades cuando el panel desbordaba. */
 .juego .panel .fila-extra { position: static; box-shadow: none; background: none; padding-top: 0; }
+
+/* =====================================================================
+   Combate a pantalla completa: el escenario detrás de todo y la interfaz
+   flotando encima con marcos translúcidos.
+   ===================================================================== */
+.juego.modo-combate #caja-juego { position: fixed; inset: 0; z-index: 0; display: block !important; height: auto !important; overflow: hidden; pointer-events: auto; }
+.juego.modo-combate #caja-juego canvas { border-image: none !important; box-shadow: none !important; position: absolute; left: 0; top: 0; cursor: crosshair; }
+.juego.modo-combate > :not(#caja-juego) { position: relative; z-index: 2; }
+.juego.modo-combate .barra { margin: -10px -16px 0; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 14px; background: linear-gradient(180deg, rgba(6, 4, 8, .82), rgba(6, 4, 8, .45) 70%, transparent); }
+.juego.modo-combate #grupo { margin-top: auto; }
+.juego.modo-combate .panel { flex: none !important; max-height: 54vh; border-image-source: var(--px-hud) !important; padding: 10px 11px; }
+.juego.modo-combate .panel .rivales, .juego.modo-combate .panel .rival-info, .juego.modo-combate .panel .intencion { display: none; }
+.juego.modo-combate .mesa { padding: 4px 8px; margin: 0 -6px; background: rgba(6, 4, 8, .6); }
+.juego.modo-combate .anuncio { top: 70px; }
+.juego.modo-combate .opcion, .juego.modo-combate .boton.sec, .juego.modo-combate .lado { border-image-source: var(--px-boton); }
+.juego.modo-combate .heroe { border-image-source: var(--px-carta); }
+
+/* Ficha flotante del objetivo (con pico apuntando al enemigo). */
+.hud-obj { position: absolute; left: 0; top: 0; z-index: 3; width: min(220px, 62vw); display: grid; gap: 3px; padding: 7px 9px 8px; pointer-events: auto;
+  border: 0 solid transparent; border-image: var(--px-hud) 6 fill / 12px round; image-rendering: pixelated; transition: transform .18s steps(4); }
+.hud-obj::after { content: ""; position: absolute; left: var(--pico, 50%); bottom: -7px; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(70, 62, 80, .95); border-bottom: 0; }
+.hud-obj.pop { animation: popPx .32s steps(5); }
+.ho-cab { margin: 0; display: flex; align-items: center; gap: 6px; }
+.ho-cab b { flex: 1; min-width: 0; font-size: 13px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ho-cab span { font-size: 10px; color: var(--muted); }
+.ho-info { width: 18px; height: 18px; padding: 0; border: 0; background: rgba(255, 255, 255, .08); color: var(--muted); font-size: 11px; font-weight: 700; }
+.ho-vida { position: relative; display: block; height: 9px; background: #0d0907; box-shadow: 0 0 0 1px #000; }
+.ho-vida i { display: block; height: 100%; background: #c8352a; background-image: linear-gradient(180deg, rgba(255, 255, 255, .3) 0 34%, transparent 34% 70%, rgba(0, 0, 0, .25) 70%); transition: width .3s steps(6); }
+.ho-vida em { position: absolute; right: 3px; top: -1px; font-style: normal; font-size: 9px; line-height: 11px; color: #fff; text-shadow: 0 1px 0 #000; }
+.ho-rasgos { margin: 0; display: flex; flex-wrap: wrap; gap: 3px; }
+.ho-rasgos span, .ho-rasgos i { font-style: normal; font-size: 9.5px; padding: 0 5px; line-height: 15px; background: rgba(255, 255, 255, .07); color: var(--muted); }
+.ho-rasgos i { color: var(--c); box-shadow: inset 0 0 0 1px var(--c); }
+.ho-int { margin: 0; font-size: 10.5px; line-height: 1.3; color: #ffb3a6; }
+.ho-int b { color: #fff; }
+.ho-ayuda { margin: 0; font-size: 9.5px; color: var(--faint); }
+
+/* ---------- Ventanas emergentes dinámicas (animaciones a pasos, como en pixel art) ---------- */
+@keyframes popPx { 0% { transform: scale(.55); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes caePx { 0% { transform: translate(-50%, -40px); opacity: 0; } 70% { transform: translate(-50%, 4px); opacity: 1; } 100% { transform: translate(-50%, 0); } }
+@keyframes subePx { 0% { transform: translateY(26px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes brillaPx { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+.modal { animation: popPx .3s steps(5); transform-origin: 50% 80%; }
+.capa:not([hidden]) { animation: fundido .18s steps(3); }
+@keyframes fundido { from { opacity: 0; } }
+.aviso:not([hidden]) { animation: caePx .35s steps(6); }
+.precision .prec-caja { animation: popPx .26s steps(5); }
+.panel.entra > * { animation: subePx .32s steps(5) backwards; }
+.panel.entra > *:nth-child(2) { animation-delay: .04s; } .panel.entra > *:nth-child(3) { animation-delay: .08s; }
+.panel.entra > *:nth-child(4) { animation-delay: .12s; } .panel.entra > *:nth-child(5) { animation-delay: .16s; }
+.menu > .opcion, .talentos-op > .talento-op, .caminos > .camino { animation: subePx .3s steps(5) backwards; }
+.menu > .opcion:nth-child(2), .talentos-op > :nth-child(2), .caminos > :nth-child(2) { animation-delay: .05s; }
+.menu > .opcion:nth-child(3), .talentos-op > :nth-child(3), .caminos > :nth-child(3) { animation-delay: .1s; }
+.menu > .opcion:nth-child(4), .caminos > :nth-child(4) { animation-delay: .15s; }
+.heroe.activo { animation: brillaPx 1.2s steps(4) infinite; }
+.opcion:not(:disabled):hover { filter: brightness(1.12); }
+@media (max-height: 700px) {
+  .juego.ver-grafo .mapa { padding: 6px; }
+  .juego.ver-grafo .nodo { width: 34px; height: 34px; }
+  .juego.ver-grafo .nodo.jefe { width: 44px; height: 44px; }
+  .juego.ver-grafo .nodo canvas { transform: scale(.85); }
+}
+.juego.ver-grafo .mapa { overflow: hidden; }

@@ -1015,6 +1015,68 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 /* La fila de Objetos/Concentrarse ya no es fija: tapaba la segunda fila de habilidades cuando el panel desbordaba. */
 .juego .panel .fila-extra { position: static; box-shadow: none; background: none; padding-top: 0; }
 
+/* =====================================================================
+   Combate a pantalla completa: el escenario detrás de todo y la interfaz
+   flotando encima con marcos translúcidos.
+   ===================================================================== */
+.juego.modo-combate #caja-juego { position: fixed; inset: 0; z-index: 0; display: block !important; height: auto !important; overflow: hidden; pointer-events: auto; }
+.juego.modo-combate #caja-juego canvas { border-image: none !important; box-shadow: none !important; position: absolute; left: 0; top: 0; cursor: crosshair; }
+.juego.modo-combate > :not(#caja-juego) { position: relative; z-index: 2; }
+.juego.modo-combate .barra { margin: -10px -16px 0; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 14px; background: linear-gradient(180deg, rgba(6, 4, 8, .82), rgba(6, 4, 8, .45) 70%, transparent); }
+.juego.modo-combate #grupo { margin-top: auto; }
+.juego.modo-combate .panel { flex: none !important; max-height: 54vh; border-image-source: var(--px-hud) !important; padding: 10px 11px; }
+.juego.modo-combate .panel .rivales, .juego.modo-combate .panel .rival-info, .juego.modo-combate .panel .intencion { display: none; }
+.juego.modo-combate .mesa { padding: 4px 8px; margin: 0 -6px; background: rgba(6, 4, 8, .6); }
+.juego.modo-combate .anuncio { top: 70px; }
+.juego.modo-combate .opcion, .juego.modo-combate .boton.sec, .juego.modo-combate .lado { border-image-source: var(--px-boton); }
+.juego.modo-combate .heroe { border-image-source: var(--px-carta); }
+
+/* Ficha flotante del objetivo (con pico apuntando al enemigo). */
+.hud-obj { position: absolute; left: 0; top: 0; z-index: 3; width: min(220px, 62vw); display: grid; gap: 3px; padding: 7px 9px 8px; pointer-events: auto;
+  border: 0 solid transparent; border-image: var(--px-hud) 6 fill / 12px round; image-rendering: pixelated; transition: transform .18s steps(4); }
+.hud-obj::after { content: ""; position: absolute; left: var(--pico, 50%); bottom: -7px; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(70, 62, 80, .95); border-bottom: 0; }
+.hud-obj.pop { animation: popPx .32s steps(5); }
+.ho-cab { margin: 0; display: flex; align-items: center; gap: 6px; }
+.ho-cab b { flex: 1; min-width: 0; font-size: 13px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ho-cab span { font-size: 10px; color: var(--muted); }
+.ho-info { width: 18px; height: 18px; padding: 0; border: 0; background: rgba(255, 255, 255, .08); color: var(--muted); font-size: 11px; font-weight: 700; }
+.ho-vida { position: relative; display: block; height: 9px; background: #0d0907; box-shadow: 0 0 0 1px #000; }
+.ho-vida i { display: block; height: 100%; background: #c8352a; background-image: linear-gradient(180deg, rgba(255, 255, 255, .3) 0 34%, transparent 34% 70%, rgba(0, 0, 0, .25) 70%); transition: width .3s steps(6); }
+.ho-vida em { position: absolute; right: 3px; top: -1px; font-style: normal; font-size: 9px; line-height: 11px; color: #fff; text-shadow: 0 1px 0 #000; }
+.ho-rasgos { margin: 0; display: flex; flex-wrap: wrap; gap: 3px; }
+.ho-rasgos span, .ho-rasgos i { font-style: normal; font-size: 9.5px; padding: 0 5px; line-height: 15px; background: rgba(255, 255, 255, .07); color: var(--muted); }
+.ho-rasgos i { color: var(--c); box-shadow: inset 0 0 0 1px var(--c); }
+.ho-int { margin: 0; font-size: 10.5px; line-height: 1.3; color: #ffb3a6; }
+.ho-int b { color: #fff; }
+.ho-ayuda { margin: 0; font-size: 9.5px; color: var(--faint); }
+
+/* ---------- Ventanas emergentes dinámicas (animaciones a pasos, como en pixel art) ---------- */
+@keyframes popPx { 0% { transform: scale(.55); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes caePx { 0% { transform: translate(-50%, -40px); opacity: 0; } 70% { transform: translate(-50%, 4px); opacity: 1; } 100% { transform: translate(-50%, 0); } }
+@keyframes subePx { 0% { transform: translateY(26px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes brillaPx { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+.modal { animation: popPx .3s steps(5); transform-origin: 50% 80%; }
+.capa:not([hidden]) { animation: fundido .18s steps(3); }
+@keyframes fundido { from { opacity: 0; } }
+.aviso:not([hidden]) { animation: caePx .35s steps(6); }
+.precision .prec-caja { animation: popPx .26s steps(5); }
+.panel.entra > * { animation: subePx .32s steps(5) backwards; }
+.panel.entra > *:nth-child(2) { animation-delay: .04s; } .panel.entra > *:nth-child(3) { animation-delay: .08s; }
+.panel.entra > *:nth-child(4) { animation-delay: .12s; } .panel.entra > *:nth-child(5) { animation-delay: .16s; }
+.menu > .opcion, .talentos-op > .talento-op, .caminos > .camino { animation: subePx .3s steps(5) backwards; }
+.menu > .opcion:nth-child(2), .talentos-op > :nth-child(2), .caminos > :nth-child(2) { animation-delay: .05s; }
+.menu > .opcion:nth-child(3), .talentos-op > :nth-child(3), .caminos > :nth-child(3) { animation-delay: .1s; }
+.menu > .opcion:nth-child(4), .caminos > :nth-child(4) { animation-delay: .15s; }
+.heroe.activo { animation: brillaPx 1.2s steps(4) infinite; }
+.opcion:not(:disabled):hover { filter: brightness(1.12); }
+@media (max-height: 700px) {
+  .juego.ver-grafo .mapa { padding: 6px; }
+  .juego.ver-grafo .nodo { width: 34px; height: 34px; }
+  .juego.ver-grafo .nodo.jefe { width: 44px; height: 44px; }
+  .juego.ver-grafo .nodo canvas { transform: scale(.85); }
+}
+.juego.ver-grafo .mapa { overflow: hidden; }
+
 </style>
 </head>
 <body>
@@ -1517,28 +1579,30 @@ const INTERFAZ = (() => {
   const ORO = ["#4a2c0e", "#8a5a1c", "#c48a2c", "#f0c25a", "#fff0b0"];
   const BRONCE = ["#2e1b10", "#5c3a1f", "#8a5a30", "#b98448", "#e0b070"];
 
+  /* Remache de un píxel en cada esquina: el único adorno de la interfaz minimalista. */
+  const puntos = col => (g, px, py) => { g.set(px + 2, py + 2, col); };
   const TEXTURAS = {
-    /* Madera oscura con tablones horizontales, vetas y clavos; herrajes de hierro. */
+    /* Panel minimalista: fondo liso casi negro con un leve grano, borde de hierro fino y biselado. */
     panel: () => marco({
-      grosor: 4, luz: HIERRO[3], borde: HIERRO[2], sombra: HIERRO[0], interior: "#120c09", vetas: HIERRO[1],
-      fondo: (u, v) => {
-        const tablon = Math.floor(v / 8), filo = v % 8 === 7, desplaza = (u + tablon * 9) % 24;
-        if (filo) return "#140e0b";
-        if (desplaza === 0) return "#18110d";
-        const n = hash(u, v, tablon);
-        return n < 0.12 ? "#2a1f18" : n < 0.5 ? "#231914" : "#1f1612";
-      },
-      placa: placa(HIERRO, ORO)
+      grosor: 3, luz: "#5d5868", borde: "#38343f", sombra: "#0d0b10", interior: "#100d12",
+      fondo: (u, v) => (hash(u, v, 1) < 0.05 ? "#1d1820" : "#18141b"),
+      placa: puntos(ORO[3])
     }),
-    /* Losa de piedra tallada: botones. */
+    /* Versión translúcida para la interfaz que flota sobre el combate. */
+    hud: () => marco({
+      grosor: 3, luz: "rgba(255,240,210,0.45)", borde: "rgba(70,62,80,0.9)", sombra: "rgba(0,0,0,0.9)", interior: "rgba(0,0,0,0.55)",
+      fondo: (u, v) => (hash(u, v, 2) < 0.05 ? "rgba(24,19,28,0.8)" : "rgba(12,9,15,0.72)"),
+      placa: puntos(ORO[3])
+    }),
+    /* Botón: losa lisa con bisel claro arriba y sombra abajo. */
     boton: () => marco({
-      grosor: 3, luz: "#77728a", borde: "#4a4659", sombra: "#17151d", interior: "#211f2a",
-      fondo: (u, v) => { const n = hash(u, v, 3); return n < 0.08 ? "#3b3848" : n < 0.16 ? "#26242f" : "#2f2c3a"; }
+      grosor: 3, luz: "#7d7790", borde: "#45405a", sombra: "#120f18", interior: "#1d1a26",
+      fondo: (u, v) => (v < 2 ? "#3a3548" : hash(u, v, 3) < 0.05 ? "#332f40" : "#2b2737")
     }),
-    /* La misma losa hundida, al pulsar. */
+    /* El mismo botón hundido, al pulsar. */
     botonOn: () => marco({
-      grosor: 3, luz: "#17151d", borde: "#3a3747", sombra: "#5d596e", interior: "#17151d",
-      fondo: (u, v) => { const n = hash(u, v, 3); return n < 0.08 ? "#302d3c" : "#25232e"; }
+      grosor: 3, luz: "#120f18", borde: "#3a3548", sombra: "#615b74", interior: "#120f18",
+      fondo: () => "#221f2c"
     }),
     /* Marco dorado: lo elegido, lo activo. */
     sel: () => marco({
@@ -1552,15 +1616,10 @@ const INTERFAZ = (() => {
       fondo: (u, v) => { const n = hash(u, v, 9); return v < 3 ? "#b8323c" : n < 0.1 ? "#7a1a24" : "#93222e"; },
       placa: (g, px, py) => { g.set(px + 2, py + 2, ORO[4]).set(px + 3, py + 2, ORO[3]).set(px + 2, py + 3, ORO[3]).set(px + 3, py + 3, ORO[1]); }
     }),
-    /* Cuero curtido con costura: las fichas de los héroes. */
+    /* Ficha de héroe: translúcida con ribete de bronce fino. */
     carta: () => marco({
-      grosor: 3, luz: BRONCE[4], borde: BRONCE[2], sombra: BRONCE[0], interior: "#1a110c",
-      fondo: (u, v, x, y) => {
-        const costura = (x === 4 || y === 4 || x === N - 5 || y === N - 5) && (x + y) % 3 === 0;
-        if (costura) return "#8a6a48";
-        const n = hash(u, v, 11);
-        return n < 0.1 ? "#3a2619" : n < 0.4 ? "#2f1f15" : "#2a1b12";
-      }
+      grosor: 2, luz: BRONCE[4], borde: BRONCE[2], sombra: "rgba(0,0,0,0.9)", interior: "rgba(0,0,0,0.6)",
+      fondo: (u, v) => (v < 1 ? "rgba(70,48,30,0.75)" : "rgba(16,11,10,0.74)")
     }),
     /* Pergamino: los textos de la historia. */
     pergamino: () => marco({
@@ -22961,6 +23020,8 @@ const ESCENARIO = (() => {
     const vb = viejoBuf.getContext("2d");
     const ctx = lienzo.getContext("2d");
     let vista = { fondo: "taberna", heroes: [], rival: null, activo: -1 };
+    /* Pantalla completa (combate): el escenario se alarga por arriba (cielo) y por abajo (suelo) hasta llenar la pantalla. */
+    let completa = null, ext = { arriba: 0, abajo: 0 }, escCss = 1;
     const efectos = [];
     /* Partículas: chispas de impacto, polvo, humo de muerte, destellos de conjuro. */
     const parts = [];
@@ -22971,8 +23032,23 @@ const ESCENARIO = (() => {
 
     function ajustar() {
       const caja = lienzo.parentElement;
-      if (!caja || !caja.offsetParent) return;
+      if (!caja || (!caja.offsetParent && !(completa && caja.getClientRects().length))) return;
       const dpr = window.devicePixelRatio || 1;
+      if (completa) {
+        const aw = window.innerWidth, ah = window.innerHeight, sc = aw / W;
+        const arriba = Math.max(0, Math.round(completa.fin / sc - H)), total = Math.max(H, Math.ceil(ah / sc));
+        ext = { arriba, abajo: Math.max(0, total - H - arriba) };
+        escCss = sc;
+        if (buf.height !== total) buf.height = total;
+        const pw = Math.round(aw * dpr), ph = Math.round(total * sc * dpr);
+        if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
+        const cw = aw + "px", ch = total * sc + "px";
+        if (lienzo.style.width !== cw || lienzo.style.height !== ch) { lienzo.style.width = cw; lienzo.style.height = ch; }
+        caja.style.height = "";
+        return;
+      }
+      ext = { arriba: 0, abajo: 0 };
+      if (buf.height !== H) buf.height = H;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
       let s = Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H);
@@ -22981,6 +23057,7 @@ const ESCENARIO = (() => {
       if (ent >= 1 && ent >= s * 0.86) s = ent;
       s = Math.max(1, s);
       const pw = Math.round(W * s), ph = Math.round(H * s);
+      escCss = s / dpr;
       if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
       const cw = pw / dpr + "px", ch = ph / dpr + "px";
       if (lienzo.style.width !== cw) { lienzo.style.width = cw; lienzo.style.height = ch; }
@@ -23071,6 +23148,32 @@ const ESCENARIO = (() => {
       if (f) PX.texto(b, "z", Math.round(x + 5), Math.round(y - 4 - f), R.mar[3]);
     }
 
+    const cacheExt = new Map();
+    /* Cielo y suelo prolongados a partir de la primera y la última fila del fondo, oscureciendo con tramado. */
+    function extension(clave, arriba, abajo) {
+      const k = `${clave}|${arriba}|${abajo}`;
+      if (cacheExt.has(k)) return cacheExt.get(k);
+      const fd = fondo(clave), tmp = Object.assign(document.createElement("canvas"), { width: W, height: H }), t = tmp.getContext("2d");
+      t.imageSmoothingEnabled = false;
+      t.drawImage(fd.cv, 0, 0, W, H);
+      const px = t.getImageData(0, 0, W, H).data;
+      const media = (x, y0, y1) => { let r = 0, g = 0, bl = 0, n = 0; for (let y = y0; y <= y1; y++) for (let dx = -1; dx <= 1; dx++) { const xx = Math.max(0, Math.min(W - 1, x + dx)), i = (y * W + xx) * 4; r += px[i]; g += px[i + 1]; bl += px[i + 2]; n++; } return [r / n, g / n, bl / n]; };
+      const cv = Object.assign(document.createElement("canvas"), { width: W, height: arriba + H + abajo }), c = cv.getContext("2d");
+      const pon = (x, y, [r, g, bl], f) => { c.fillStyle = `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(bl * f)})`; c.fillRect(x, y, 1, 1); };
+      /* Color medio de toda la primera fila: hacia arriba, cada columna se funde con él (sin franjas). */
+      const filaMedia = [0, 1, 2].map(k => { let t = 0; for (let x = 0; x < W; x++) t += media(x, 0, 2)[k]; return t / W; });
+      for (let x = 0; x < W; x++) {
+        const cielo = media(x, 0, 2), suelo = media(x, H - 4, H - 1);
+        for (let j = 0; j < arriba; j++) {
+          const d = (arriba - j) / Math.max(1, arriba), mezcla = Math.min(1, d * 1.6 + (PX.umbral(x, j) - 0.5) * 0.25);
+          const col = cielo.map((v, k) => v * (1 - mezcla) + filaMedia[k] * mezcla);
+          pon(x, j, col, Math.max(0.16, 1 - d * 0.8));
+        }
+        for (let j = 0; j < abajo; j++) { const d = j / Math.max(1, abajo); const ruido = PX.umbral(x * 3, j) < 0.12 ? 0.85 : 1; pon(x, arriba + H + j, suelo, Math.max(0.1, (1 - d * 0.92) * ruido)); }
+      }
+      cacheExt.set(k, cv);
+      return cv;
+    }
     function pintarFondo(ahora) {
       const fd = fondo(vista.fondo);
       if (fd.viejo) {
@@ -23123,8 +23226,10 @@ const ESCENARIO = (() => {
       }
     }
     function pintar(ahora) {
-      b.clearRect(0, 0, W, H);
+      b.clearRect(0, 0, W, buf.height);
+      if (ext.arriba || ext.abajo) b.drawImage(extension(vista.fondo, ext.arriba, ext.abajo), 0, 0);
       b.save();
+      b.translate(0, ext.arriba);
       if (temblor > ahora && !reducido) b.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
       pintarFondo(ahora);
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
@@ -23146,7 +23251,7 @@ const ESCENARIO = (() => {
           const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
           sombraSuelo(a.fx, a.fy, Math.max(12, v.ancho * 0.7));
           b.drawImage(blanco ? v.blanco : v.normal, x, y);
-          marcas.m = { alto: v.pie - v.cima };
+          marcas.m = { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: y + v.cima, y1: a.fy, cx: a.fx };
           continue;
         }
         if (a.h) {
@@ -23167,7 +23272,7 @@ const ESCENARIO = (() => {
           if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = 0.25; b.drawImage(img, x - Math.sign(dx) * 6, y); b.globalAlpha = 1; }
           b.drawImage(img, x, y);
           const cima = y + v.cima;
-          marcas[a.id] = { alto: v.pie - v.cima };
+          marcas[a.id] = { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: cima, y1: a.fy, cx: a.fx };
           if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, cima - 10 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
           if (a.h.aturdido) zz(a.fx + 8, cima - 2, ahora);
           puntos(a.fx + 1, cima - (vista.activo === a.i ? 17 : 8), a.h.estados);
@@ -23194,7 +23299,7 @@ const ESCENARIO = (() => {
           b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
           b.globalAlpha = 1;
           const cima = iy + v.cima;
-          marcas[a.id] = { alto: v.pie - v.cima };
+          marcas[a.id] = r.derrotado ? null : { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: cima, y1: a.fy, cx: a.fx };
           if (r.tipo === "enemigo" && r.max) {
             const ancho = v.h > 60 ? 46 : 32;
             const by = Math.max(4, cima - 7);
@@ -23258,13 +23363,33 @@ const ESCENARIO = (() => {
         }
       }
       pintarParticulas(ahora);
+      if (!ext.arriba && !ext.abajo) b.drawImage(capaVineta(), 0, 0);
       b.restore();
-      b.drawImage(capaVineta(), 0, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(buf, 0, 0, lienzo.width, lienzo.height);
     }
 
-    const inst = { mostrar, efecto, ajustar, pintar, lienzo, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
+    /* Qué actor hay en un punto del lienzo (px CSS) y dónde está la cabeza de un actor en pantalla. */
+    function actorEn(x, y) {
+      const ax = x / escCss, ay = y / escCss - ext.arriba;
+      let mejor = null, d = 1e9;
+      for (const [id, m] of Object.entries(marcas)) {
+        if (!m || m.x0 === undefined) continue;
+        if (ax >= m.x0 - 4 && ax <= m.x1 + 4 && ay >= m.y0 - 6 && ay <= m.y1 + 2) { const dd = Math.abs(ax - m.cx); if (dd < d) { d = dd; mejor = id; } }
+      }
+      return mejor;
+    }
+    function pantalla(id) {
+      const m = marcas[id];
+      if (!m || m.x0 === undefined) return null;
+      return { x: m.cx * escCss, y: (m.y0 + ext.arriba) * escCss, pie: (m.y1 + ext.arriba) * escCss };
+    }
+    function ponerCompleta(fin) {
+      const nuevo = fin === null ? null : { fin };
+      if (JSON.stringify(nuevo) === JSON.stringify(completa)) return;
+      completa = nuevo; ajustar();
+    }
+    const inst = { mostrar, efecto, ajustar, pintar, lienzo, actorEn, pantalla, completa: ponerCompleta, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
     instancias.add(inst);
     return inst;
   }
@@ -23274,7 +23399,7 @@ const ESCENARIO = (() => {
     requestAnimationFrame(bucle);
     if (ahora - ultimo < 1000 / 30) return;
     ultimo = ahora;
-    for (const i of instancias) if (i.lienzo.isConnected && i.lienzo.offsetParent !== null) i.pintar(ahora);
+    for (const i of instancias) if (i.lienzo.isConnected && i.lienzo.getClientRects().length) i.pintar(ahora);
   }
   requestAnimationFrame(bucle);
 
@@ -27201,6 +27326,8 @@ function renderJuego() {
   const historiaLarga = vivo && S.esc && S.fase !== "resultado" && (S.esc.historia || S.esc.viaje || (S.esc.tipo === "prueba" && (S.esc.opciones || []).length >= 4 && window.innerHeight < 700));
   const enPanel = enTienda || historiaLarga || !!S.final || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
+  const enCombateLleno = vivo && !!S.combate && !enPanel;
+  $("#p-juego").classList.toggle("modo-combate", enCombateLleno);
   $("#p-juego").classList.toggle("ver-grafo", enMapa && verGrafo);
   $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
@@ -27226,7 +27353,56 @@ function renderJuego() {
   renderJuego.turno = turnoClave;
   const u = S.log[S.log.length - 1];
   if (u && !$("#dado-info").textContent.trim()) $("#dado-info").textContent = u.t;
+  /* En combate el escenario ocupa toda la pantalla y la interfaz flota encima: se mide dónde empieza el HUD. */
+  if (enCombateLleno) { const g = $("#grupo").getBoundingClientRect(); escJuego.completa(Math.round(g.top - 4)); }
+  else escJuego.completa(null);
+  renderHudObjetivo();
 }
+/* Ficha flotante del enemigo al que apuntas: nombre, vida, rasgos y qué hará; sigue al enemigo en pantalla. */
+function renderHudObjetivo() {
+  let el = $("#hud-obj");
+  const c = S && S.combate;
+  if (!c || !$("#p-juego").classList.contains("modo-combate")) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement("div"); el.id = "hud-obj"; el.className = "hud-obj"; $("#caja-juego").appendChild(el); }
+  const t = miObjetivo(), r = c.rivales[t];
+  if (!r || r.hp <= 0) { el.hidden = true; return; }
+  const e = ENEMIGOS[r.clave], varios = c.rivales.filter(x => x.hp > 0).length > 1;
+  const rasgos = [r.mod ? r.mod.nombre : c.elite && !r.esbirro ? "élite" : "", r.debil ? `débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `resiste ${TIPOS_DANO[r.resiste]}` : "", r.jefe && r.fase === 2 ? "fase 2" : ""].filter(Boolean);
+  const ests = Object.keys(r.est || {}).filter(k => ESTADOS[k]).map(k => `<i style="--c:${ESTADOS[k].color}">${ESTADOS[k].nombre}</i>`).join("");
+  const html = `<p class="ho-cab"><b>${esc(r.nombre)}</b><span>CA ${caRival(r)}</span><button type="button" class="ho-info" data-ui="bestia" data-k="${r.clave}" aria-label="Bestiario">?</button></p>
+    <span class="ho-vida"><i style="width:${Math.round((100 * r.hp) / r.hpMax)}%"></i><em>${r.hp}/${r.hpMax}</em></span>
+    ${rasgos.length || ests ? `<p class="ho-rasgos">${rasgos.map(x => `<span>${esc(x)}</span>`).join("")}${ests}</p>` : ""}
+    ${c.fase === "plan" ? `<p class="ho-int">${intencion(c, t)}</p>` : ""}${varios && c.fase === "plan" ? `<p class="ho-ayuda">Toca otro enemigo para cambiar</p>` : ""}`;
+  if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+  if (el.dataset.t !== String(t)) { el.dataset.t = String(t); el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+  el.hidden = false;
+  posicionarHud();
+}
+function posicionarHud() {
+  const el = $("#hud-obj");
+  if (!el || el.hidden || !S || !S.combate || !escJuego) return;
+  const pos = escJuego.pantalla("e" + miObjetivo());
+  if (!pos) return;
+  const w = el.offsetWidth, h = el.offsetHeight, bar = $(".barra").getBoundingClientRect().bottom + 4;
+  const x = Math.max(6, Math.min(window.innerWidth - w - 6, pos.x - w / 2));
+  const y = Math.max(bar, pos.y - h - 14);
+  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  el.style.setProperty("--pico", `${Math.round(Math.max(10, Math.min(w - 10, pos.x - x)))}px`);
+}
+setInterval(posicionarHud, 200);
+/* En combate, tocar a un enemigo en el escenario le apunta; tocar a un héroe abre su ficha. */
+document.addEventListener("click", ev => {
+  const cv = ev.target.closest && ev.target.closest("#lienzo");
+  if (!cv || !S || !S.combate || !escJuego || !$("#p-juego").classList.contains("modo-combate")) return;
+  const r = cv.getBoundingClientRect(), id = escJuego.actorEn(ev.clientX - r.left, ev.clientY - r.top);
+  if (!id) return;
+  if (id[0] === "e") {
+    const k = +id.slice(1);
+    if (!S.combate.rivales[k] || S.combate.rivales[k].hp <= 0) return;
+    objetivoLocal = k; if (!S.online) S.combate.objetivo = k;
+    sonar("clic"); renderEscena(); sincronizarEscenario(); renderHudObjetivo();
+  } else if (id[0] === "h") abrirModal({ tipo: "ficha", i: +id.slice(1) });
+});
 function tipoRival(clave) { return typeof PNJ !== "undefined" && PNJ[clave] ? "pnj" : "enemigo"; }
 function sincronizarEscenario() {
   const sc = S.esc;

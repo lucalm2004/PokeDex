@@ -171,6 +171,8 @@ const ESCENARIO = (() => {
     const vb = viejoBuf.getContext("2d");
     const ctx = lienzo.getContext("2d");
     let vista = { fondo: "taberna", heroes: [], rival: null, activo: -1 };
+    /* Pantalla completa (combate): el escenario se alarga por arriba (cielo) y por abajo (suelo) hasta llenar la pantalla. */
+    let completa = null, ext = { arriba: 0, abajo: 0 }, escCss = 1;
     const efectos = [];
     /* Partículas: chispas de impacto, polvo, humo de muerte, destellos de conjuro. */
     const parts = [];
@@ -181,8 +183,23 @@ const ESCENARIO = (() => {
 
     function ajustar() {
       const caja = lienzo.parentElement;
-      if (!caja || !caja.offsetParent) return;
+      if (!caja || (!caja.offsetParent && !(completa && caja.getClientRects().length))) return;
       const dpr = window.devicePixelRatio || 1;
+      if (completa) {
+        const aw = window.innerWidth, ah = window.innerHeight, sc = aw / W;
+        const arriba = Math.max(0, Math.round(completa.fin / sc - H)), total = Math.max(H, Math.ceil(ah / sc));
+        ext = { arriba, abajo: Math.max(0, total - H - arriba) };
+        escCss = sc;
+        if (buf.height !== total) buf.height = total;
+        const pw = Math.round(aw * dpr), ph = Math.round(total * sc * dpr);
+        if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
+        const cw = aw + "px", ch = total * sc + "px";
+        if (lienzo.style.width !== cw || lienzo.style.height !== ch) { lienzo.style.width = cw; lienzo.style.height = ch; }
+        caja.style.height = "";
+        return;
+      }
+      ext = { arriba: 0, abajo: 0 };
+      if (buf.height !== H) buf.height = H;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
       let s = Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H);
@@ -191,6 +208,7 @@ const ESCENARIO = (() => {
       if (ent >= 1 && ent >= s * 0.86) s = ent;
       s = Math.max(1, s);
       const pw = Math.round(W * s), ph = Math.round(H * s);
+      escCss = s / dpr;
       if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
       const cw = pw / dpr + "px", ch = ph / dpr + "px";
       if (lienzo.style.width !== cw) { lienzo.style.width = cw; lienzo.style.height = ch; }
@@ -281,6 +299,32 @@ const ESCENARIO = (() => {
       if (f) PX.texto(b, "z", Math.round(x + 5), Math.round(y - 4 - f), R.mar[3]);
     }
 
+    const cacheExt = new Map();
+    /* Cielo y suelo prolongados a partir de la primera y la última fila del fondo, oscureciendo con tramado. */
+    function extension(clave, arriba, abajo) {
+      const k = `${clave}|${arriba}|${abajo}`;
+      if (cacheExt.has(k)) return cacheExt.get(k);
+      const fd = fondo(clave), tmp = Object.assign(document.createElement("canvas"), { width: W, height: H }), t = tmp.getContext("2d");
+      t.imageSmoothingEnabled = false;
+      t.drawImage(fd.cv, 0, 0, W, H);
+      const px = t.getImageData(0, 0, W, H).data;
+      const media = (x, y0, y1) => { let r = 0, g = 0, bl = 0, n = 0; for (let y = y0; y <= y1; y++) for (let dx = -1; dx <= 1; dx++) { const xx = Math.max(0, Math.min(W - 1, x + dx)), i = (y * W + xx) * 4; r += px[i]; g += px[i + 1]; bl += px[i + 2]; n++; } return [r / n, g / n, bl / n]; };
+      const cv = Object.assign(document.createElement("canvas"), { width: W, height: arriba + H + abajo }), c = cv.getContext("2d");
+      const pon = (x, y, [r, g, bl], f) => { c.fillStyle = `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(bl * f)})`; c.fillRect(x, y, 1, 1); };
+      /* Color medio de toda la primera fila: hacia arriba, cada columna se funde con él (sin franjas). */
+      const filaMedia = [0, 1, 2].map(k => { let t = 0; for (let x = 0; x < W; x++) t += media(x, 0, 2)[k]; return t / W; });
+      for (let x = 0; x < W; x++) {
+        const cielo = media(x, 0, 2), suelo = media(x, H - 4, H - 1);
+        for (let j = 0; j < arriba; j++) {
+          const d = (arriba - j) / Math.max(1, arriba), mezcla = Math.min(1, d * 1.6 + (PX.umbral(x, j) - 0.5) * 0.25);
+          const col = cielo.map((v, k) => v * (1 - mezcla) + filaMedia[k] * mezcla);
+          pon(x, j, col, Math.max(0.16, 1 - d * 0.8));
+        }
+        for (let j = 0; j < abajo; j++) { const d = j / Math.max(1, abajo); const ruido = PX.umbral(x * 3, j) < 0.12 ? 0.85 : 1; pon(x, arriba + H + j, suelo, Math.max(0.1, (1 - d * 0.92) * ruido)); }
+      }
+      cacheExt.set(k, cv);
+      return cv;
+    }
     function pintarFondo(ahora) {
       const fd = fondo(vista.fondo);
       if (fd.viejo) {
@@ -333,8 +377,10 @@ const ESCENARIO = (() => {
       }
     }
     function pintar(ahora) {
-      b.clearRect(0, 0, W, H);
+      b.clearRect(0, 0, W, buf.height);
+      if (ext.arriba || ext.abajo) b.drawImage(extension(vista.fondo, ext.arriba, ext.abajo), 0, 0);
       b.save();
+      b.translate(0, ext.arriba);
       if (temblor > ahora && !reducido) b.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
       pintarFondo(ahora);
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
@@ -356,7 +402,7 @@ const ESCENARIO = (() => {
           const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
           sombraSuelo(a.fx, a.fy, Math.max(12, v.ancho * 0.7));
           b.drawImage(blanco ? v.blanco : v.normal, x, y);
-          marcas.m = { alto: v.pie - v.cima };
+          marcas.m = { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: y + v.cima, y1: a.fy, cx: a.fx };
           continue;
         }
         if (a.h) {
@@ -377,7 +423,7 @@ const ESCENARIO = (() => {
           if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = 0.25; b.drawImage(img, x - Math.sign(dx) * 6, y); b.globalAlpha = 1; }
           b.drawImage(img, x, y);
           const cima = y + v.cima;
-          marcas[a.id] = { alto: v.pie - v.cima };
+          marcas[a.id] = { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: cima, y1: a.fy, cx: a.fx };
           if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, cima - 10 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
           if (a.h.aturdido) zz(a.fx + 8, cima - 2, ahora);
           puntos(a.fx + 1, cima - (vista.activo === a.i ? 17 : 8), a.h.estados);
@@ -404,7 +450,7 @@ const ESCENARIO = (() => {
           b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
           b.globalAlpha = 1;
           const cima = iy + v.cima;
-          marcas[a.id] = { alto: v.pie - v.cima };
+          marcas[a.id] = r.derrotado ? null : { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: cima, y1: a.fy, cx: a.fx };
           if (r.tipo === "enemigo" && r.max) {
             const ancho = v.h > 60 ? 46 : 32;
             const by = Math.max(4, cima - 7);
@@ -468,13 +514,33 @@ const ESCENARIO = (() => {
         }
       }
       pintarParticulas(ahora);
+      if (!ext.arriba && !ext.abajo) b.drawImage(capaVineta(), 0, 0);
       b.restore();
-      b.drawImage(capaVineta(), 0, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(buf, 0, 0, lienzo.width, lienzo.height);
     }
 
-    const inst = { mostrar, efecto, ajustar, pintar, lienzo, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
+    /* Qué actor hay en un punto del lienzo (px CSS) y dónde está la cabeza de un actor en pantalla. */
+    function actorEn(x, y) {
+      const ax = x / escCss, ay = y / escCss - ext.arriba;
+      let mejor = null, d = 1e9;
+      for (const [id, m] of Object.entries(marcas)) {
+        if (!m || m.x0 === undefined) continue;
+        if (ax >= m.x0 - 4 && ax <= m.x1 + 4 && ay >= m.y0 - 6 && ay <= m.y1 + 2) { const dd = Math.abs(ax - m.cx); if (dd < d) { d = dd; mejor = id; } }
+      }
+      return mejor;
+    }
+    function pantalla(id) {
+      const m = marcas[id];
+      if (!m || m.x0 === undefined) return null;
+      return { x: m.cx * escCss, y: (m.y0 + ext.arriba) * escCss, pie: (m.y1 + ext.arriba) * escCss };
+    }
+    function ponerCompleta(fin) {
+      const nuevo = fin === null ? null : { fin };
+      if (JSON.stringify(nuevo) === JSON.stringify(completa)) return;
+      completa = nuevo; ajustar();
+    }
+    const inst = { mostrar, efecto, ajustar, pintar, lienzo, actorEn, pantalla, completa: ponerCompleta, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
     instancias.add(inst);
     return inst;
   }
@@ -484,7 +550,7 @@ const ESCENARIO = (() => {
     requestAnimationFrame(bucle);
     if (ahora - ultimo < 1000 / 30) return;
     ultimo = ahora;
-    for (const i of instancias) if (i.lienzo.isConnected && i.lienzo.offsetParent !== null) i.pintar(ahora);
+    for (const i of instancias) if (i.lienzo.isConnected && i.lienzo.getClientRects().length) i.pintar(ahora);
   }
   requestAnimationFrame(bucle);
 
