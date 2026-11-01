@@ -64,7 +64,62 @@
   const FUEGO = R.fuego;
 
   /* ---------- Utilidades ---------- */
-  const capa = () => new Capa(W, W);
+  /* Capa con el mismo sombreado por relieve que PX.Capa, pero que solo recorre la caja que ocupa la máscara
+     (el resultado es idéntico y mucho más rápido en rejillas de 64×64). */
+  class CapaR extends Capa {
+    pintar(rej, rampa, op = {}) {
+      const w = this.w, h = this.h, m = this.m;
+      let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[y * w + x]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) return rej;
+      if (op.plano !== undefined) {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y * w + x]) rej.set(x, y, rampa[op.plano], rampa);
+        return rej;
+      }
+      const Rr = op.relieve || 4;
+      const d = new Float32Array(w * h);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y * w + x]) d[y * w + x] = 1e6;
+      const D = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[y * w + x]);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * w + x;
+        if (!d[i]) continue;
+        d[i] = Math.min(d[i], D(x - 1, y) + 1, D(x, y - 1) + 1, D(x - 1, y - 1) + 1.414, D(x + 1, y - 1) + 1.414);
+      }
+      for (let y = y1; y >= y0; y--) for (let x = x1; x >= x0; x--) {
+        const i = y * w + x;
+        if (!d[i]) continue;
+        d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
+      }
+      const alto = (x, y) => {
+        if (x < 0 || y < 0 || x >= w || y >= h || !m[y * w + x]) return 0;
+        const v = Math.min(d[y * w + x], Rr) / Rr;
+        return Math.sqrt(1 - (1 - v) * (1 - v));
+      };
+      const L = op.luz || [-0.5, -0.62, 0.6];
+      const ln = Math.hypot(L[0], L[1], L[2]);
+      const lx = L[0] / ln, ly = L[1] / ln, lz = L[2] / ln;
+      const k = op.fuerza || 2.4, sesgo = op.sesgo || 0;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        if (!m[y * w + x]) continue;
+        const nx = (alto(x - 1, y) - alto(x + 1, y)) * 0.5 * k;
+        const ny = (alto(x, y - 1) - alto(x, y + 1)) * 0.5 * k;
+        const nl = Math.hypot(nx, ny, 1);
+        const l = (nx * lx + ny * ly + lz) / nl + sesgo;
+        let t = l > 0.965 ? 4 : l > 0.74 ? 3 : l > 0.4 ? 2 : l > 0.02 ? 1 : 0;
+        if (t === 0 && !op.profundo) t = 1;
+        if (op.max !== undefined) t = Math.min(t, op.max);
+        if (op.min !== undefined) t = Math.max(t, op.min);
+        if (op.separar) {
+          const tiene = (a, b) => a >= 0 && b >= 0 && a < w && b < h && m[b * w + a];
+          const borde = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !tiene(x + a, y + b) && rej.get(x + a, y + b));
+          if (borde) t = Math.min(t, op.separar === true ? 1 : op.separar);
+        }
+        rej.set(x, y, rampa[Math.min(t, rampa.length - 1)], rampa);
+      }
+      return rej;
+    }
+  }
+  const capa = () => new CapaR(W, W);
   const lim = (v, a, b) => (v < a ? a : v > b ? b : v);
   const pon = (g, ram, k, ...pts) => { for (const [x, y] of pts) g.set(x, y, ram[lim(k, 0, 4)], ram); return g; };
   const tonoDe = (g, x, y, ram) => (g.rampa(x, y) === ram ? ram.indexOf(g.get(x, y)) : -1);

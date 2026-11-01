@@ -497,9 +497,15 @@
     /* Una grieta en el cráneo. */
     trazo(g, craneo, Hu, 0, [51, 11, 52, 14, 51, 16]); pon(g, Hu, 4, [52, 11]);
     /* Cuencas: hondas, con el fuego fatuo dentro. */
-    for (const [x0, y0, w, h] of [[42, 18, 4, 3], [48, 18, 4, 3]]) {
-      new Capa(W, H).rect(x0, y0, w, h).off(x0, y0 + h - 1).off(x0 + w - 1, y0 + h - 1).pintar(g, NEGRO, { plano: 0 });
-      pon(g, E, 4, [x0 + 1, y0 + 1]); pon(g, E, 3, [x0 + 2, y0 + 1], [x0 + 1, y0]); pon(g, E, 2, [x0 + 2, y0], [x0 + 1, y0 + 2]);
+    /* El borde de arriba de cada cuenca baja hacia la nariz: un ceño de hueso, con mala cara. */
+    for (const [x0, lado] of [[42, 1], [48, -1]]) {
+      const c = new Capa(W, H).rect(x0, 18, 4, 4).off(x0, 21).off(x0 + 3, 21);
+      c.off(lado > 0 ? x0 + 3 : x0, 18); c.off(lado > 0 ? x0 : x0 + 3, 18);
+      c.pintar(g, NEGRO, { plano: 0 });
+      const ci = lado > 0 ? x0 + 2 : x0 + 1;
+      pon(g, E, 4, [ci, 19]); pon(g, E, 3, [ci - lado, 19], [ci, 20]); pon(g, E, 2, [ci - lado, 20], [ci + lado, 20]);
+      trazo(g, null, Hu, 1, lado > 0 ? [x0, 17, x0 + 4, 18] : [x0 - 1, 18, x0 + 3, 17]);
+      pon(g, Hu, 4, lado > 0 ? [x0, 16] : [x0 + 3, 16]);
     }
     /* Nariz y dientes. */
     pon(g, NEGRO, 0, [46, 22], [46, 23], [45, 23], [47, 23]);
@@ -555,7 +561,7 @@
     /* Chispas de fuego fatuo, sin contorno, y las llamas que salen de las cuencas. */
     for (const [x, y, k] of [[67, 3, 3], [86, 6, 4], [84, 16, 2], [69, 14, 3], [7, 3, 3], [22, 2, 4], [4, 13, 2], [25, 20, 3], [9, 22, 2], [80, 0, 3], [89, 11, 2], [64, 9, 2], [28, 12, 2], [3, 30, 2], [30, 4, 2]])
       if (!g.get(x, y)) pon(g, E, k, [x, y]);
-    for (const [x, y] of [[43, 17], [49, 17]]) { pon(g, E, 3, [x + 1, y]); pon(g, E, 4, [x + 2, y - 1]); }
+    
     destello(g, 15, 2, E, 2);
     destello(g, gx, gy - 9, E, 1);
     return g;

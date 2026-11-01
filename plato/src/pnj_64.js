@@ -620,7 +620,7 @@
     cada(g, Pe, 0, 0, W - 1, t.torTop, (i, j, k) => { if (k >= 2 && (i * 2 + j) % 5 === 0) pon(g, Pe, k - 1, [i, j]); });
     pon(g, Pe, 4, [x - 6, t.cabY - 5], [x - 5, t.cabY - 5], [x - 7, t.cabY - 4], [x - 4, t.cabY - 6]);
     const cofia = capa().ell(x + 2, t.cabY - 4.4, t.cabRx - 0.4, t.cabRy - 3.2);
-    todo((i, j) => { if (i < x - 4) cofia.off(i, j); if (j > t.cabY - 2 && i < x + 4) cofia.off(i, j); if (j > t.cabY + 1) cofia.off(i, j); });
+    todo((i, j) => { if (i < x - 4) cofia.off(i, j); if (j > t.cabY - 4 && i < x + 4) cofia.off(i, j); if (j > t.cabY + 1) cofia.off(i, j); });
     cofia.pintar(g, B, { relieve: 2.8, min: 2, separar: true });
     /* Volante del borde: festón de puntos claros con su sombra debajo. */
     todo((i, j) => { if (cofia.tiene(i, j) && !cofia.tiene(i, j + 1)) { pon(g, B, i % 2 ? 4 : 3, [i, j + 1]); if (i % 2) ponSi(g, [Pe, P], B, 2, [i, j + 2]); } });
