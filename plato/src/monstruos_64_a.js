@@ -718,10 +718,10 @@
     surco(g, F, 4, 50, 38, 53, 35, F); surco(g, F, 1, 50, 39, 53, 36, F);
     /* Piernas: fémur, rótula, tibia y peroné, y los huesos del pie. */
     hueso(34.6, 46, 36.2, 51.2, 1.1, { max: 3 });
-    hueso(37.8, 52.8, 38.8, 58, 0.5, { max: 2 }); hueso(36, 52.4, 37, 58.4, 0.9, { max: 3 });
+    hueso(36, 52.6, 37, 58.4, 0.7, { max: 3 });
     volumen(g, H, [["e", 39.4, 60.6, 2.9, 1.6, 0], ["e", 37.6, 59.6, 1.6, 1.3, 1]], { max: 3, min: 1, separar: true });
     hueso(27, 46, 25.2, 51.2, 1.1);
-    hueso(27, 52.8, 25.8, 58, 0.5, { max: 3 }); hueso(25.2, 52.4, 24, 58.4, 0.9);
+    hueso(25.2, 52.6, 24, 58.4, 0.7);
     volumen(g, H, [["e", 22, 60.6, 3, 1.6, 0], ["e", 24.2, 59.6, 1.6, 1.3, 1]], { min: 1, separar: true });
     for (const i of [19, 21, 23, 38, 40, 42]) pon(g, H, 1, [i, 62]);
     pon(g, H, 4, [19, 60], [37, 60]);
@@ -738,9 +738,8 @@
     volumen(g, H, [["e", 25.6, 35.6, 2.6, 1.4, 0], ["e", 35, 35.6, 2.6, 1.4, 0]], { min: 1, separar: true, detras: true });
     for (let j = 31; j <= 35; j += 1.4) volumen(g, H, [["e", 30, j, 1.6, 0.9, 0]], { min: 1, separar: true });
     /* Caja torácica: hueco oscuro, columna detrás, esternón y costillas curvas. */
-    const caja = capa().ell(30, 27.6, 7.4, 5.6);
+    const caja = capa().ell(30, 27.4, 7.2, 5.2);
     caja.pintar(g, NEGRO, { plano: 1 });
-    cada(capa().ell(30, 27.6, 7.4, 5.6).quitarEll(29, 27, 6, 4.4), (x, y) => pon(g, NEGRO, 0, [x, y]));
     for (let j = 24; j <= 31; j += 2) pon(g, H, 1, [31, j], [32, j]);
     for (let k = 0; k < 4; k++) {
       const y = 23.6 + k * 2.4, ab = k * 0.3;

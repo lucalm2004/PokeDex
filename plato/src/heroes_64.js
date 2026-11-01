@@ -1000,15 +1000,17 @@
           surco(g, tela, 1, cx + 3, torTop + 3, cx + 5, suelo - 2, tela);
           ribete(g, tn, ORO, 3, 1);
           cada(g, tela, wL - 7, suelo - 4, wR + 7, suelo - 2, (x, y) => { if (!tn.tiene(x, y + 2) && tn.tiene(x, y + 1) && (x % 3) === 0) g.set(x, y, ORO[2], ORO); });
+          /* Bordados: solo sobre la tela de la túnica (y nunca por debajo del bajo). */
+          const borda = (ram, k, ...pts) => { for (const [i, j] of pts) if (g.rampa(i, j) === tela && j < suelo - 2) pon(g, ram, k, [i, j]); };
           const estrella = (x, y, grande) => {
-            pon(g, ORO, 4, [x, y]); pon(g, ORO, 3, [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
-            if (grande) pon(g, ORO, 2, [x - 2, y], [x + 2, y], [x, y - 2], [x, y + 2]);
+            borda(ORO, 4, [x, y]); borda(ORO, 3, [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+            if (grande) borda(ORO, 2, [x - 2, y], [x + 2, y], [x, y - 2], [x, y + 2]);
           };
           estrella(cx - 3, torTop + 6, true); estrella(cx + 7, pierTop + 6, true); estrella(cx - 5, pierTop + 10, true);
           estrella(cx - 1, pierTop + 17, false); estrella(cx + 9, pierTop + 15, false);
           /* Lunas crecientes. */
-          pon(g, R.hueso, 4, [cx - 7, pierTop + 3], [cx - 6, pierTop + 2]); pon(g, R.hueso, 3, [cx - 7, pierTop + 4]);
-          pon(g, R.hueso, 4, [cx + 5, pierTop + 19], [cx + 6, pierTop + 18]); pon(g, R.hueso, 3, [cx + 5, pierTop + 20]);
+          borda(R.hueso, 4, [cx - 7, pierTop + 3], [cx - 6, pierTop + 2]); borda(R.hueso, 3, [cx - 7, pierTop + 4]);
+          borda(R.hueso, 4, [cx + 5, pierTop + 19], [cx + 6, pierTop + 18]); borda(R.hueso, 3, [cx + 5, pierTop + 20]);
           /* Fajín con borlas. */
           for (let x = wL - 1; x <= wR + 1; x++) { pon(g, R.tela.granate, 3, [x, torBot - 3]); pon(g, R.tela.granate, 2, [x, torBot - 2]); pon(g, R.tela.granate, 1, [x, torBot - 1]); }
           pon(g, R.tela.granate, 3, [cx - 3, torBot], [cx - 3, torBot + 1], [cx - 2, torBot + 2]); pon(g, ORO, 3, [cx - 3, torBot + 3], [cx - 2, torBot + 3]);
@@ -1613,6 +1615,8 @@
       pon(g, ORO, 2, [ax - 3, ay + 9], [ax + 3, ay + 9], [ax, ay + 12]);
     }
     if (Array.isArray(a.extras)) a.extras.forEach(fn => { if (typeof fn === "function") fn(g, t, { piel, pelo: ramPelo, tela }); });
+    /* La fila 63 queda libre para el contorno: los pies pisan la 62. */
+    for (let x = 0; x < W; x++) g.quitar(x, H - 1);
     if (!a.sinContorno) contornoSel(g);
     return a.espejo ? g.espejo() : g;
   }

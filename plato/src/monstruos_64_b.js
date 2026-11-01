@@ -946,23 +946,27 @@
     const cuerpo = m().ell(24, 11, 6.2, 6.8)
       .poly([[17, 12], [31, 12], [35, 19], [37, 27], [36.5, 34], [34, 39], [28, 42], [21, 42], [16.5, 39], [15, 33], [15, 26], [16, 18]]);
     cuerpo.lengua(26, 31, 7, 34, 3.5); // pico de la capucha, echado hacia atrás
-    for (const [x0, x1, y, px, py] of [[16, 20.5, 38, 13.5, 45], [20, 25, 40, 20.5, 47], [24.5, 29.5, 40, 28.5, 46.5], [29, 34, 39, 35, 46], [33, 37, 34, 41, 42], [22, 24, 41, 24, 45], [27, 29.5, 41, 31.5, 45.5], [31.5, 35, 37, 38, 43]]) cuerpo.lengua(x0, x1, y, px, py);
-    /* Huecos entre los jirones. */
-    for (const [x, y] of [[19, 42.5], [26.5, 43], [33, 42.5]]) cuerpo.c.restar(m().poly([[x - 1.3, 48], [x, y], [x + 1.3, 48]]).c);
+    /* El torso acaba en una orla irregular; debajo cuelgan los jirones. */
+    const hebra = x => Math.sin(x * 1.7) * 1.2 + Math.sin(x * 0.53 + 1) * 1.5;
+    for (let y = 44; y < W; y++) for (let x = 0; x < W; x++) if (y > 50 + hebra(x)) cuerpo.c.off(x, y);
     cuerpo.pintar(g, S, { relieve: 5, separar: true });
     /* Volumen: el lado de la derecha, lejos de la luz, en sombra. */
     sombraPropia(g, cuerpo, S, 33, 24, 7);
-    /* El humo se apaga hacia abajo en hebras verticales: cada columna se oscurece a su altura. */
-    const hebra = x => Math.sin(x * 1.7) * 2.2 + Math.sin(x * 0.53 + 1) * 2.5;
-    tono(g, cuerpo, S, -1, (x, y) => y > 47 + hebra(x));
     /* Pliegues del manto: surcos largos y luz en los cantos. */
-    for (const [x0, y0, x1, y1] of [[27, 31, 25, 52], [35, 29, 36, 55], [42, 31, 45, 52]]) trazo(g, x0, y0, x1, y1, S, 0, cuerpo.c);
-    for (const [x0, y0, x1, y1] of [[26, 33, 24, 44], [34, 31, 35, 44]]) trazo(g, x0, y0, x1, y1, S, 3, cuerpo.c);
+    for (const [x0, y0, x1, y1] of [[27, 31, 26, 50], [35, 29, 36, 51], [42, 31, 44, 50]]) trazo(g, x0, y0, x1, y1, S, 0, cuerpo.c);
+    for (const [x0, y0, x1, y1] of [[26, 33, 25, 46], [34, 31, 35, 46]]) trazo(g, x0, y0, x1, y1, S, 3, cuerpo.c);
+    /* Jirones de humo que cuelgan y se arrastran hacia atrás, de los de detrás a los de delante. */
+    for (const [x0, y0, cx, cy, x1, y1, gr] of [[47, 43, 49, 50, 55, 56, 4], [41, 46, 42, 53, 46, 60, 5], [37, 48, 39, 55, 42, 59, 3], [34, 47, 34, 55, 37, 62, 5],
+      [25, 48, 23, 55, 25, 60, 3], [29, 47, 28, 55, 30, 62, 5], [22, 45, 19, 53, 17, 61, 5]]) {
+      const j = capa().curva(x0, y0, cx, cy, x1, y1, gr, 1);
+      j.pintar(g, S, { relieve: 2, max: 3, separar: true });
+      filo(g, j, S, 3, { cond: (x, y) => y < y1 - 2 });
+    }
     /* Vetas violetas que serpentean hacia abajo y se apagan. */
-    for (const [x0, fase, y0, y1] of [[30.5, 0, 27, 50], [39.5, 2.5, 26, 47], [22, 4, 30, 42]])
+    for (const [x0, fase, y0, y1] of [[30.5, 0, 27, 56], [39.5, 2.5, 26, 52], [22, 4, 30, 44]])
       for (let y = y0; y <= y1; y++) {
-        const x = Math.round(x0 + Math.sin(y * 0.22 + fase) * 2.4);
-        if (!cuerpo.c.tiene(x, y)) continue;
+        const x = Math.round(x0 + Math.sin(y * 0.22 + fase) * 2.4 + Math.max(0, y - 46) * 0.25);
+        if (!g.get(x, y) || g.rampa(x, y) !== S) continue;
         const t = y < y0 + 6 ? 3 : y < (y0 + y1) / 2 ? 2 : 1;
         if (y > y1 - 5 && (y & 1)) continue;
         pon(g, Mg, t, [x, y]);

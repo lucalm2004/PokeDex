@@ -155,7 +155,8 @@
      pasa a una copia de la rampa con ese color en el tono de luminosidad más parecida, para que
      .tenida() lo traduzca con sentido. */
   const cacheFin = new Map();
-  const lum = c => { const [r, g, b] = aRgb(c); return 0.3 * r + 0.59 * g + 0.11 * b; };
+  const cacheLum = new Map();
+  const lum = c => { if (!cacheLum.has(c)) { const [r, g, b] = aRgb(c); cacheLum.set(c, 0.3 * r + 0.59 * g + 0.11 * b); } return cacheLum.get(c); };
   function final(g) {
     for (let i = 0; i < g.c.length; i++) {
       const c = g.c[i], r = g.r[i];
@@ -266,7 +267,10 @@
      rampa cuyo tono 0 es él mismo, para que .tenida() lo deje oscuro. */
   const cacheOsc = new Map();
   const rampaContorno = c => { if (!cacheOsc.has(c)) cacheOsc.set(c, [c, mezcla(c, "#ffffff", 0.15), mezcla(c, "#ffffff", 0.3), mezcla(c, "#ffffff", 0.45), mezcla(c, "#ffffff", 0.6)]); return cacheOsc.get(c); };
-  const oscuro = c => mezcla(c, "#0b0610", 0.62);
+  const cacheOscuro = new Map();
+  const oscuro = c => { if (!cacheOscuro.has(c)) cacheOscuro.set(c, mezcla(c, "#0b0610", 0.62)); return cacheOscuro.get(c); };
+  const cacheMedio = new Map();
+  const medio = ram => { if (!cacheMedio.has(ram)) cacheMedio.set(ram, mezcla(ram[0], ram[1], 0.5)); return cacheMedio.get(ram); };
   function contornoSel(g, op = {}) {
     const nuevos = [];
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -279,7 +283,7 @@
       if (!op.color && ram && ram.length === 5 && ram[0] !== ram[1]) {
         if (!iz && !ar && y < H - 1) {
           col = ram[0];
-          if (!ab && de && tono(g, x + 1, y) >= 3) col = mezcla(ram[0], ram[1], 0.5);
+          if (!ab && de && tono(g, x + 1, y) >= 3) col = medio(ram);
         } else col = oscuro(ram[0]);
       }
       nuevos.push([x, y, col]);

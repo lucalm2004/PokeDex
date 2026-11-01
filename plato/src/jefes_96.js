@@ -103,7 +103,7 @@
       const i = y * w + x; if (!d[i]) continue;
       d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
     }
-    const alto = (x, y) => { const v0 = d[y * w + x]; if (!v0) return 0; const v = Math.min(v0, Rr) / Rr; return Math.sqrt(1 - (1 - v) * (1 - v)); };
+    const alto = (x, y) => { const v0 = D(x, y); if (!v0) return 0; const v = Math.min(v0, Rr) / Rr; return Math.sqrt(1 - (1 - v) * (1 - v)); };
     const L = op.luz || [-0.5, -0.62, 0.6], ln = Math.hypot(...L), k = op.fuerza || 2.4;
     const cx = op.centro ? op.centro[0] : (x0 + x1) / 2, cy = op.centro ? op.centro[1] : (y0 + y1) / 2;
     const rx = Math.max(1, (x1 - x0) / 2), ry = Math.max(1, (y1 - y0) / 2), vol = op.volumen || 0;
