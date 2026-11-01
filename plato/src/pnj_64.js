@@ -122,11 +122,14 @@
         if (!d[i]) continue;
         d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
       }
-      const alto = (x, y) => {
-        if (x < 0 || y < 0 || x >= W || y >= H || !m[y * W + x]) return 0;
-        const v = Math.min(d[y * W + x], R2) / R2;
-        return Math.sqrt(1 - (1 - v) * (1 - v));
-      };
+      const al = new Float32Array(W * H);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * W + x;
+        if (!m[i]) continue;
+        const v = Math.min(d[i], R2) / R2;
+        al[i] = Math.sqrt(1 - (1 - v) * (1 - v));
+      }
+      const alto = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : al[y * W + x]);
       const L = op.luz || [-0.5, -0.62, 0.6];
       const ln = Math.hypot(L[0], L[1], L[2]);
       const lx = L[0] / ln, ly = L[1] / ln, lz = L[2] / ln;
@@ -171,7 +174,12 @@
     }
     return g;
   }
-  const acabar = fs => { const o = {}; for (const [k, f] of Object.entries(fs)) o[k] = () => final(f()); return o; };
+  /* Cada pieza se dibuja una sola vez; las llamadas siguientes devuelven una copia nueva (misma imagen). */
+  const acabar = fs => {
+    const o = {};
+    for (const [k, f] of Object.entries(fs)) { let hecha = null; o[k] = () => (hecha || (hecha = final(f()))).copia(); }
+    return o;
+  };
   const lim = (v, a, b) => (v < a ? a : v > b ? b : v);
   const pon = (g, ram, k, ...pts) => { for (const [x, y] of pts) g.set(x, y, ram[lim(k, 0, 4)], ram); return g; };
   const tono = (g, x, y) => { const r = g.rampa(x, y); return r ? r.indexOf(g.get(x, y)) : -1; };
@@ -1179,9 +1187,9 @@
     capa().ell(x + 3.6, y + 5.4, 1.4, 1.6).pintar(g, O, { relieve: 1, min: 2 });
     g.set(x + 3, y + 4, BRILLO, O);
     /* Cuernos: salen por detrás del turbante y se curvan hacia atrás y arriba, con anillos. */
-    const c1 = capa().curva(x - 3, t.cabY - 6, x - 3, t.cabY - 13, x + 3, t.cabY - 15, 4.4, 1.4);
+    const c1 = capa().curva(x - 3, t.cabY - 6, x - 3, t.cabY - 12, x + 3, t.cabY - 13.6, 4.4, 1.4);
     c1.pintar(g, Cu, { relieve: 2, min: 1, max: 3 });
-    const c2 = capa().curva(x + 5, t.cabY - 5, x + 10, t.cabY - 13, x + 16, t.cabY - 12, 5.6, 1.6);
+    const c2 = capa().curva(x + 5, t.cabY - 5, x + 10, t.cabY - 12, x + 16, t.cabY - 10.6, 5.6, 1.6);
     c2.pintar(g, Cu, { relieve: 2.2, min: 1, separar: true });
     for (const [a0, b0, a1, b1] of [[x + 7, t.cabY - 11, x + 9, t.cabY - 8], [x + 10, t.cabY - 13, x + 11, t.cabY - 10], [x + 13, t.cabY - 14, x + 13, t.cabY - 11], [x - 4, t.cabY - 11, x - 1, t.cabY - 11], [x - 2, t.cabY - 14, x, t.cabY - 13]]) { surco(g, Cu, 1, a0, b0, a1, b1, Cu); surco(g, Cu, 4, a0 - 1, b0, a1 - 1, b1, Cu); }
     /* Turbante blanco enrollado con gema de magia y su engarce de oro. */

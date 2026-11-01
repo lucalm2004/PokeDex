@@ -79,14 +79,15 @@ const ESCENARIO = (() => {
     tabla("HEROES_HD") && tabla("HEROES_HD").componer ? () => tabla("HEROES_HD").componer(look) : null,
     () => HEROES.componer(look)
   ]);
-  const hayMascota = clave => !!((tabla("MASCOTAS_HD") || {})[clave] || (typeof MASCOTAS !== "undefined" && MASCOTAS[clave]));
+  const hayMascota = clave => !!((tabla("MASCOTAS_64") || {})[clave] || (tabla("MASCOTAS_HD") || {})[clave] || (typeof MASCOTAS !== "undefined" && MASCOTAS[clave]));
   const spriteMascota = clave => sprite("m:" + clave, [
+    (tabla("MASCOTAS_64") || {})[clave],
     (tabla("MASCOTAS_HD") || {})[clave],
     typeof MASCOTAS !== "undefined" ? MASCOTAS[clave] : null
   ]);
   const spriteRival = (tipo, clave) => sprite(tipo + ":" + clave, tipo === "pnj"
-    ? [(tabla("PNJ_HD") || {})[clave], typeof PNJ !== "undefined" ? PNJ[clave] : null]
-    : [(tabla("MONSTRUOS_HD") || {})[clave], typeof MONSTRUOS !== "undefined" ? MONSTRUOS[clave] : null]);
+    ? [(tabla("PNJ_64") || {})[clave], (tabla("PNJ_HD") || {})[clave], typeof PNJ !== "undefined" ? PNJ[clave] : null]
+    : [(tabla("MONSTRUOS_64") || {})[clave], (tabla("MONSTRUOS_HD") || {})[clave], typeof MONSTRUOS !== "undefined" ? MONSTRUOS[clave] : null]);
 
   /* Ajusta un lienzo pequeño al múltiplo entero de píxeles del dispositivo más cercano a su tamaño pedido.
      base es el lado en píxeles de arte de lo que se va a dibujar. */

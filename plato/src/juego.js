@@ -3114,7 +3114,8 @@ function cambiarSeleccion(campo, paso) {
 /* ---------- Pantalla de juego ---------- */
 function limitesJuego() {
   const ancho = $("#p-juego").clientWidth;
-  const f = S && S.modo === "mapa" && window.innerHeight < 720 ? 0.235 : 0.3;
+  const bajo = window.innerHeight < 720;
+  const f = S && S.modo === "mapa" && bajo ? 0.235 : S && S.combate && bajo ? 0.26 : 0.3;
   return [ancho - 12, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
 }
 function renderJuego() {
@@ -3454,7 +3455,7 @@ function renderCombate(el, sc, p0, mio0) {
   const mio = plan && heroePlan(miId) === pi && !esperandoHost && !sinHost;
   const t = miObjetivo(), r = c.rivales[t], e = ENEMIGOS[r.clave];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
-  const chips = [r.mod ? `<b title="${esc(r.mod.desc)}">${esc(r.mod.nombre)}: ${esc(r.mod.desc)}</b>` : c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", r.jefe && (r.inmuneHasta ?? -9) >= c.ronda ? "Inmune a paralizar" : "", `CA ${caRival(r)}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
+  const chips = [r.mod ? `<b title="${esc(r.mod.desc)}">${esc(r.mod.nombre.replace(/^./, x => x.toUpperCase()))}</b>` : c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", r.jefe && (r.inmuneHasta ?? -9) >= c.ronda ? "Inmune a paralizar" : "", `CA ${caRival(r)}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
     r.marca ? "¡Listo para combo!" : "", c.escudo ? "Escudo" : ""].filter(Boolean)
     .concat(Object.keys(r.est).filter(k => ESTADOS[k]).map(k => `<i class="est" style="--c:${ESTADOS[k].color}">${ESTADOS[k].nombre}${r.est[k] < 90 ? ` ${r.est[k]}` : ""}</i>`));
   const varios = c.rivales.length > 1;

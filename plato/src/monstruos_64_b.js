@@ -40,7 +40,7 @@
   const QUITINA = ["#08050c", "#140c1c", "#251832", "#3e2a52", "#62487e"]; // caparazón de la araña
   const BRILLO = ["#1c0a2a", "#3a1856", "#6a30a0", "#a066d8", "#dcc0ff"];  // reflejos violetas
   const RELOJ = ["#360408", "#680a10", "#ac1a1a", "#e43c28", "#ff8c5a"];   // reloj de arena y ojos
-  const HUMO = ["#06040a", "#110a18", "#201430", "#36234a", "#54386e"];    // cuerpo de la sombra
+  const HUMO = ["#07050c", "#130c1c", "#241634", "#3c2852", "#5c4078"];    // cuerpo de la sombra
   const ESPECTRO = ["#1e2c3e", "#3a5a76", "#6892b0", "#9cc4da", "#dcf0f8"]; // ojos y garras pálidas
 
   /* ---------- Utilidades ---------- */
@@ -229,6 +229,13 @@
       if (!c.tiene(x, y) && g.get(x, y) && (c.tiene(x + 1, y) || c.tiene(x - 1, y) || c.tiene(x, y + 1) || c.tiene(x, y - 1))) pts.push([x, y]);
     pon(g, ram, i, ...pts);
   }
+  /* Pinta a mano un trozo de sprite desde un mapa de caracteres; cada carácter es [rampa, tono] y "." no toca nada. */
+  function mapa(g, x0, y0, filas, leyenda) {
+    filas.forEach((fila, j) => [...fila].forEach((ch, i) => {
+      const t = leyenda[ch];
+      if (t) g.set(x0 + i, y0 + j, t[0][t[1]], t[0]);
+    }));
+  }
   /* Distancia (aproximada) de cada píxel de la capa a su borde. */
   function distancia(c) {
     const d = new Float32Array(W * W);
@@ -381,16 +388,17 @@
     /* Fauces: el hueco de la boca, encía, lengua y colmillos. */
     const boca = capa().poly([[3.5, 39.4], [17, 38.6], [17, 42.8], [5.5, 42.8]]);
     detras(g, boca, ENCIA, { plano: 0 });
-    for (let x = 4; x <= 16; x++) { if (g.rampa(x, 39) === G) pon(g, ENCIA, 2, [x, 39]); }
-    for (let x = 6; x <= 16; x++) if (g.rampa(x, 43) === G || g.rampa(x, 42) === ENCIA) pon(g, ENCIA, 1, [x, 42]);
-    pon(g, ENCIA, 3, [9, 41], [10, 41], [11, 41], [12, 42], [10, 42]);
-    pon(g, ENCIA, 4, [10, 41]);
-    /* Colmillos de arriba (hacia abajo) y de abajo (hacia arriba). */
-    pon(g, MARFIL, 4, [4, 40], [4, 41], [7, 40], [12, 40], [14, 40]);
-    pon(g, MARFIL, 3, [4, 42], [5, 40], [7, 41], [9, 40], [13, 40]);
-    pon(g, MARFIL, 2, [5, 41], [15, 40]);
-    pon(g, MARFIL, 4, [6, 42], [8, 42], [6, 41]);
-    pon(g, MARFIL, 3, [13, 42], [14, 42]);
+    /* Encía, lengua y colmillos, a mano: el canino de arriba baja por delante del de abajo. */
+    mapa(g, 2, 38, [
+      "..LL.LLLL.LLL....",
+      ".WWLgggggggLLL...",
+      ".WwddsddsddddL...",
+      "..sdtttddddddL...",
+      "..WdtTttddddL....",
+      "..WwjjjjjjjJJ...."
+    ], { L: [G, 0], g: [ENCIA, 2], d: [ENCIA, 0], t: [ENCIA, 3], T: [ENCIA, 4], W: [MARFIL, 4], w: [MARFIL, 3], s: [MARFIL, 2], j: [G, 3], J: [G, 2] });
+    /* La mandíbula de abajo: el labio claro y la parte de abajo en sombra. */
+    for (let x = 5; x <= 17; x++) { if (g.rampa(x, 45) === G) pon(g, G, 1, [x, 45]); if (g.rampa(x, 44) === G) pon(g, G, 2, [x, 44]); }
     /* Un hilo de baba que cuelga de la mandíbula. */
     hilo(g, 9, 47, 9, 48, BABA, 2);
     pon(g, BABA, 4, [9, 49]);
@@ -525,7 +533,7 @@
     m().linea(14, 28, 12, 30, 4).pintar(g, F, { relieve: 1.5, separar: true });
     pon(g, F, 4, [17, 34], [17, 35]);
     /* Mandoble alzado: hoja de plata con su canal, gavilanes de oro y empuñadura de cuero. */
-    const hoja = m().rect(8, 3, 3, 24).poly([[8, 3.5], [9.5, -0.6], [11, 3.5]]);
+    const hoja = m().rect(8, 3, 3, 24).poly([[8, 3.5], [9.5, 0.5], [11, 3.5]]);
     hoja.pintar(g, F, { relieve: 1, min: 2, separar: true });
     for (let y = 4; y <= 34; y++) {
       if (!hoja.c.tiene(13, y)) continue;
@@ -538,7 +546,7 @@
     pon(g, MARFIL, 4, [12, 2], [12, 3]);
     /* Mellas en el filo. */
     pon(g, F, 1, [10, 20], [10, 28], [14, 12]);
-    destello(g, 12, 1, MARFIL, 1);
+    destello(g, 12, 3, MARFIL, 1);
     m().rect(4, 27, 11, 2).pintar(g, O, { relieve: 1, min: 2, separar: true });
     pon(g, O, 4, [6, 36], [7, 36], [8, 36]);
     pon(g, O, 1, [12, 37], [13, 37], [14, 37]);
@@ -734,6 +742,19 @@
       }
       const h = m().linea(pts[0][0], pts[0][1], muneca[0], muneca[1], 2);
       puntas.forEach(([x, y]) => h.linea(muneca[0], muneca[1], x, y, 1));
+      /* La membrana es más clara (y algo translúcida) junto a las varillas y se oscurece hacia el borde festoneado. */
+      const huesos = [];
+      for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (h.c.tiene(x, y)) huesos.push([x, y]);
+      const tope = op.max || 1, dBorde = distancia(mem.c);
+      for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+        if (!mem.c.tiene(x, y) || h.c.tiene(x, y) || g.rampa(x, y) !== S) continue;
+        let dd = 99;
+        for (const [a, b] of huesos) dd = Math.min(dd, Math.hypot(a - x, b - y));
+        const v = dd + (umbral(x, y) - 0.5) * 1.1;
+        let t = v < 1.8 ? tope : v < 4.5 ? tope - 1 : tope - 2;
+        if (dBorde[y * W + x] < 1.5) t = Math.min(t, tope - 1);
+        g.set(x, y, S[Math.max(0, t)], S);
+      }
       h.pintar(g, Rj, { relieve: 1, min: tonoHueso - 1, max: tonoHueso });
       pon(g, MARFIL, tonoHueso - 1, [Math.round(mx) - 1, Math.round(my) - 2]);
       return mem;
@@ -780,7 +801,7 @@
     pon(g, ORO, 3, [12, 20], [13, 20], [14, 20], [15, 20], [16, 20]);
     pon(g, ORO, 4, [12, 20]);
     /* Llamitas en las puntas. */
-    for (const [x, y] of [[9, 6], [15, 3], [20, 6]]) {
+    for (const [x, y] of [[9, 6], [15, 4], [20, 6]]) {
       const ll = capa().poly([[x - 1.6, y + 1.5], [x - 0.5, y - 3.5], [x + 1.5, y + 1.5]]);
       detras(g, ll, FUEGO, { plano: 3 });
       pon(g, CALOR, 2, [x, y + 1]);
@@ -794,7 +815,8 @@
     sombraPropia(g, cab, Rj, 27, 30, 3.5);
     tono(g, cab, Rj, 1, (x, y) => (x - 25) * 0.6 + (y - 26) * 0.8 + (umbral(x, y) - 0.5) * 2 < -2.5);
     tono(g, m().poly([[26, 22], [31, 19.6], [26.5, 24.5]]), Rj, -1);
-    pon(g, ENCIA, 3, [36, 29], [37, 28], [38, 28]);
+    pon(g, Rj, 0, [36, 29], [37, 28], [38, 28], [39, 28]);
+    pon(g, ENCIA, 3, [37, 29]);
     /* Cuernos con anillos. */
     const cuernos = m().curva(18, 19, 15, 16, 16.5, 12, 3, 1).curva(23, 18.5, 26, 16, 25, 11.5, 3, 1);
     cuernos.pintar(g, MARFIL, { relieve: 1.2, separar: true });

@@ -85,7 +85,7 @@
   /* Como Capa.pintar, pero con el tono continuo y un tramado estrecho entre bandas, para volúmenes grandes.
      op.caida oscurece hacia abajo (luz cenital); op.volumen añade un degradado de esfera desde arriba a la izquierda;
      op.tramado = anchura del tramado (0 = bandas limpias); op.extra(x, y) suma luz a mano (pliegues, ondas). */
-  const DIST = new Float32Array(W * H);
+  const DIST = new Float32Array(W * H), ALTO = new Float32Array(W * H);
   function sombrear(capa, g, ram, op = {}) {
     const w = W, h = H, Rr = op.relieve || 6, m = capa.m;
     /* Solo se trabaja dentro de la caja de la capa: las piezas pequeñas (púas, dedos) salen casi gratis. */
@@ -103,23 +103,39 @@
       const i = y * w + x; if (!d[i]) continue;
       d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
     }
-    const alto = (x, y) => { const v0 = D(x, y); if (!v0) return 0; const v = Math.min(v0, Rr) / Rr; return Math.sqrt(1 - (1 - v) * (1 - v)); };
+    /* Altura de cada píxel (un cuarto de círculo según la distancia al borde), una sola vez. */
+    const A = ALTO;
+    for (let y = Math.max(0, y0 - 1); y <= Math.min(h - 1, y1 + 1); y++) for (let x = Math.max(0, x0 - 1); x <= Math.min(w - 1, x1 + 1); x++) {
+      const i = y * w + x, v0 = d[i];
+      if (!v0) { A[i] = 0; continue; }
+      const v = Math.min(v0, Rr) / Rr;
+      A[i] = Math.sqrt(1 - (1 - v) * (1 - v));
+    }
+    const alto = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : A[y * w + x]);
     const L = op.luz || [-0.5, -0.62, 0.6], ln = Math.hypot(...L), k = op.fuerza || 2.4;
+    const lx = L[0] / ln, ly = L[1] / ln, lz = L[2] / ln;
     const cx = op.centro ? op.centro[0] : (x0 + x1) / 2, cy = op.centro ? op.centro[1] : (y0 + y1) / 2;
     const rx = Math.max(1, (x1 - x0) / 2), ry = Math.max(1, (y1 - y0) / 2), vol = op.volumen || 0;
     const TH = [-0.4, 0.02, 0.4, 0.74, 0.965, 1.2], s = op.tramado === undefined ? 0.4 : op.tramado;
+    const sesgo = op.sesgo || 0, caida = (op.caida || 0) / Math.max(1, y1 - y0), extra = op.extra;
+    const tMin = op.min || 0, tMax = op.max === undefined ? 4 : op.max, sep = op.separar ? (op.separar === true ? 1 : op.separar) : -1;
+    const gc = g.c;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      if (!m[y * w + x]) continue;
+      const i = y * w + x;
+      if (!m[i]) continue;
       const nx = (alto(x - 1, y) - alto(x + 1, y)) * 0.5 * k, ny = (alto(x, y - 1) - alto(x, y + 1)) * 0.5 * k;
-      const l = (nx * L[0] + ny * L[1] + L[2]) / ln / Math.sqrt(nx * nx + ny * ny + 1) + (op.sesgo || 0) - (op.caida || 0) * (y - y0) / Math.max(1, y1 - y0)
-        - vol * (((x - cx) / rx) * 0.55 + ((y - cy) / ry) * 0.75) + (op.extra ? op.extra(x, y) : 0);
+      let l = (nx * lx + ny * ly + lz) / Math.sqrt(nx * nx + ny * ny + 1) + sesgo - caida * (y - y0)
+        - vol * (((x - cx) / rx) * 0.55 + ((y - cy) / ry) * 0.75);
+      if (extra) l += extra(x, y);
       let v = 0;
       for (let b = 0; b < 5; b++) if (l > TH[b]) v = b + Math.min(1, (l - TH[b]) / (TH[b + 1] - TH[b]));
       let t = Math.floor(v + (umbral(x, y) - 0.5) * s);
-      t = Math.max(op.min || 0, Math.min(op.max === undefined ? 4 : op.max, t));
-      if (op.separar) {
-        const borde = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !capa.tiene(x + a, y + b) && g.get(x + a, y + b));
-        if (borde) t = Math.min(t, op.separar === true ? 1 : op.separar);
+      t = Math.max(tMin, Math.min(tMax, t));
+      if (sep >= 0) {
+        /* Línea oscura donde la capa toca lo ya pintado. */
+        const borde = (x + 1 < w && !m[i + 1] && gc[i + 1]) || (x > 0 && !m[i - 1] && gc[i - 1]) ||
+          (y + 1 < h && !m[i + w] && gc[i + w]) || (y > 0 && !m[i - w] && gc[i - w]);
+        if (borde) t = Math.min(t, sep);
       }
       g.set(x, y, ram[t], ram);
     }
@@ -129,7 +145,7 @@
   function pua(g, ram, x0, y0, x1, y1, ancho = 1.2, op = { relieve: 1, min: 2 }, brillo = true) {
     const dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy) || 1, nx = -dy / l * ancho, ny = dx / l * ancho;
     const c = C().poly([[x0 + nx, y0 + ny], [x1, y1], [x0 - nx, y0 - ny]]);
-    if (c.vacia()) c.linea(x0, y0, x1, y1, 1);
+    if (!c.m.includes(1)) c.linea(x0, y0, x1, y1, 1);
     sombrear(c, g, ram, { tramado: 0, ...op });
     if (brillo && l > 3) {
       /* Arista iluminada por el lado de arriba a la izquierda. */
@@ -589,7 +605,7 @@
        del paño negro (con su brillo de raso), para que el borde no pese. */
     const forroDe = ala => {
       const f = ala.copia();
-      cada(ala, (x, y) => { if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !ala.tiene(x + a, y + b))) f.off(x, y); });
+      cada(ala, (x, y) => { if (!ala.tiene(x + 1, y) || !ala.tiene(x - 1, y) || !ala.tiene(x, y + 1) || !ala.tiene(x, y - 1)) f.off(x, y); });
       return f;
     };
     const capa = (ala, mano, puntas, lado) => {
@@ -762,7 +778,7 @@
     for (const [x0, y0, x1, y1] of [[75, 16, 87, 22], [75, 30, 90, 38], [74, 43, 85, 54], [70, 22, 66, 36]]) trazo(g, ala, Mb, 1, [x0, y0, (x0 + x1) / 2 + 1, (y0 + y1) / 2 + 2, x1, y1]);
     cada(ala, (x, y) => { if (!huesosAla.tiene(x, y) && (!ala.tiene(x + 1, y) || !ala.tiene(x, y + 1)) && g.rampa(x, y) === Mb) pon(g, Mb, 3, [x, y]); });
     /* La luz de la lava se cuela por la membrana cerca de los huesos. */
-    cada(ala, (x, y) => { if (!huesosAla.tiene(x, y) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => huesosAla.tiene(x + a, y + b)) && umbral(x, y) < 0.5 && g.rampa(x, y) === Mb) pon(g, Mb, Math.min(4, Mb.indexOf(g.get(x, y)) + 1), [x, y]); });
+    cada(ala, (x, y) => { if (!huesosAla.tiene(x, y) && (huesosAla.tiene(x + 1, y) || huesosAla.tiene(x - 1, y) || huesosAla.tiene(x, y + 1) || huesosAla.tiene(x, y - 1)) && umbral(x, y) < 0.5 && g.rampa(x, y) === Mb) pon(g, Mb, Math.min(4, Mb.indexOf(g.get(x, y)) + 1), [x, y]); });
     pua(g, Cn, 71, 7, 67, 1, 1.6, { relieve: 1, min: 2 });
     for (const [x, y] of [[86, 1], [93, 14], [93, 33]]) pon(g, E, 4, [x - 1, y + 1]);
 
@@ -984,7 +1000,8 @@
       const x = Math.round(42 + Math.cos(a) * 22.2), y = Math.round(60 + Math.sin(a) * 8.2);
       if ((!boca.tiene(x, y) && boca.tiene(x + Math.sign(42 - x), y)) || (boca.tiene(x, y + Math.sign(60 - y)) && !boca.tiene(x, y))) labio.on(x, y);
     }
-    cada(boca, (x, y) => { if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !boca.tiene(x + a, y + b) && cuerpo.tiene(x + a, y + b))) labio.on(x, y); });
+    const fuera = (x, y) => !boca.tiene(x, y) && cuerpo.tiene(x, y);
+    cada(boca, (x, y) => { if (fuera(x + 1, y) || fuera(x - 1, y) || fuera(x, y + 1) || fuera(x, y - 1)) labio.on(x, y); });
     labio.recortar(cuerpo).pintar(g, A, { plano: 1 });
     /* Colmillos de arriba (largos) y de abajo (cortos), curvados. */
     const LARGO_A = [6, 4, 8.5, 5, 7.5, 4, 9, 5, 6.5, 4], LARGO_B = [4, 6, 3, 6.5, 4, 5.5, 3, 5];
