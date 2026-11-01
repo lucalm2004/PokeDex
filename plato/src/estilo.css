@@ -984,3 +984,20 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
   .boton.grande { padding: 11px 16px; }
   .habs-ini span { display: none; }
 }
+
+/* ---------- Combate compacto: que las habilidades nunca queden tapadas ---------- */
+.riv .apuntan { display: inline-flex; align-items: center; gap: 1px; vertical-align: -2px; }
+.juego .panel .fila-extra { background: #1f1612; box-shadow: 0 -8px 8px -4px #1f1612; }
+@media (max-height: 760px) {
+  .juego .intencion { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 4px 9px; }
+  .suceso-btn { padding: 5px 10px 5px 6px; }
+  .suceso-btn small { display: none; }
+  .suceso-btn canvas { padding: 2px; }
+  .juego .acciones .opcion { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+  .juego .acciones .opcion small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .juego .rival-info { gap: 4px; }
+  .planes-aliados { font-size: 11px; }
+  .juego .panel .fila-extra .opcion { min-height: 38px; padding-top: 4px; padding-bottom: 4px; }
+  .equipo-btn { padding: 5px 10px; }
+}
+@media (max-height: 760px) { .juego .intencion { line-height: 1.4; padding: 5px 10px; min-height: 26px; } }

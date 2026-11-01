@@ -136,10 +136,6 @@
   };
   /* Recorre los píxeles de una capa. */
   const cada = (c, fn) => { for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (c.tiene(x, y)) fn(x, y); };
-  /* Sube o baja un tono los píxeles de una rampa dentro de una capa. */
-  function matiz(g, c, ram, d, min = 0, max = 4) {
-    cada(c, (x, y) => { const t = tonoDe(g, x, y, ram); if (t >= 0) pon(g, ram, lim(t + d, min, max), [x, y]); });
-  }
   /* Pinta una capa solo donde aún no hay nada, como si quedara detrás. */
   function detras(g, c, ram, op) {
     cada(c, (x, y) => { if (g.get(x, y)) c.off(x, y); });
@@ -208,22 +204,6 @@
       const d = Math.hypot(i, j * 1.2) + hash(x + i, y + j, sem) * 0.9;
       if (d > r + 0.3 || g.rampa(x + i, y + j) !== metal) continue;
       pon(g, OXIDO, d < r * 0.45 ? 1 : d < r * 0.8 ? 2 : 3, [x + i, y + j]);
-    }
-  }
-  /* Mechones de pelo: trazos cortos de sombra en una dirección con su brillo detrás. */
-  function mechones(g, c, ram, sem, paso, dir, largo = 3, minT = 1) {
-    for (let y = 0; y < W; y += paso) for (let x = ((y / paso) & 1) * (paso >> 1); x < W; x += paso) {
-      const px = x + Math.floor(hash(x, y, sem) * paso), py = y + Math.floor(hash(y, x, sem + 7) * paso);
-      if (!c.tiene(px, py)) continue;
-      const t = tonoDe(g, px, py, ram);
-      if (t < minT) continue;
-      const [dx, dy] = typeof dir === "function" ? dir(px, py) : dir;
-      for (let k = 0; k < largo; k++) {
-        const qx = Math.round(px + dx * k), qy = Math.round(py + dy * k), tq = tonoDe(g, qx, qy, ram);
-        if (c.tiene(qx, qy) && tq >= 1) pon(g, ram, tq - 1, [qx, qy]);
-      }
-      const hx = Math.round(px - dx), hy = Math.round(py - dy), th = tonoDe(g, hx, hy, ram);
-      if (t >= 2 && c.tiene(hx, hy) && th >= 1 && th < 4) pon(g, ram, th + 1, [hx, hy]);
     }
   }
   /* Pelaje limpio: las fronteras entre tonos se vuelven dientes de sierra en la dirección del pelo (mechones claros
@@ -310,8 +290,7 @@
     for (const [x, y, t] of tonos) pon(g, ram, t, [x, y]);
     return c;
   }
-  /* Abanico de garras de 1 píxel. */
-  const abanico = (c, x, y, puntas) => { puntas.forEach(([a, b]) => c.linea(x, y, x + a, y + b, 1)); return c; };
+  /* Garras de 1 píxel en abanico, con la punta más clara. */
   function garras(g, x, y, puntas, ram = HUESO) {
     for (const [a, b] of puntas) {
       const n = Math.max(Math.abs(a), Math.abs(b));

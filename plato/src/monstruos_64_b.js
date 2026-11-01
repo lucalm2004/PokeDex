@@ -14,7 +14,7 @@
   /* ---------- Rampas propias (5 tonos, de la sombra al brillo) ---------- */
   const NEGRO = ["#08070c", "#16131c", "#2a2430", "#463c48", "#6e6270"];   // pezuñas, cejas, pupilas
   const MARFIL = ["#4a3e3a", "#7d6c60", "#b5a38c", "#e3d5bb", "#fffaec"];  // colmillos, garras, cuernos
-  const PELO = ["#22252f", "#3a3f4b", "#5c626b", "#8a8e8a", "#bdb9a7"];    // pelaje gris del huargo
+  const PELO = ["#252932", "#404652", "#656b73", "#92958f", "#c4c0ae"];    // pelaje gris del huargo
   const LOMO = ["#0e1018", "#191c27", "#272b37", "#3a3f4b", "#555a63"];    // pelaje oscuro del lomo
   const AMBAR = ["#5a1606", "#a83e0c", "#e88618", "#ffc848", "#fff3b4"];   // ojos encendidos
   const ENCIA = ["#22050e", "#4a0c18", "#7e1e2a", "#b63e48", "#e47a76"];   // boca, lengua, encías
@@ -640,7 +640,7 @@
     /* Ojo grande y amarillo, con ceja de escamas. */
     pon(g, P, 0, [21, 20], [22, 19], [23, 19], [24, 19], [25, 19], [26, 20], [27, 21]);
     pon(g, P, 4, [22, 18], [23, 18], [24, 18]);
-    pon(g, ORO, 4, [22, 21], [23, 21]);
+    pon(g, ORO, 4, [22, 21], [23, 21], [23, 22]);
     pon(g, ORO, 3, [22, 22], [25, 21], [26, 22]);
     pon(g, ORO, 2, [23, 23], [25, 23], [26, 23]);
     pon(g, NEGRO, 0, [24, 21], [24, 22], [24, 23]);
@@ -743,14 +743,14 @@
       const h = m().linea(pts[0][0], pts[0][1], muneca[0], muneca[1], 2);
       puntas.forEach(([x, y]) => h.linea(muneca[0], muneca[1], x, y, 1));
       /* La membrana es más clara (y algo translúcida) junto a las varillas y se oscurece hacia el borde festoneado. */
-      const huesos = [];
-      for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (h.c.tiene(x, y)) huesos.push([x, y]);
+      /* Distancia a la varilla más cercana: la del resto del lienzo hasta los huesos. */
+      const resto = capa();
+      resto.m.fill(1);
+      const dHueso = distancia(resto.restar(h.c));
       const tope = op.max || 1, dBorde = distancia(mem.c);
       for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
         if (!mem.c.tiene(x, y) || h.c.tiene(x, y) || g.rampa(x, y) !== S) continue;
-        let dd = 99;
-        for (const [a, b] of huesos) dd = Math.min(dd, Math.hypot(a - x, b - y));
-        const v = dd + (umbral(x, y) - 0.5) * 1.1;
+        const v = dHueso[y * W + x] - 0.5 + (umbral(x, y) - 0.5) * 1.1;
         let t = v < 1.8 ? tope : v < 4.5 ? tope - 1 : tope - 2;
         if (dBorde[y * W + x] < 1.5) t = Math.min(t, tope - 1);
         g.set(x, y, S[Math.max(0, t)], S);
