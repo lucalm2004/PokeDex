@@ -100,6 +100,28 @@
   /* Capa que solo sombrea la caja que ocupa (mismo resultado que Capa.pintar, mucho más barato a 64×64). */
   class Capa64 extends Capa {
     copia() { const o = new Capa64(this.w, this.h); o.m = this.m.slice(); return o; }
+    /* Borra todas las filas desde «fila» hacia abajo. */
+    borrarDesde(fila) { this.m.fill(0, Math.max(0, fila) * this.w); return this; }
+    /* Mismo criterio que Capa.poly (centro del píxel dentro, regla par-impar), recorriendo solo los cruces de cada fila. */
+    poly(pts) {
+      let ax = Infinity, bx = -Infinity, ay = Infinity, by = -Infinity;
+      for (const [x, y] of pts) { if (x < ax) ax = x; if (x > bx) bx = x; if (y < ay) ay = y; if (y > by) by = y; }
+      const n = pts.length, cs = [];
+      for (let y = Math.max(0, Math.floor(ay)); y <= Math.min(this.h - 1, Math.ceil(by)); y++) {
+        cs.length = 0;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+          const [xi, yi] = pts[i], [xj, yj] = pts[j];
+          if ((yi > y) !== (yj > y)) cs.push(((xj - xi) * (y - yi)) / (yj - yi) + xi);
+        }
+        if (!cs.length) continue;
+        for (let x = Math.max(0, Math.floor(ax)); x <= Math.min(this.w - 1, Math.ceil(bx)); x++) {
+          let par = false;
+          for (const c of cs) if (x < c) par = !par;
+          if (par) this.m[y * this.w + x] = 1;
+        }
+      }
+      return this;
+    }
     pintar(rej, rampa, op = {}) {
       const w = this.w, h = this.h, m = this.m;
       let x0 = w, y0 = h, x1 = -1, y1 = -1;
@@ -123,11 +145,12 @@
         if (!d[i]) continue;
         d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
       }
-      const alto = (x, y) => {
-        if (x < 0 || y < 0 || x >= w || y >= h || !m[y * w + x]) return 0;
-        const v = Math.min(d[y * w + x], R) / R;
-        return Math.sqrt(1 - (1 - v) * (1 - v));
-      };
+      const A = new Float32Array(w * h);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * w + x;
+        if (m[i]) { const v = Math.min(d[i], R) / R; A[i] = Math.sqrt(1 - (1 - v) * (1 - v)); }
+      }
+      const alto = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : A[y * w + x]);
       const L = op.luz || [-0.5, -0.62, 0.6];
       const ln = Math.hypot(L[0], L[1], L[2]);
       const lx = L[0] / ln, ly = L[1] / ln, lz = L[2] / ln;
@@ -499,19 +522,21 @@
     const x = t.cabX, y = t.cabY, rx = t.cabRx, ry = t.cabRy;
     if (peinado === "rapado") {
       /* Rapado: la sombra del pelo corto sobre el cráneo, con un poco de grano. */
-      cada(g, g.rampa(x, y - 4), x - 8, y - 9, x + 4, y - 3, (i, j, k) => {
-        if (j < t.ojoY - 4 - (i > x + 1 ? 1 : 0) && umbral(i, j) > 0.25) g.set(i, j, k >= 3 ? ram[2] : ram[1], ram);
+      /* Rapado: sombra uniforme del pelo corto sobre el cráneo, con el nacimiento del pelo tramado. */
+      cada(g, g.rampa(x, y - 4), x - 8, y - 9, x + 4, y + 3, (i, j, k) => {
+        const borde = t.ojoY - 4 - (i > x + 1 ? 1 : 0) + (i < x - 3 ? Math.min(6, (x - 3 - i) * 2) : 0);
+        if (j < borde - 1 || (j === borde - 1 && umbral(i, j) > 0.4)) g.set(i, j, k >= 3 ? ram[3] : k === 2 ? ram[2] : ram[1], ram);
       });
       return;
     }
     const c = capa().ell(x - 0.5, y - 1, rx + 1.2, ry + 0.4);
     /* Cara despejada: flequillo hasta la frente con unas puntas. */
-    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    for (let j = t.ojoY - 5; j < Math.min(H, y + 12); j++) for (let i = x - 1; i < Math.min(W, x + 12); i++) {
       const frente = t.ojoY - 3 - (i >= x + 4 ? 1 : 0) - (i >= x + 6 ? 1 : 0);
-      if (i >= x - 1 && j >= frente) c.off(i, j);
+      if (j >= frente) c.off(i, j);
     }
     c.on(x, t.ojoY - 3).on(x + 3, t.ojoY - 4).on(x + 4, t.ojoY - 4).on(x - 1, t.ojoY - 2).on(x - 1, t.ojoY - 1).on(x - 1, t.ojoY);
-    c.quitarRect(0, y + 5, W, H);
+    c.borrarDesde(y + 5);
     c.rect(x - 8, y + 1, 4, 4); // nuca
     for (let i = x - 8; i <= x - 4; i += 2) c.on(i, y + 5);
     c.on(x - 9, y + 3).on(x + 2, t.ojoY - 3).on(x + 5, t.ojoY - 5);
@@ -520,7 +545,7 @@
     if (peinado === "rizado") {
       c.ell(x - 1, y - 4, rx + 2.6, 5.2);
       c.ell(x - 7.5, y + 1.5, 3.4, 4);
-      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (i >= x - 1 && j >= t.ojoY - 3 - (i >= x + 5 ? 1 : 0)) c.off(i, j);
+      for (let j = t.ojoY - 5; j < Math.min(H, y + 12); j++) for (let i = x - 1; i < Math.min(W, x + 12); i++) if (j >= t.ojoY - 3 - (i >= x + 5 ? 1 : 0)) c.off(i, j);
     }
     if (raza === "elfo" || raza === "gnomo" || raza === "satiro" || raza === "semiorco") c.quitarRect(x - 5, y - 1, 3, 4);
     if (soloCabeza) c.recortar(capa().ell(t.cabX, t.cabY, t.cabRx, t.cabRy));
@@ -884,13 +909,18 @@
         T.pintar(g, piel, { relieve: 5.5 });
         /* Pectorales, esternón, abdominales y oblicuos marcados a mano. */
         const py = torTop + 7;
-        for (let x = cx - 4; x <= torR - 1; x++) if (x !== cx + 2) { pon(g, piel, 1, [x, py]); if (g.rampa(x, py - 1) === piel) pon(g, piel, 3, [x, py - 2]); }
-        pon(g, piel, 0, [cx + 1, py], [cx + 3, py]);
+        /* Pectorales: borde inferior hondo, cara de luz encima y el pezón insinuado. */
+        for (let x = cx - 5; x <= torR - 1; x++) if (x !== cx + 2) {
+          pon(g, piel, x < cx - 3 || x > torR - 3 ? 1 : 0, [x, py]); pon(g, piel, 1, [x, py - 1]);
+          if (x < cx + 1) pon(g, piel, x < cx - 2 ? 3 : 4, [x, py - 3]);
+        }
+        pon(g, piel, 4, [cx - 3, py - 4], [cx - 2, py - 4], [cx + 4, py - 3]);
+        pon(g, piel, 1, [cx - 1, py - 2], [torR - 2, py - 2]);
         for (let y = torTop + 3; y < py; y++) pon(g, piel, 1, [cx + 2, y]);
         pon(g, piel, 4, [cx - 2, torTop + 3], [cx - 1, torTop + 3], [cx + 4, torTop + 3], [cx - 3, torTop + 4]);
         for (let y = py + 3; y < torBot - 3; y += 3) {
-          pon(g, piel, 1, [cx, y], [cx + 1, y], [cx + 3, y], [cx + 4, y]);
-          pon(g, piel, 3, [cx, y + 1], [cx + 3, y + 1]);
+          pon(g, piel, 1, [cx - 1, y], [cx, y], [cx + 1, y], [cx + 3, y], [cx + 4, y]);
+          pon(g, piel, 3, [cx, y + 1], [cx + 3, y + 1]); pon(g, piel, 4, [cx - 1, y + 1]);
         }
         for (let y = py + 1; y < torBot - 2; y++) pon(g, piel, 1, [cx + 2, y]);
         pon(g, piel, 1, [cx - 3, py + 3], [cx - 4, py + 5], [cx - 4, py + 7]);
@@ -1081,7 +1111,7 @@
       case "guerrero": {
         const yelmo = capa().ell(x - 0.2, y - 1, t.cabRx + 1.4, t.cabRy + 0.8);
         yelmo.quitarRect(x, t.ojoY - 3, 12, 11);
-        yelmo.quitarRect(0, y + 6, W, H);
+        yelmo.borrarDesde(y + 6);
         /* Carrillera que baja por delante de la oreja. */
         yelmo.rect(x - 1, t.ojoY - 3, 2, 9).on(x + 1, t.bocaY + 1).on(x + 1, t.bocaY);
         yelmo.pintar(g, PLACA, { relieve: 4.5, separar: true });
@@ -1154,7 +1184,7 @@
       case "bardo": {
         /* Chambergo: copa redonda, ala ancha levantada por delante, cinta granate y una pluma larga. */
         const by = Math.round(y - 6);
-        const copa = capa().ell(x - 1.5, by - 1.5, 5.6, 4.4).quitarRect(0, by + 2, W, H);
+        const copa = capa().ell(x - 1.5, by - 1.5, 5.6, 4.4).borrarDesde(by + 2);
         const ala = capa().ell(x - 0.5, by + 2, t.cabRx + 5.5, 1.7).poly([[x + 4, by + 3.5], [x + 9, by - 0.5], [x + 12.5, by - 2.5], [x + 12.5, by + 0.5], [x + 9, by + 3.5]]);
         copa.pintar(g, tela, { relieve: 3.2, separar: true });
         surco(g, tela, 1, x - 1, by - 5, x, by - 1, tela);
@@ -1553,7 +1583,8 @@
     }
     if (clase === "barbaro") {
       /* Pelliza de lobo sobre los hombros, con la cabeza del lobo en el hombro de delante. */
-      const pz = capa().ell(t.cx - 0.5, t.torTop + 2, (t.torR - t.torL) / 2 + 3, 3).ell(t.torL + 1, t.torTop + 3, 4, 5);
+      /* Solo por el hombro de atrás y la nuca: el pecho queda al aire. */
+      const pz = capa().ell(t.torL + 4, t.torTop + 1, 6.5, 2.8).ell(t.torL + 1, t.torTop + 3, 4, 5.5);
       for (let i = t.torL - 5; i <= t.torR + 5; i++) if ((i & 1) === 0) pz.off(i, Math.round(t.torTop + 4.6));
       pz.pintar(g, PELLIZA, { relieve: 2.8, separar: true });
       cada(g, PELLIZA, t.torL - 6, t.torTop - 4, t.torR + 6, t.torTop + 9, (x, y, k) => {

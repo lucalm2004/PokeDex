@@ -59,6 +59,7 @@
   const AMBAR = ["#4a2008", "#8a4410", "#d08a1e", "#f6c440", "#fff4b0"];                // ojos de lechuza y goblin
   const ACERO = ["#1b1d2b", "#383f55", "#626e84", "#a5b1c1", "#f1f4ee"];                // filos
   const PLUMA_O = matizar(["#3a2408", "#6b4a1a", "#a8782a", "#e0b04a", "#fff0a0"]);    // plumas ocres
+  const PARDO = ["#1c0e10", "#3a1f18", "#5e3822", "#87552f", "#b47e4a"];                // pelo de la rata grande
   const ORO = ["#3a1f10", "#6e4518", "#b57d27", "#e9bf4e", "#fff2a6"];
   const GARGANTA = ["#14040a", "#2e0810", "#561018", "#86202a", "#b8403c"];            // fauces del mímico
   const FUEGO = R.fuego;
@@ -90,11 +91,15 @@
         if (!d[i]) continue;
         d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
       }
-      const alto = (x, y) => {
-        if (x < 0 || y < 0 || x >= w || y >= h || !m[y * w + x]) return 0;
-        const v = Math.min(d[y * w + x], Rr) / Rr;
-        return Math.sqrt(1 - (1 - v) * (1 - v));
-      };
+      /* Altura de cada píxel (cúpula redondeada según la distancia al borde). */
+      const A = new Float32Array(w * h);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * w + x;
+        if (!m[i]) continue;
+        const v = Math.min(d[i], Rr) / Rr;
+        A[i] = Math.sqrt(1 - (1 - v) * (1 - v));
+      }
+      const alto = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : A[y * w + x]);
       const L = op.luz || [-0.5, -0.62, 0.6];
       const ln = Math.hypot(L[0], L[1], L[2]);
       const lx = L[0] / ln, ly = L[1] / ln, lz = L[2] / ln;
@@ -220,6 +225,90 @@
       if (t >= 2 && c.tiene(hx, hy) && th >= 1 && th < 4) pon(g, ram, th + 1, [hx, hy]);
     }
   }
+  /* Pelaje limpio: las fronteras entre tonos se vuelven dientes de sierra en la dirección del pelo (mechones claros
+     que caen sobre la sombra) y unas pocas hebras oscuras separan los mechones en las zonas iluminadas. */
+  function pelo(g, c, ram, dir, sem, hebras = 6) {
+    const T = new Int8Array(W * W).fill(-1);
+    cada(c, (x, y) => { T[y * W + x] = tonoDe(g, x, y, ram); });
+    const tq = (x, y) => (x < 0 || y < 0 || x >= W || y >= W ? -1 : T[y * W + x]);
+    cada(c, (x, y) => {
+      const t = tq(x, y);
+      if (t < 1) return;
+      const [dx, dy] = typeof dir === "function" ? dir(x, y) : dir;
+      const qx = Math.round(x + dx), qy = Math.round(y + dy);
+      if (tq(qx, qy) !== t - 1 || !c.tiene(qx, qy)) return;
+      const h = hash(x, y, sem);
+      if (h < 0.5) {
+        pon(g, ram, t, [qx, qy]);
+        const rx = Math.round(x + dx * 2), ry = Math.round(y + dy * 2);
+        if (h < 0.2 && tq(rx, ry) === t - 1 && c.tiene(rx, ry)) pon(g, ram, t, [rx, ry]);
+      }
+    });
+    if (!hebras) return;
+    for (let y = 0; y < W; y += hebras) for (let x = ((y / hebras) & 1) * (hebras >> 1); x < W; x += hebras) {
+      const px = x + Math.floor(hash(x, y, sem + 3) * 3), py = y + Math.floor(hash(y, x, sem + 5) * 3);
+      const t = tq(px, py);
+      if (t < 2 || !c.tiene(px, py)) continue;
+      const [dx, dy] = typeof dir === "function" ? dir(px, py) : dir;
+      for (let k = 0; k < 3; k++) {
+        const qx = Math.round(px + dx * k), qy = Math.round(py + dy * k);
+        if (tq(qx, qy) === t && c.tiene(qx, qy)) pon(g, ram, t - 1, [qx, qy]);
+      }
+      const hx = Math.round(px - dx), hy = Math.round(py - dy);
+      if (tq(hx, hy) === t && t < 4 && c.tiene(hx, hy)) pon(g, ram, t + 1, [hx, hy]);
+    }
+  }
+  /* Volumen: une elipsoides ["e", cx, cy, rx, ry, z0] y cápsulas ["c", x0, y0, x1, y1, r0, r1, z0] y sombrea
+     cada píxel con la normal de la forma que queda más cerca del ojo (las uniones forman pliegues suaves).
+     op: min, max, separar, detras (solo donde no hay nada), rebote (luz rebotada en el borde de abajo),
+     plano (aplana la normal: más contraste), sesgo. Devuelve la capa de lo pintado. */
+  function volumen(g, ram, formas, op = {}) {
+    const Lr = op.luz || [-0.55, -0.68, 0.5], ln = Math.hypot(...Lr), L = Lr.map(v => v / ln);
+    const zb = new Float32Array(W * W).fill(-1e9), N = new Float32Array(W * W * 3);
+    const c = capa();
+    const prueba = (x, y, h, nx, ny, nz) => {
+      const i = y * W + x;
+      if (h <= zb[i]) return;
+      zb[i] = h; N[i * 3] = nx; N[i * 3 + 1] = ny; N[i * 3 + 2] = nz; c.on(x, y);
+    };
+    for (const f of formas) {
+      if (f[0] === "e") {
+        const [, cx, cy, rx, ry, z0 = 0] = f, rz = Math.min(rx, ry);
+        for (let y = Math.max(0, Math.floor(cy - ry - 1)); y <= Math.min(W - 1, Math.ceil(cy + ry + 1)); y++)
+          for (let x = Math.max(0, Math.floor(cx - rx - 1)); x <= Math.min(W - 1, Math.ceil(cx + rx + 1)); x++) {
+            const dx = (x - cx) / (rx + 0.25), dy = (y - cy) / (ry + 0.25), u = dx * dx + dy * dy;
+            if (u > 1) continue;
+            const z = Math.sqrt(1 - u);
+            prueba(x, y, z0 + z * rz, dx / rx, dy / ry, z / rz);
+          }
+      } else {
+        const [, x0, y0, x1, y1, r0, r1 = r0, z0 = 0] = f, vx = x1 - x0, vy = y1 - y0, l2 = vx * vx + vy * vy || 1, rm = Math.max(r0, r1);
+        for (let y = Math.max(0, Math.floor(Math.min(y0, y1) - rm - 1)); y <= Math.min(W - 1, Math.ceil(Math.max(y0, y1) + rm + 1)); y++)
+          for (let x = Math.max(0, Math.floor(Math.min(x0, x1) - rm - 1)); x <= Math.min(W - 1, Math.ceil(Math.max(x0, x1) + rm + 1)); x++) {
+            const t = lim(((x - x0) * vx + (y - y0) * vy) / l2, 0, 1), px = x0 + vx * t, py = y0 + vy * t, r = r0 + (r1 - r0) * t;
+            const ex = x - px, ey = y - py, u = (ex * ex + ey * ey) / ((r + 0.25) * (r + 0.25));
+            if (u > 1) continue;
+            const z = Math.sqrt(1 - u);
+            prueba(x, y, z0 + z * r, ex / r, ey / r, z / r);
+          }
+      }
+    }
+    if (op.detras) cada(c, (x, y) => { if (g.get(x, y)) c.off(x, y); });
+    if (op.recorte) c.recortar(op.recorte);
+    const k = op.plano || 1, sesgo = op.sesgo || 0, tonos = [];
+    cada(c, (x, y) => {
+      const i = (y * W + x) * 3, nx = N[i] * k, ny = N[i + 1] * k, nz = N[i + 2], nl = Math.hypot(nx, ny, nz) || 1;
+      const l = (nx * L[0] + ny * L[1] + nz * L[2]) / nl + sesgo;
+      let t = l > 0.84 ? 4 : l > 0.58 ? 3 : l > 0.27 ? 2 : l > -0.08 ? 1 : 0;
+      if (op.rebote && t <= 1 && !c.tiene(x, y + 1) && ny > 0.5) t = 2;
+      if (op.max !== undefined) t = Math.min(t, op.max);
+      if (op.min !== undefined) t = Math.max(t, op.min);
+      if (op.separar && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !c.tiene(x + a, y + b) && g.get(x + a, y + b))) t = Math.min(t, 1);
+      tonos.push([x, y, t]);
+    });
+    for (const [x, y, t] of tonos) pon(g, ram, t, [x, y]);
+    return c;
+  }
   /* Abanico de garras de 1 píxel. */
   const abanico = (c, x, y, puntas) => { puntas.forEach(([a, b]) => c.linea(x, y, x + a, y + b, 1)); return c; };
   function garras(g, x, y, puntas, ram = HUESO) {
@@ -291,97 +380,83 @@
     pon(g, HUESO, max >= 3 ? 4 : 2, [x - 1, y + 2]);
     pon(g, HUESO, 2, [x + 1, y + 2]);
   }
+  /* Oreja redonda: borde de pelo y pabellón rosado con su sombra. */
+  function orejaRata(g, ram, x, y, r, max = 4) {
+    capa().ell(x, y, r, r * 1.05).pintar(g, ram, { relieve: 1.6, max, separar: true });
+    const dentro = capa().ell(x - 0.4, y + 0.5, r - 1.2, r - 1);
+    cada(dentro, (i, j) => pon(g, ROSA, Math.min(max - 1, (i - x) + (j - y) < -0.5 ? 2 : 1), [i, j]));
+    pon(g, ROSA, Math.min(max, 3), [Math.round(x - r + 1.4), Math.round(y)]);
+    pon(g, ram, Math.min(max, 4), [Math.round(x - 1), Math.round(y - r)], [Math.round(x - r + 0.6), Math.round(y - 1)]);
+  }
+  /* Mechones erizados que asoman por la silueta (pintados detrás de lo que ya hay). */
+  function crestas(g, ram, pts, k = 2) {
+    for (const [i, j, a = 1] of pts) {
+      const c = capa().poly([[i - 2.2, j + 2.4], [i + 1.6 * a, j - 2.6], [i + 2.2, j + 2.4]]);
+      cada(c, (x, y) => { if (g.get(x, y)) c.off(x, y); });
+      cada(c, (x, y) => pon(g, ram, x - i < 0 ? k + 1 : k, [x, y]));
+    }
+  }
   function rata() {
-    const g = new Rejilla(W, W), G = R.piel.gris, C = R.pelo.castano, S = R.sangre;
+    const g = new Rejilla(W, W), G = R.piel.gris, C = PARDO, S = R.sangre, Oc = R.tela.ocre;
 
     /* --- Rata gris del fondo, encaramada al lomo de la grande --- */
     cola(g, 53, 38, 63, 41, 59, 26, 3, 1.2, 2);
-    const gris = capa().ell(46, 37, 10.5, 6.4).ell(37, 37.6, 6, 5.4).poly([[37, 32.6], [25.5, 38], [26, 40], [37, 42.6]]);
-    for (const [i, j] of [[42, 31.4], [47, 30.6], [52, 32]]) gris.poly([[i - 2, j + 1.8], [i + 1.2, j - 2], [i + 2, j + 1.8]]);
-    gris.pintar(g, G, { relieve: 4.5, max: 3, separar: true });
-    mechones(g, gris, G, 11, 3, [1, 0.25], 3);
-    trazo(g, G, 1, 40, 33, 41.5, 38, 40, 42);
-    trazo(g, G, 3, 39, 33, 40.5, 37.5, 39, 41);
-    /* Oreja. */
-    const orG = capa().ell(39.5, 31.6, 3.2, 3.4);
-    orG.pintar(g, G, { relieve: 2, max: 3, separar: true });
-    capa().ell(39.3, 32.1, 1.8, 2.1).pintar(g, ROSA, { relieve: 1, min: 1, max: 2 });
-    pon(g, ROSA, 3, [38, 31]);
+    const gris = volumen(g, G, [["e", 46, 37.5, 10, 6.2, 0], ["e", 37, 37.6, 5.6, 5, 1.5], ["c", 36, 38, 26.5, 39.4, 4.4, 1.6, 1.5]], { max: 3, separar: true });
+    crestas(g, G, [[42, 31.8], [47, 31.2], [52, 32.6]], 2);
+    pelo(g, gris, G, [1, 1], 11, 6);
+    orejaRata(g, G, 39.4, 32.2, 3, 3);
     /* Ojo rojo, nariz y boca. */
-    pon(g, NEGRO, 0, [30, 34], [31, 34], [32, 34], [33, 35], [33, 36]);
+    pon(g, NEGRO, 0, [30, 35], [31, 34], [32, 34], [33, 35], [33, 36]);
     pon(g, OJO_R, 3, [31, 35], [32, 35]); pon(g, OJO_R, 4, [31, 35]); pon(g, OJO_R, 1, [31, 36], [32, 36]);
     pon(g, ROSA, 4, [25, 38]); pon(g, ROSA, 3, [26, 38], [25, 39]); pon(g, ROSA, 1, [26, 39]);
-    pon(g, G, 4, [28, 36], [29, 36], [27, 37]);
+    pon(g, G, 3, [27, 37], [28, 36], [29, 36]);
     pon(g, NEGRO, 1, [27, 41], [28, 41], [29, 41], [30, 41]);
-    pon(g, R.tela.ocre, 4, [27, 42]); pon(g, R.tela.ocre, 2, [28, 42]);
+    pon(g, Oc, 4, [27, 42]); pon(g, Oc, 2, [28, 42]);
 
     /* --- Rata grande del frente --- */
     cola(g, 47, 55, 63, 63, 59, 44, 4.2, 1.2);
-    /* Pata trasera del fondo. */
-    detras(g, capa().linea(38, 53, 36, 59, 4.2), C, { relieve: 1.5, max: 1 });
+    /* Patas del fondo. */
+    volumen(g, C, [["c", 38, 53, 36.5, 59.4, 2.4, 1.8, 0]], { max: 1, detras: true });
     pieRata(g, 33, 60, 2);
-    /* Cuerpo: lomo arqueado, cuartos traseros, hombros, cabeza y hocico. */
-    const cuerpo = capa().ell(34, 50, 14.5, 8.2).ell(44, 49.5, 8.6, 9.4).ell(23, 51, 8, 7.2).ell(15.5, 50, 6.5, 5.6)
-      .poly([[15, 44.6], [3, 51.4], [3.4, 53.8], [15, 55.6]]);
-    /* Mechones de pelo sucio erizados en el lomo. */
-    for (const [i, j] of [[24, 44], [29.5, 42.6], [35, 41.4], [40.5, 40.4], [46, 40.6], [50.5, 42.6]]) cuerpo.poly([[i - 2.6, j + 2.2], [i + 1.8, j - 2.8], [i + 2.6, j + 2.2]]);
-    cuerpo.pintar(g, C, { relieve: 6, separar: true });
-    /* Pelaje que va hacia atrás. */
-    mechones(g, cuerpo, C, 7, 3, (x, y) => (x > 38 ? [0.7, 1] : [1, 0.3]), 3);
-    /* Capas de pelo: arcos oscuros con su brillo encima. */
-    for (const [x0, y0, cx, cy, x1, y1] of [[20, 47, 25, 43.5, 31, 44.5], [27, 49, 33, 45.5, 39, 46.5], [34, 44, 40, 42, 45, 44],
-      [24, 53, 29, 50.5, 35, 52], [33, 54, 38, 51.5, 43, 54], [41, 46, 46, 44, 50, 47]]) {
-      trazo(g, C, 1, x0, y0, cx, cy, x1, y1);
-      trazo(g, C, 3, x0, y0 - 1, cx, cy - 1, x1, y1 - 1);
-    }
-    /* Muslo trasero y mejilla. */
-    trazo(g, C, 1, 40, 42, 50, 45, 47, 57);
-    trazo(g, C, 0, 47, 55, 48, 57, 47, 58);
-    trazo(g, C, 1, 18, 45, 21, 50, 18.5, 55.5);
-    trazo(g, C, 3, 17, 45, 20, 50, 17.5, 55);
-    /* Vientre más claro, con luz rebotada. */
-    cada(cuerpo, (x, y) => {
-      if (y < 52 || x < 9) return;
-      if (!cuerpo.tiene(x, y + 1)) pon(g, C, 3, [x, y]);
-      else if (!cuerpo.tiene(x, y + 2) && (x + y) % 2) pon(g, C, 2, [x, y]);
-    });
+    /* Cuerpo: cuartos traseros, lomo, hombros, cabeza y hocico. */
+    const cuerpo = volumen(g, C, [["e", 44, 50, 8.6, 9.2, 0], ["e", 33, 50, 13, 8, 0], ["e", 23, 51.5, 7.8, 7, 1],
+      ["e", 15.5, 50, 6.4, 5.6, 2.5], ["c", 14, 50.6, 4, 52.6, 5, 1.9, 2.5]], { separar: true, rebote: true, sesgo: -0.06 });
+    crestas(g, C, [[25, 44.6], [30.5, 43.2], [36, 42], [41.5, 41], [47, 41.2], [51.4, 43.4, 1.4]], 2);
+    pelo(g, cuerpo, C, [1, 1], 7, 6);
+    /* Muslo trasero y pliegue del cuello. */
+    trazo(g, C, 1, 39, 43, 49, 45, 47, 57);
+    trazo(g, C, 3, 38, 43.5, 47.6, 45.6, 46, 57);
+    trazo(g, C, 1, 18.5, 45, 21.5, 50, 19, 56);
     /* Cicatrices y una calva de sarna con una llaga. */
     surco(g, ROSA, 2, 31, 45, 36, 49.5, C); surco(g, ROSA, 3, 33, 44.6, 37.6, 48.4, C);
     pon(g, ROSA, 1, [32, 47], [36, 50], [34, 45]);
     const calva = capa().ell(45, 46, 2.3, 1.7).recortar(cuerpo);
     calva.pintar(g, ROSA, { relieve: 1.2, min: 1, max: 3 });
     pon(g, S, 3, [45, 46]); pon(g, S, 1, [46, 47]); pon(g, ROSA, 4, [44, 45]);
-    /* Pata trasera de delante y su pie. */
-    capa().linea(47, 53, 46, 59, 4.2).pintar(g, C, { relieve: 1.6, separar: true });
-    pon(g, C, 3, [45, 54], [45, 55]);
+    /* Pata trasera de delante. */
+    volumen(g, C, [["c", 46.5, 53, 45.6, 59.4, 2.6, 1.9, 4]], { separar: true, max: 3 });
     pieRata(g, 41, 60);
     /* Patas delanteras: la del fondo y la de delante. */
-    capa().linea(25.5, 56, 26, 59.5, 3.2).pintar(g, C, { relieve: 1.2, max: 2, separar: true });
+    volumen(g, C, [["c", 25.5, 55.5, 26, 59.4, 1.9, 1.6, 0]], { max: 2, separar: true });
     pieRata(g, 22, 60, 3);
-    capa().linea(17.5, 54.5, 15, 59.5, 3.6).pintar(g, C, { relieve: 1.4, separar: true });
-    pon(g, C, 4, [16, 56]); pon(g, C, 3, [15, 57]);
-    pieRata(g, 10, 60);
-    /* Oreja redonda con el pabellón rosado. */
-    const oreja = capa().ell(20.5, 43, 4, 4);
-    oreja.pintar(g, C, { relieve: 2, separar: true });
-    capa().ell(20.2, 43.6, 2.4, 2.7).pintar(g, ROSA, { relieve: 1.2, min: 1, max: 3 });
-    pon(g, ROSA, 4, [19, 42]); pon(g, C, 4, [18, 40], [19, 39]);
+    volumen(g, C, [["c", 18, 53.6, 15.6, 59.4, 2.4, 1.8, 4]], { separar: true, max: 3 });
+    pieRata(g, 11, 60);
+    /* Oreja. */
+    orejaRata(g, C, 20.6, 43.6, 3.4);
     /* Ojo rojo encendido bajo la ceja. */
-    pon(g, NEGRO, 0, [10, 46], [11, 45], [12, 45], [13, 45], [14, 46], [15, 46], [15, 47], [15, 48], [11, 48]);
-    pon(g, OJO_R, 2, [12, 47], [13, 47], [14, 47]); pon(g, OJO_R, 4, [12, 46]); pon(g, OJO_R, 3, [13, 46]);
+    pon(g, NEGRO, 0, [10, 46], [11, 45], [12, 45], [13, 45], [14, 45], [15, 46], [15, 47], [15, 48], [11, 48]);
+    pon(g, OJO_R, 2, [12, 47], [13, 47], [14, 47]); pon(g, OJO_R, 4, [12, 46]); pon(g, OJO_R, 3, [13, 46], [14, 46]);
     pon(g, OJO_R, 1, [12, 48], [13, 48], [14, 48]); pon(g, NEGRO, 0, [14, 47]);
-    pon(g, C, 4, [12, 44], [13, 44], [14, 44]);
-    /* Hocico: caña iluminada, nariz rosada y boca con incisivos amarillos. */
-    for (let i = 5; i <= 11; i++) pon(g, C, i < 8 ? 4 : 3, [i, Math.round(51.2 - (i - 3) * 0.55)]);
-    pon(g, ROSA, 4, [3, 51]); pon(g, ROSA, 3, [3, 52], [4, 51]); pon(g, ROSA, 1, [4, 52], [3, 53]);
+    pon(g, C, 4, [12, 44], [13, 44]); pon(g, C, 3, [11, 44], [14, 44]);
+    /* Hocico: nariz rosada, boca e incisivos amarillos. */
+    pon(g, ROSA, 4, [3, 51]); pon(g, ROSA, 3, [2, 52], [3, 52], [4, 51]); pon(g, ROSA, 1, [4, 52], [3, 53]);
     pon(g, NEGRO, 1, [4, 54], [5, 54], [6, 55], [7, 55], [8, 55], [9, 55], [10, 55], [11, 55]);
     pon(g, NEGRO, 0, [12, 54]);
-    pon(g, R.tela.ocre, 4, [6, 56]); pon(g, R.tela.ocre, 3, [7, 56], [6, 57]); pon(g, R.tela.ocre, 1, [7, 57]);
-    pon(g, C, 1, [8, 56], [9, 56], [10, 56]);
+    pon(g, Oc, 4, [6, 56]); pon(g, Oc, 3, [7, 56], [6, 57]); pon(g, Oc, 1, [7, 57]);
+    pon(g, C, 2, [8, 56], [9, 56], [10, 56]);
     /* Patas de la gris agarradas al lomo. */
     pon(g, ROSA, 3, [29, 42], [30, 42]); pon(g, ROSA, 2, [31, 42]); pon(g, ROSA, 1, [30, 43]);
     contornoSel(g);
-    suavizar(g);
     /* Bigotes. */
     for (const [x0, y0, x1, y1] of [[4, 52, 1, 49], [4, 53, 1, 56], [6, 51, 3, 46], [25, 39, 21, 37], [25, 40, 21, 42]]) hilo(g, x0, y0, x1, y1, HUESO, 2);
     return g;
@@ -535,26 +610,25 @@
   /* ---------- Oso-lechuza: cuerpo de oso, cabeza de lechuza con pico y plumas ---------- */
   function osolechuza() {
     const g = new Rejilla(W, W), C = R.pelo.castano, O = PLUMA_O, M = R.madera, P = R.piedra;
-    const abajo = (x, y) => [0.3, 1];
     /* Brazo levantado de atrás, zarpa abierta. */
     const brazoA = capa().linea(44.6, 29.5, 51, 20.4, 6.5).linea(51, 20.4, 49.8, 11.4, 6.2).ell(49.8, 10, 4.2, 3.4);
     brazoA.pintar(g, C, { relieve: 3, max: 2 });
-    mechones(g, brazoA, C, 3, 3, [0, 1], 3);
+    pelo(g, brazoA, C, [1, 1], 3, 0);
     garras(g, 49.8, 7.4, [[-4.4, -2.6], [-1.4, -4.6], [1.8, -4.6], [4.4, -2.6]]);
     /* Pierna de atrás. */
     const piernaA = capa().rect(40.7, 46.4, 10.4, 11).ell(45.9, 46, 5.2, 3).rect(37, 57, 14, 6).off(37, 57).off(50, 57);
     piernaA.pintar(g, C, { relieve: 3, max: 2 });
-    mechones(g, piernaA, C, 4, 3, [0, 1], 3);
+    pelo(g, piernaA, C, [0, 1], 4, 0);
     /* Cuerpo enorme. */
     const cuerpo = capa().ell(36.2, 38.6, 14.3, 15).ell(31.6, 45.1, 11.7, 9.1);
     cuerpo.pintar(g, C, { relieve: 7, separar: true });
-    mechones(g, cuerpo, C, 5, 3, abajo, 4);
+    pelo(g, cuerpo, C, [1, 1], 5, 5);
     /* Mechones en el borde de la espalda. */
     for (const [i, j] of [[49, 32], [50.5, 38], [50.5, 44], [48.5, 49]]) capa().poly([[i - 1, j - 2.4], [i + 2.4, j + 0.4], [i - 1, j + 2.4]]).pintar(g, C, { plano: 1 });
     /* Pierna de delante. */
     const pierna = capa().rect(22.5, 47.7, 11.7, 9.5).ell(28.3, 48, 6, 3).rect(17.4, 57, 16, 6).off(17.4, 57).off(33, 57);
     pierna.pintar(g, C, { relieve: 3.5, separar: true });
-    mechones(g, pierna, C, 9, 3, [0, 1], 3);
+    pelo(g, pierna, C, [1, 1], 9, 5);
     surco(g, C, 1, 22, 56.5, 33, 56.5); surco(g, C, 3, 21, 57, 26, 57);
     pon(g, HUESO, 4, [16, 62], [19, 62], [22, 62], [38, 62], [41, 62]);
     pon(g, HUESO, 2, [17, 62], [20, 62], [23, 62], [39, 62], [42, 62]);
@@ -615,7 +689,7 @@
     /* Brazo de delante con zarpa abierta hacia los héroes. */
     const brazo = capa().linea(27.7, 30.8, 19.9, 38.6, 6.5).linea(19.9, 38.6, 13.4, 38.6, 5.2).ell(11.4, 38.6, 3.6, 3.4);
     brazo.pintar(g, C, { relieve: 3, separar: true });
-    mechones(g, brazo, C, 13, 3, [1, 0.4], 3);
+    pelo(g, brazo, C, [1, 1], 13, 5);
     garras(g, 8.6, 38.6, [[-4, -4], [-4.6, -0.6], [-4, 2.6], [-1.4, 4.6]]);
     pon(g, C, 1, [10, 37], [10, 40]); pon(g, C, 4, [11, 36], [12, 36]);
     contornoSel(g);

@@ -14,7 +14,7 @@
   /* ---------- Rampas propias (5 tonos, de la sombra al brillo) ---------- */
   const NEGRO = ["#08070c", "#16131c", "#2a2430", "#463c48", "#6e6270"];   // pezuñas, cejas, pupilas
   const MARFIL = ["#4a3e3a", "#7d6c60", "#b5a38c", "#e3d5bb", "#fffaec"];  // colmillos, garras, cuernos
-  const PELO = ["#1b1e2a", "#303644", "#4f5663", "#7b807f", "#aeab9b"];    // pelaje gris del huargo
+  const PELO = ["#22252f", "#3a3f4b", "#5c626b", "#8a8e8a", "#bdb9a7"];    // pelaje gris del huargo
   const LOMO = ["#0e1018", "#191c27", "#272b37", "#3a3f4b", "#555a63"];    // pelaje oscuro del lomo
   const AMBAR = ["#5a1606", "#a83e0c", "#e88618", "#ffc848", "#fff3b4"];   // ojos encendidos
   const ENCIA = ["#22050e", "#4a0c18", "#7e1e2a", "#b63e48", "#e47a76"];   // boca, lengua, encías
@@ -44,10 +44,68 @@
   const ESPECTRO = ["#1e2c3e", "#3a5a76", "#6892b0", "#9cc4da", "#dcf0f8"]; // ojos y garras pálidas
 
   /* ---------- Utilidades ---------- */
-  const capa = () => new Capa(W, W);
+  /* Capa que solo recorre su recuadro al pintarse (mismo resultado que Capa.pintar, pero más rápido). */
+  class Capa64 extends Capa {
+    constructor() { super(W, W); }
+    pintar(rej, rampa, op = {}) {
+      const w = this.w, h = this.h, m = this.m;
+      let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[y * w + x]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) return rej;
+      if (op.plano !== undefined) {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y * w + x]) rej.set(x, y, rampa[op.plano], rampa);
+        return rej;
+      }
+      const R = op.relieve || 4;
+      const d = new Float32Array(w * h);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y * w + x]) d[y * w + x] = 1e6;
+      const D = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[y * w + x]);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * w + x;
+        if (d[i]) d[i] = Math.min(d[i], D(x - 1, y) + 1, D(x, y - 1) + 1, D(x - 1, y - 1) + 1.414, D(x + 1, y - 1) + 1.414);
+      }
+      for (let y = y1; y >= y0; y--) for (let x = x1; x >= x0; x--) {
+        const i = y * w + x;
+        if (d[i]) d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
+      }
+      /* Altura del relieve (0 fuera de la capa), precalculada en el recuadro y un píxel de margen. */
+      const A = new Float32Array(w * h);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * w + x;
+        if (!m[i]) continue;
+        const v = Math.min(d[i], R) / R;
+        A[i] = Math.sqrt(1 - (1 - v) * (1 - v));
+      }
+      const alto = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : A[y * w + x]);
+      const L = op.luz || [-0.5, -0.62, 0.6];
+      const ln = Math.hypot(L[0], L[1], L[2]);
+      const lx = L[0] / ln, ly = L[1] / ln, lz = L[2] / ln;
+      const k = op.fuerza || 2.4, sesgo = op.sesgo || 0;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        if (!m[y * w + x]) continue;
+        const nx = (alto(x - 1, y) - alto(x + 1, y)) * 0.5 * k;
+        const ny = (alto(x, y - 1) - alto(x, y + 1)) * 0.5 * k;
+        const nl = Math.hypot(nx, ny, 1);
+        const l = (nx * lx + ny * ly + lz) / nl + sesgo;
+        let t = l > 0.965 ? 4 : l > 0.74 ? 3 : l > 0.4 ? 2 : l > 0.02 ? 1 : 0;
+        if (t === 0 && !op.profundo) t = 1;
+        if (op.max !== undefined) t = Math.min(t, op.max);
+        if (op.min !== undefined) t = Math.max(t, op.min);
+        if (op.separar) {
+          const borde = (!this.tiene(x + 1, y) && rej.get(x + 1, y)) || (!this.tiene(x - 1, y) && rej.get(x - 1, y)) ||
+            (!this.tiene(x, y + 1) && rej.get(x, y + 1)) || (!this.tiene(x, y - 1) && rej.get(x, y - 1));
+          if (borde) t = Math.min(t, op.separar === true ? 1 : op.separar);
+        }
+        rej.set(x, y, rampa[Math.min(t, rampa.length - 1)], rampa);
+      }
+      return rej;
+    }
+    copia() { const o = new Capa64(); o.m = this.m.slice(); return o; }
+  }
+  const capa = () => new Capa64();
   /* Capa en coordenadas de la versión de 48×48: escala por K y desplaza (dx, dy). */
   class Molde {
-    constructor(dx = 0, dy = 0) { this.c = new Capa(W, W); this.dx = dx; this.dy = dy; }
+    constructor(dx = 0, dy = 0) { this.c = new Capa64(); this.dx = dx; this.dy = dy; }
     p(x, y) { return [x * K + this.dx, y * K + this.dy]; }
     ell(x, y, rx, ry = rx) { const [a, b] = this.p(x, y); this.c.ell(a, b, rx * K, ry * K); return this; }
     quitarEll(x, y, rx, ry = rx) { const [a, b] = this.p(x, y); this.c.quitarEll(a, b, rx * K, ry * K); return this; }
@@ -127,6 +185,37 @@
       if (g.rampa(x, y) === ram && cond(x, y) && (!g.get(x - 1, y) || !g.get(x, y - 1)) && ram.indexOf(g.get(x, y)) < t) borde.push([x, y]);
     pon(g, ram, t, ...borde);
   }
+  /* Filo de luz: los píxeles de la capa que dan a la izquierda (o arriba) suben al tono t. */
+  function filo(g, c, ram, t, { arriba = false, cond = () => true } = {}) {
+    c = c.c || c;
+    const pts = [];
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (!c.tiene(x, y) || g.rampa(x, y) !== ram || !cond(x, y)) continue;
+      if ((!c.tiene(x - 1, y) || (arriba && !c.tiene(x, y - 1))) && ram.indexOf(g.get(x, y)) < t) pts.push([x, y]);
+    }
+    pon(g, ram, t, ...pts);
+  }
+  /* Metal pulido: bandas verticales de reflejo según la posición dentro de cada fila de la capa
+     (borde, luz, brillo duro, medio, reflejo oscuro y rebote de luz al otro lado). */
+  const BANDAS = [[0.1, 2], [0.27, 3], [0.36, 4], [0.56, 2], [0.84, 1], [1.01, 2]];
+  function metal(g, c, ram, { bandas = BANDAS, arriba = 1, separar = true } = {}) {
+    c = c.c || c;
+    let y0 = W;
+    for (let y = 0; y < W && y0 === W; y++) for (let x = 0; x < W; x++) if (c.tiene(x, y)) { y0 = y; break; }
+    for (let y = 0; y < W; y++) {
+      let a = -1, b = -1;
+      for (let x = 0; x < W; x++) if (c.tiene(x, y)) { if (a < 0) a = x; b = x; }
+      if (a < 0) continue;
+      for (let x = a; x <= b; x++) {
+        if (!c.tiene(x, y)) continue;
+        const u = b > a ? (x - a) / (b - a) : 0.5;
+        let t = bandas.find(([lim]) => u < lim)[1];
+        if (y - y0 < arriba && t < 4) t++;
+        if (separar && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([i, j]) => !c.tiene(x + i, y + j) && g.get(x + i, y + j))) t = Math.min(t, 1);
+        g.set(x, y, ram[t], ram);
+      }
+    }
+  }
   /* Distancia (aproximada) de cada píxel de la capa a su borde. */
   function distancia(c) {
     const d = new Float32Array(W * W);
@@ -170,22 +259,23 @@
         const k = ram.indexOf(g.get(px, py));
         if (k > 0) g.set(px, py, ram[k - 1], ram);
       }
-      if (luz && k0 >= 2 && k0 < 4 && c.tiene(x - dx, y - dy) && g.rampa(x - dx, y - dy) === ram) {
+      if (luz && k0 >= 3 && k0 < 4 && c.tiene(x - dx, y - dy) && g.rampa(x - dx, y - dy) === ram) {
         const k = ram.indexOf(g.get(x - dx, y - dy));
         if (k >= 2) g.set(x - dx, y - dy, ram[Math.min(4, k + 1)], ram);
       }
     }
   }
-  /* Escamas en hileras: el borde de abajo de cada escama más oscuro y un punto de luz arriba. */
-  function escamas(g, c, ram, { ancho = 4, alto = 3, cond = () => true } = {}) {
+  /* Escamas en hileras: cada escama es un arco (∪) más oscuro; las hileras se alternan a media escama.
+     Con luz, un punto claro dentro de la escama donde ya da la luz. */
+  function escamas(g, c, ram, { cond = () => true, luz = false } = {}) {
     c = c.c || c;
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
       if (!c.tiene(x, y) || g.rampa(x, y) !== ram || !cond(x, y)) continue;
-      const fila = Math.floor(y / alto), u = (x + (fila % 2) * (ancho >> 1)) % ancho, v = y % alto;
+      const fila = y >> 1, u = (x + (fila & 1) * 2) & 3, v = y & 1;
       const k = ram.indexOf(g.get(x, y));
-      if (k < 0) continue;
-      if (v === alto - 1 && u !== 0) g.set(x, y, ram[Math.max(0, k - 1)], ram);
-      else if (v === 0 && u === 1 && k >= 2 && k < 4) g.set(x, y, ram[k + 1], ram);
+      if (k < 1) continue;
+      if ((v === 0 && u === 0) || (v === 1 && (u === 1 || u === 2))) g.set(x, y, ram[k - 1], ram);
+      else if (luz && v === 0 && u === 2 && k === 3) g.set(x, y, ram[4], ram);
     }
   }
   /* Contorno selectivo: oscuro por fuera; en los bordes de arriba y de la izquierda (de cara a la luz),
@@ -243,17 +333,21 @@
     }
     /* Pechera más clara, con mechones que cuelgan. */
     tono(g, m().ell(15, 31, 4, 5.2), G, 1, (x, y) => y > 39);
+    /* Sombra propia bajo el vientre: el pelo se oscurece hacia abajo, con el corte tramado. */
+    tono(g, cuerpo, G, -1, (x, y) => x > 22 && y > 45.5 - (x > 40 ? (x - 40) * 0.3 : 0) + (umbral(x, y) > 0.5 ? 1 : 0));
     for (const [x, y] of [[17, 44], [19, 46], [21, 45], [23, 47]]) { pon(g, G, 4, [x, y]); pon(g, G, 2, [x + 1, y + 1]); }
     /* Una cicatriz vieja en la paletilla. */
-    trazo(g, 27, 38, 31, 43, ENCIA, 2, cuerpo.c);
-    trazo(g, 28, 38, 32, 43, G, 4, cuerpo.c);
+    trazo(g, 28, 39, 31, 43, ENCIA, 1, cuerpo.c);
+    trazo(g, 29, 39, 32, 43, G, 4, cuerpo.c);
     /* Patas de este lado: la delantera recta y la trasera con el corvejón. */
     const pd = m().linea(16, 31, 14, 39, 4).linea(14, 39, 13, 43, 3).ell(11.5, 45.2, 3, 1.6);
     pd.pintar(g, G, { relieve: 2, separar: true });
-    pelaje(g, pd, G, az, { paso: 2, largo: 2, dx: 0, dy: 1 });
+    filo(g, pd, G, 3, { cond: (x, y) => y > 44 && y < 59 });
+    tono(g, pd, G, -1, (x, y) => x > 20 && y > 46);
     const pt = m().ell(33, 32.5, 5, 5.5).linea(34, 36, 37, 40, 3).linea(37, 40, 36, 44, 2).ell(34, 45.4, 2.8, 1.3);
     pt.pintar(g, G, { relieve: 2.5, separar: true });
-    pelaje(g, pt, G, az, { paso: 3, largo: 3, dx: 0.6, dy: 1 });
+    pelaje(g, pt, G, az, { paso: 3, largo: 3, dx: 0.6, dy: 1, cond: (x, y) => y < 50 });
+    tono(g, pt, G, -1, (x, y) => y > 52 && x > 47);
     /* Dedos y garras. */
     pon(g, G, 1, [14, 60], [17, 60], [20, 60], [45, 61], [48, 61]);
     pon(g, MARFIL, 4, [11, 62], [14, 62], [43, 62]);
@@ -271,7 +365,6 @@
     /* Lo de dentro de la oreja. */
     const oreja = capa().poly([[21, 30], [27, 27.5], [23, 32]]);
     tono(g, oreja, G, -2);
-    pon(g, ENCIA, 2, [23, 30], [24, 29]);
     /* Fauces: el hueco de la boca, encía, lengua y colmillos. */
     const boca = capa().poly([[3.5, 39.4], [17, 38.6], [17, 42.8], [5.5, 42.8]]);
     detras(g, boca, ENCIA, { plano: 0 });
@@ -286,9 +379,8 @@
     pon(g, MARFIL, 4, [6, 42], [8, 42], [6, 41]);
     pon(g, MARFIL, 3, [13, 42], [14, 42]);
     /* Un hilo de baba que cuelga de la mandíbula. */
-    hilo(g, 8, 47, 8, 49, BABA, 3);
-    pon(g, BABA, 4, [8, 50]);
-    hilo(g, 14, 47, 14, 48, BABA, 2);
+    hilo(g, 9, 47, 9, 48, BABA, 2);
+    pon(g, BABA, 4, [9, 49]);
     /* Trufa húmeda con brillo. */
     pon(g, NEGRO, 1, [2, 35], [2, 36], [3, 35], [2, 37]);
     pon(g, NEGRO, 0, [3, 37]);
@@ -317,7 +409,8 @@
     const manto = m().poly([[26, 16], [33, 16], [38.5, 27], [42.5, 44], [33, 45], [28, 40]]);
     for (const [x, y] of [[31.5, 41], [35.5, 39], [39.5, 41.5]]) manto.c.restar(m().poly([[x - 1.4, 46], [x, y], [x + 1.4, 46]]).c);
     manto.pintar(g, Gr, { relieve: 2.5, max: 2 });
-    for (const [x0, y0, x1, y1] of [[44, 24, 49, 56], [47, 32, 53, 57], [50, 40, 55, 58]]) { trazo(g, x0, y0, x1, y1, Gr, 0, manto.c); trazo(g, x0 + 1, y0, x1 + 1, y1, Gr, 3, manto.c); }
+    /* Pliegues: un surco oscuro y su canto iluminado, abriéndose hacia el bajo. */
+    for (const [x0, y0, x1, y1] of [[44, 26, 46, 55], [48, 34, 51, 56], [51, 44, 54, 57]]) { trazo(g, x0, y0, x1, y1, Gr, 0, manto.c); trazo(g, x0 - 1, y0 + 2, x1 - 1, y1, Gr, 2, manto.c); }
     /* Lo de dentro: vacío oscuro, que se ve por las juntas. */
     m().rect(19, 14, 10, 30).pintar(g, V, { relieve: 2, max: 1 });
     /* Pierna de atrás. */
@@ -328,41 +421,48 @@
     m().ell(30.5, 19.5, 4.5, 4).pintar(g, F, { relieve: 2, max: 2, separar: true });
     /* Peto abombado, con una arista central, ristre y remaches. */
     const peto = m().poly([[17, 18], [30, 18], [31.5, 23], [29.5, 30.5], [18.5, 30.5], [16, 23]]);
-    peto.pintar(g, F, { relieve: 6, separar: true });
-    trazo(g, 30, 25, 31, 39, F, 4, peto.c);
-    trazo(g, 31, 25, 32, 39, F, 1, peto.c);
+    metal(g, peto, F, { arriba: 2 });
+    /* La curva del peto: el pecho abombado brilla más arriba y se apaga hacia la cintura. */
+    tono(g, peto, F, -1, (x, y) => y > 32 + (umbral(x, y) > 0.5 ? 1 : 0) && g.get(x, y) !== F[4]);
     for (let x = 22; x <= 40; x++) if (peto.c.tiene(x, 35)) pon(g, F, 1, [x, 35]);
     for (let x = 23; x <= 39; x++) if (peto.c.tiene(x, 36)) pon(g, F, x < 30 ? 3 : 2, [x, 36]);
     for (const x of [25, 31, 37]) { pon(g, F, 4, [x, 37]); pon(g, F, 1, [x + 1, 38]); }
-    /* Brillo especular del peto. */
-    pon(g, F, 4, [25, 27], [26, 27], [25, 28], [24, 29], [24, 30], [27, 26]);
-    pon(g, MARFIL, 4, [25, 27]);
+    /* Destello en el pecho. */
+    pon(g, MARFIL, 4, [28, 27]);
+    destello(g, 28, 27, MARFIL, 0);
     /* Faldar: tres láminas solapadas. */
     for (let i = 0; i < 3; i++) {
       const l = m().poly([[18 - i * 0.7, 30.5 + i * 2], [30 + i * 0.6, 30.5 + i * 2], [30.5 + i * 0.6, 32.5 + i * 2], [17.5 - i * 0.7, 32.5 + i * 2]]);
       l.pintar(g, F, { relieve: 1.2, separar: true });
       const y = Math.round((30.5 + i * 2) * K) + 1;
-      for (let x = 22; x <= 42; x++) if (l.c.tiene(x, y) && g.rampa(x, y) === F) pon(g, F, x < 28 ? 4 : 3, [x, y]);
+      for (let x = 22; x <= 42; x++) if (l.c.tiene(x, y) && g.rampa(x, y) === F) pon(g, F, x < 25 ? 3 : 2, [x, y]);
     }
     /* Tabardo hecho jirones colgando por delante, con el sol de oro. */
     const tab = m().poly([[20, 30], [26, 30], [26.5, 40.8], [24.5, 39.5], [23, 41.5], [21.5, 39.8], [19.5, 40.8]]);
     tab.pintar(g, Gr, { relieve: 1.5, separar: true });
     trazo(g, 28, 46, 28, 53, Gr, 1, tab.c); trazo(g, 33, 45, 33, 52, Gr, 2, tab.c);
     trazo(g, 27, 41, 34, 41, O, 2, tab.c); trazo(g, 27, 42, 34, 42, Gr, 1, tab.c);
-    const sol = capa().ell(30.5, 46.5, 2.6, 2.6);
-    sol.pintar(g, O, { relieve: 1.5, min: 2 });
-    pon(g, O, 3, [30, 42], [31, 42], [30, 51], [26, 46], [26, 47], [35, 46], [27, 43], [34, 43], [27, 50], [34, 50]);
-    pon(g, O, 4, [29, 45], [30, 44]);
-    pon(g, Gr, 1, [30, 46], [31, 47]);
+    /* El sol de oro bordado: disco con el centro granate y ocho rayos. */
+    const SOL = ["...r...", ".r...r.", "..aab..", "r.aGb.r", "..bbb..", ".r...r.", "...r..."];
+    SOL.forEach((fila, j) => [...fila].forEach((ch, i) => {
+      const x = 28 + i, y = 44 + j;
+      if (ch === "r") pon(g, O, j < 3 ? 3 : 2, [x, y]);
+      else if (ch === "a") pon(g, O, 4, [x, y]);
+      else if (ch === "b") pon(g, O, 2, [x, y]);
+      else if (ch === "G") pon(g, Gr, 1, [x, y]);
+    }));
     /* Pierna de delante: muslera, rodillera, greba y escarpe puntiagudo. */
-    m().rect(18, 36, 5, 4).pintar(g, F, { relieve: 1.5, separar: true });
-    m().rect(18, 41, 5, 3).pintar(g, F, { relieve: 1.5, separar: true });
-    m().ell(20.5, 40, 3, 2).pintar(g, F, { relieve: 1.5, min: 2, separar: true });
-    m().poly([[13, 46.6], [15, 43.6], [18, 43], [23.5, 43], [23.5, 46.6]]).pintar(g, F, { relieve: 1.5, separar: true });
-    pon(g, F, 4, [25, 52], [25, 53], [26, 52], [20, 58], [21, 58], [25, 55]);
-    pon(g, MARFIL, 4, [25, 52]);
-    for (let x = 19; x <= 30; x++) if (g.rampa(x, 60) === F) pon(g, F, 1, [x, 60]);
-    for (let x = 24; x <= 30; x++) if (g.rampa(x, 49) === F) pon(g, F, 1, [x, 49]);
+    for (const pieza of [m().rect(18, 36, 5, 4), m().rect(18, 41, 5, 3)]) { pieza.pintar(g, F, { relieve: 1.5, separar: true }); metal(g, pieza, F); }
+    const rodilla = m().ell(20.5, 40, 3, 2);
+    rodilla.pintar(g, F, { relieve: 1.5, min: 2, separar: true });
+    metal(g, rodilla, F, { arriba: 1, separar: false });
+    pon(g, F, 1, [26, 55], [27, 55], [28, 55], [29, 55]);
+    pon(g, MARFIL, 4, [26, 52]);
+    const escarpe = m().poly([[13, 46.6], [15, 43.6], [18, 43], [23.5, 43], [23.5, 46.6]]);
+    escarpe.pintar(g, F, { relieve: 1.5, separar: true });
+    filo(g, escarpe, F, 3, { arriba: true });
+    for (let x = 19; x <= 31; x++) if (g.rampa(x, 60) === F) pon(g, F, 1, [x, 60]);
+    pon(g, F, 4, [20, 59], [21, 59], [22, 58]);
     /* Cresta de crin roja, con hebras. */
     const cresta = m().curva(21, 3.5, 28, 1, 34, 6, 3, 1.5);
     cresta.lengua(31, 34, 5, 37, 9.5).lengua(28, 31, 4, 34, 9.2).lengua(33, 35.5, 7, 37.6, 12.5);
@@ -440,8 +540,7 @@
     pon(g, F, 4, [10, 39], [11, 39], [12, 39], [9, 40]);
     pon(g, F, 1, [11, 41], [13, 41], [15, 41]);
     /* Arañazos y herrumbre. */
-    for (const [x0, y0, x1, y1] of [[33, 29, 36, 31], [21, 44, 23, 45], [36, 51, 38, 52]]) trazo(g, x0, y0, x1, y1, F, 4, peto.c.copia().unir(capa().rect(0, 40, 64, 24)));
-    for (const [x, y] of [[37, 29], [27, 32], [39, 55], [33, 17], [17, 27], [38, 38], [23, 58]]) { sobre(g, OXIDO, 2, [x, y]); sobre(g, OXIDO, 1, [x + 1, y + 1]); sobre(g, OXIDO, 3, [x, y - 1]); }
+    for (const [x, y] of [[37, 30], [39, 55], [17, 27], [23, 58]]) { sobre(g, OXIDO, 2, [x, y]); sobre(g, OXIDO, 1, [x + 1, y + 1]); sobre(g, OXIDO, 3, [x, y - 1]); }
     bordeLuz(g, Gr, 2, (x, y) => x > 36);
     return contornear(g);
   }
@@ -456,9 +555,10 @@
     escamas(g, cola, P);
     /* Red recogida colgando de la mano de atrás: malla de cuerda con nudos. */
     const red = m().poly([[31, 24], [37, 27], [40.5, 36], [37, 42], [30, 41.5], [29, 33]]);
-    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (red.c.tiene(x, y) && (x + y) % 4 && (x - y + 128) % 4) red.c.off(x, y);
-    red.pintar(g, C, { relieve: 1.5, min: 1, max: 3 });
-    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (g.rampa(x, y) === C && (x + y) % 4 === 0 && (x - y + 128) % 4 === 0) pon(g, C, 4, [x, y]);
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (red.c.tiene(x, y) && (x + y) % 5 && (x - y + 130) % 5) red.c.off(x, y);
+    red.pintar(g, C, { relieve: 2, min: 1, max: 3 });
+    tono(g, red, C, -1, (x, y) => x > 47 || y > 52);
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (g.rampa(x, y) === C && (x + y) % 5 === 0 && (x - y + 130) % 5 === 0) pon(g, C, x < 46 ? 4 : 3, [x, y]);
     m().ell(33, 40.5, 1.6, 1.3).ell(38.5, 38, 1.3, 1.3).ell(36, 42, 1.2, 1.2).pintar(g, Fe, { relieve: 1, min: 1 });
     pon(g, Fe, 4, [43, 54], [51, 50], [47, 55]);
     /* Pierna de atrás, en sombra. */
@@ -472,8 +572,15 @@
     escamas(g, tor, P);
     const vientre = m().ell(20, 30, 2.6, 4.6);
     cambiar(g, vientre, P, VIENTRE);
-    for (const y of [36, 39, 42, 45]) for (let x = 22; x <= 30; x++) if (vientre.c.tiene(x, y)) pon(g, VIENTRE, 1, [x, y]);
-    for (const y of [35, 38, 41, 44]) for (let x = 22; x <= 30; x++) if (vientre.c.tiene(x, y) && x < 26) pon(g, VIENTRE, 4, [x, y]);
+    /* Placas del vientre: juntas un tono más oscuras, curvadas con la barriga. */
+    for (const y of [36, 39, 42]) for (let x = 22; x <= 31; x++) if (vientre.c.tiene(x, y) && vientre.c.tiene(x, y + 1)) matiz(g, x, y + (x > 28 ? 1 : 0), -1);
+    /* Pierna de delante: muslo, espinilla hacia atrás y pie de tres dedos con garras. */
+    const pierna = m().ell(20.5, 37.5, 3.4, 3.5).linea(21, 40, 22.5, 43, 3).linea(22.5, 43, 21, 45, 2).poly([[16, 46.6], [17, 44.5], [23, 44.5], [23.5, 46.6]]);
+    pierna.pintar(g, P, { relieve: 2, separar: true });
+    escamas(g, pierna, P, { cond: (x, y) => y < 57 });
+    pon(g, MARFIL, 4, [21, 62], [24, 62]);
+    pon(g, MARFIL, 3, [22, 62], [27, 62]);
+    pon(g, P, 1, [23, 61], [26, 61], [23, 62], [26, 62]);
     /* Taparrabos y cinturón con la bolsa de oro. */
     const tap = m().poly([[17.5, 33], [28.5, 33], [29, 38], [25, 39.8], [23, 37], [20.5, 39.8], [17, 38]]);
     tap.pintar(g, T, { relieve: 2, separar: true });
@@ -486,13 +593,6 @@
     pon(g, ORO, 4, [35, 45], [38, 44]);
     pon(g, ORO, 3, [36, 44], [37, 45], [39, 45]);
     pon(g, ORO, 2, [36, 45], [38, 45]);
-    /* Pierna de delante: muslo, espinilla hacia atrás y pie de tres dedos con garras. */
-    const pierna = m().ell(20.5, 37.5, 3.4, 3.5).linea(21, 40, 22.5, 43, 3).linea(22.5, 43, 21, 45, 2).poly([[16, 46.6], [17, 44.5], [23, 44.5], [23.5, 46.6]]);
-    pierna.pintar(g, P, { relieve: 2, separar: true });
-    escamas(g, pierna, P, { cond: (x, y) => y < 57 });
-    pon(g, MARFIL, 4, [21, 62], [24, 62]);
-    pon(g, MARFIL, 3, [22, 62], [27, 62]);
-    pon(g, P, 1, [23, 61], [26, 61], [23, 62], [26, 62]);
     /* Cuernos que se curvan hacia atrás, con anillos. */
     const cuernos = m().curva(24, 15, 29, 11, 33, 12.5, 2.5, 1).curva(25, 18, 30, 16.5, 32, 18.5, 2, 1);
     cuernos.pintar(g, MARFIL, { relieve: 1, separar: true });
@@ -506,7 +606,7 @@
       .poly([[19, 15], [11, 17], [10, 18.8], [11, 20.5], [20, 21]])
       .poly([[19, 21], [12, 21.2], [13, 22.8], [21, 23.5]]);
     cab.pintar(g, P, { relieve: 3, separar: true });
-    escamas(g, cab, P, { cond: (x, y) => x > 25 || y < 22 });
+    escamas(g, cab, P, { cond: (x, y) => x > 28 && y < 30 });
     /* Boca con dientecillos y la comisura. */
     for (let x = 15; x <= 25; x++) pon(g, P, 0, [x, 28]);
     pon(g, P, 0, [26, 29], [25, 29]);
@@ -517,13 +617,14 @@
     pon(g, NEGRO, 0, [15, 24]);
     pon(g, P, 4, [17, 21], [18, 21], [19, 21], [28, 19]);
     /* Ojo grande y amarillo, con ceja de escamas. */
-    pon(g, NEGRO, 1, [22, 20], [23, 20], [24, 20], [25, 20], [26, 21], [21, 21]);
-    pon(g, ORO, 4, [23, 21], [22, 22]);
-    pon(g, ORO, 3, [24, 21], [23, 22]);
-    pon(g, ORO, 2, [22, 23], [23, 23]);
-    pon(g, NEGRO, 0, [25, 21], [25, 22], [24, 22], [24, 23]);
-    pon(g, P, 1, [25, 24], [24, 24], [23, 24], [26, 23]);
-    pon(g, P, 4, [23, 19], [24, 19]);
+    pon(g, P, 0, [21, 20], [22, 19], [23, 19], [24, 19], [25, 19], [26, 20], [27, 21]);
+    pon(g, P, 4, [22, 18], [23, 18], [24, 18]);
+    pon(g, ORO, 4, [22, 21], [23, 21]);
+    pon(g, ORO, 3, [22, 22], [25, 21], [26, 22]);
+    pon(g, ORO, 2, [23, 23], [25, 23], [26, 23]);
+    pon(g, NEGRO, 0, [24, 21], [24, 22], [24, 23]);
+    pon(g, P, 0, [22, 23], [27, 22], [27, 23]);
+    pon(g, P, 1, [23, 24], [24, 24], [25, 24], [26, 24]);
     /* Brazo de delante con la lanza. */
     const brazo = m().linea(20, 24, 16, 28, 3).linea(16, 28, 12.5, 29, 2);
     brazo.pintar(g, P, { relieve: 1.5, separar: true });

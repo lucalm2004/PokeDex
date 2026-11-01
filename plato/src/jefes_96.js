@@ -84,7 +84,7 @@
   const bez = (x0, y0, cx, cy, x1, y1, t) => { const u = 1 - t; return [u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1]; };
   /* Como Capa.pintar, pero con el tono continuo y un tramado estrecho entre bandas, para volúmenes grandes.
      op.caida oscurece hacia abajo (luz cenital); op.volumen añade un degradado de esfera desde arriba a la izquierda;
-     op.tramado = anchura del tramado (0 = bandas limpias). */
+     op.tramado = anchura del tramado (0 = bandas limpias); op.extra(x, y) suma luz a mano (pliegues, ondas). */
   function sombrear(capa, g, ram, op = {}) {
     const w = W, h = H, Rr = op.relieve || 6, m = capa.m;
     const d = new Float32Array(w * h);
@@ -109,7 +109,7 @@
       if (!m[y * w + x]) continue;
       const nx = (alto(x - 1, y) - alto(x + 1, y)) * 0.5 * k, ny = (alto(x, y - 1) - alto(x, y + 1)) * 0.5 * k;
       const l = (nx * L[0] + ny * L[1] + L[2]) / ln / Math.hypot(nx, ny, 1) + (op.sesgo || 0) - (op.caida || 0) * (y - y0) / Math.max(1, y1 - y0)
-        - vol * (((x - cx) / rx) * 0.55 + ((y - cy) / ry) * 0.75);
+        - vol * (((x - cx) / rx) * 0.55 + ((y - cy) / ry) * 0.75) + (op.extra ? op.extra(x, y) : 0);
       let v = 0;
       for (let b = 0; b < 5; b++) if (l > TH[b]) v = b + Math.min(1, (l - TH[b]) / (TH[b + 1] - TH[b]));
       let t = Math.floor(v + (umbral(x, y) - 0.5) * s);
@@ -419,17 +419,24 @@
       pon(g, Hu, 1, [x1, y1]);
     }
 
-    /* El manto: túnica violeta oscura hasta el suelo, deshilachada. */
-    const manto = C().poly([[40, 30], [56, 30], [62, 41], [67, 60], [72, 78], [78, 94.5], [24, 94.5], [28, 78], [32, 60], [35, 41]]);
-    for (const [x, y, a] of [[27, 88, 1.8], [34, 90, 1.5], [42, 87, 2], [56, 89, 1.8], [63, 86, 2.2], [71, 89, 1.8], [76, 91, 1.2]])
+    /* El manto: túnica violeta oscura hasta el suelo, deshilachada, con la cola barrida hacia atrás. */
+    const manto = C().poly([[40, 30], [56, 30], [62, 41], [68, 60], [75, 78], [84, 94.5], [24, 94.5], [28, 78], [32, 60], [35, 41]]);
+    for (const [x, y, a] of [[27, 88, 1.8], [34, 90, 1.5], [42, 87, 2], [57, 89, 1.8], [64, 86, 2.2], [72, 88, 2], [79, 91, 1.4]])
       manto.restar(C().poly([[x - a, 95.5], [x, y], [x + a, 95.5]]));
-    sombrear(manto, g, V, { relieve: 7, volumen: 0.4, caida: 0.35 });
-    /* Pliegues largos, con su lado de luz. */
-    for (const [l, k] of [[[60, 46, 65, 68, 69, 91], 0], [[55, 52, 58, 72, 60, 88], 0], [[34, 62, 31, 76, 30, 89], 0], [[64, 70, 68, 82, 72, 92], 1]]) {
-      trazo(g, manto, V, k, l);
-      trazo(g, manto, V, Math.min(4, k + 3), [l[0] - 1, l[1] + 2, l[2] - 1, l[3], l[4] - 1, l[5] - 1]);
-    }
-    trazo(g, manto, V, 3, [37, 43, 35, 60, 32, 74], [59, 41, 61, 53, 62, 62]);
+    sombrear(manto, g, V, { relieve: 7, volumen: 0.4, caida: 0.35, tramado: 0.25 });
+    /* Pliegues largos: un surco de sombra con su cresta de luz a la izquierda. */
+    const pliegue = (x0, y0, cx, cy, x1, y1, hondo = 0) => {
+      const sur = C().curva(x0, y0, cx, cy, x1, y1, 1, 2.2).recortar(manto);
+      tono(g, sur, 1, V);
+      trazo(g, manto, V, hondo, [x0 + 0.5, y0, cx + 0.5, cy, x1 + 0.5, y1]);
+      trazo(g, manto, V, 3, [x0 - 1.5, y0 + 3, cx - 1.5, cy, x1 - 2, y1 - 2]);
+    };
+    pliegue(60, 46, 66, 68, 72, 91);
+    pliegue(55, 50, 58, 72, 61, 89);
+    pliegue(65, 66, 71, 80, 78, 92, 1);
+    pliegue(34, 62, 31, 76, 30, 89);
+    trazo(g, manto, V, 4, [37, 44, 35, 58, 33, 70]);
+    trazo(g, manto, V, 3, [59, 41, 61, 53, 62, 62]);
     /* Bordado de oro en el bajo, siguiendo los jirones. */
     cada(manto, (x, y) => {
       if (y < 80 || !manto.tiene(x, y) || manto.tiene(x, y + 3)) return;
@@ -437,7 +444,7 @@
     });
     /* El faldón de delante, negro, con ribete de oro y runas que brillan. */
     const panel = C().poly([[44, 34], [51, 34], [53, 60], [55, 94.5], [37, 94.5], [40, 60]]).recortar(manto);
-    sombrear(panel, g, N, { relieve: 3.5, caida: 0.3, max: 3 });
+    sombrear(panel, g, N, { relieve: 3.5, caida: 0.3, max: 3, tramado: 0.12 });
     for (const [x0, y0, x1, y1] of [[44, 34, 40, 60], [40, 60, 37, 94], [51, 34, 53, 60], [53, 60, 55, 94]]) trazo(g, manto, B, 2, [x0, y0, x1, y1]);
     for (const [x0, y0, x1, y1] of [[44, 34, 40, 60], [40, 60, 37, 94]]) trazo(g, manto, B, 3, [x0 + 1, y0, x1 + 1, y1]);
     const RUNAS = [[[0, 0], [0, 1], [0, 2], [-1, 1], [1, 1]], [[-1, 0], [0, 1], [1, 0], [0, 2]], [[0, 0], [-1, 1], [1, 1], [0, 2], [0, 3]], [[-1, 0], [1, 0], [0, 1], [-1, 2], [1, 2]]];
@@ -467,10 +474,11 @@
     pon(g, NEGRO, 0, [46, 57], [48, 57], [47, 59]);
     pon(g, E, 4, [46, 57]); pon(g, E, 3, [48, 57]);
     /* Cadena con un amuleto que cuelga del cinto. */
-    for (let y = 59; y < 72; y += 2) pon(g, B, y % 4 ? 3 : 2, [Math.round(58 + (y - 59) * 0.15), y]);
-    const amuleto = new Capa(W, H).poly([[60, 72], [62, 75], [60, 78], [58, 75]]);
-    sombrear(amuleto, g, E, { relieve: 1.5, min: 1, tramado: 0 });
-    pon(g, E, 4, [59, 74]);
+    for (let y = 59; y < 71; y += 2) pon(g, B, y % 4 ? 3 : 2, [Math.round(58 + (y - 59) * 0.15), y]);
+    const engaste = new Capa(W, H).poly([[60, 70], [63, 74], [60, 78.5], [57, 74]]);
+    sombrear(engaste, g, B, { relieve: 1, min: 1, tramado: 0 });
+    new Capa(W, H).poly([[60, 71.5], [61.8, 74], [60, 76.8], [58.2, 74]]).pintar(g, E, { plano: 2 });
+    pon(g, E, 4, [59, 73]); pon(g, E, 3, [60, 73], [59, 74]); pon(g, E, 1, [60, 76], [61, 75]);
 
     /* Esclavina sobre los hombros y el cuello alto, que se abre en dos puntas. */
     const cuello = C().poly([[34, 11], [41, 26], [55, 26], [63, 11], [60, 32], [37, 32]]);
@@ -567,7 +575,159 @@
     return g;
   }
 
+  /* =====================================================================
+     Lord Varkhul, el vampiro: abre la capa como alas de murciélago.
+     ===================================================================== */
+  function vampiro() {
+    const g = new Rejilla(W, H), N = NOCHE, Rj = CARMIN, P = PALIDO, Pe = AZABACHE, Pl = R.plata, S = R.sangre;
+
+    /* La capa abierta con las dos manos, enseñando el forro carmesí. Por fuera solo asoma un filo fino
+       del paño negro (con su brillo de raso), para que el borde no pese. */
+    const forroDe = ala => {
+      const f = ala.copia();
+      cada(ala, (x, y) => { if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !ala.tiene(x + a, y + b))) f.off(x, y); });
+      return f;
+    };
+    const capa = (ala, mano, puntas, lado) => {
+      const forro = forroDe(ala);
+      /* El filo exterior: raso negro azulado, más claro arriba, donde le da la luz. */
+      cada(ala, (x, y) => { if (!forro.tiene(x, y)) pon(g, N, y < mano[1] + 8 ? 4 : 3, [x, y]); });
+      /* Tablas de la capa: entre varilla y varilla la tela se comba, clara del lado de la luz y oscura del otro. */
+      const ang = (x, y) => Math.atan2(y - mano[1], (x - mano[0]) * lado);
+      const cortes = [-0.6, ...puntas.map(([x, y]) => ang(x, y)), ang(mano[0] - lado * 14, 95), ang(mano[0] - lado * 30, 80), 3.2];
+      const pliegues = (x, y) => {
+        const a = ang(x, y);
+        for (let i = 0; i < cortes.length - 1; i++) if (a >= cortes[i] && a < cortes[i + 1]) {
+          const f = (a - cortes[i]) / (cortes[i + 1] - cortes[i]);
+          return Math.cos(f * Math.PI) * 0.32 * (lado > 0 ? 1 : -1) * Math.min(1, Math.hypot(x - mano[0], y - mano[1]) / 14);
+        }
+        return 0;
+      };
+      sombrear(forro, g, Rj, { relieve: 6, volumen: 0.35, caida: 0.2, tramado: 0.15, sesgo: 0.08, min: 1, extra: pliegues });
+      /* La sombra del cuerpo sobre el forro, junto a la levita. */
+      tono(g, C().ell(48 + lado * 7, 62, 9, 34).recortar(forro), 1, Rj, 0.5);
+      /* Varillas de la capa, como dedos de murciélago, desde la mano. */
+      for (const [x1, y1] of puntas) {
+        const cx = (mano[0] + x1) / 2 - lado * 3, cy = (mano[1] + y1) / 2;
+        trazo(g, forro, Rj, 1, [mano[0] + lado, mano[1] + 2, cx, cy, x1 - lado, y1]);
+      }
+    };
+    const alaD = C().poly([[53, 26], [67, 20], [79, 18], [86, 23], [91, 36], [92, 55], [89, 72], [83, 86], [74, 94.5], [50, 94.5]]);
+    for (const [x, y, rx, ry] of [[98, 46, 8.6, 7.8], [97, 64, 8.4, 7.2], [92.5, 80, 7.6, 6], [82, 99, 6.6, 6]]) alaD.quitarEll(x, y, rx, ry);
+    capa(alaD, [78, 21], [[91, 37], [92, 55], [89, 72], [83, 86]], 1);
+    const alaI = C().poly([[43, 26], [29, 20], [17, 17], [10, 22], [5, 36], [4, 55], [7, 72], [13, 86], [22, 94.5], [46, 94.5]]);
+    for (const [x, y, rx, ry] of [[-2, 46, 8.6, 7.8], [-1, 64, 8.4, 7.2], [3.5, 80, 7.6, 6], [14, 99, 6.6, 6]]) alaI.quitarEll(x, y, rx, ry);
+    capa(alaI, [16, 20], [[5, 37], [4, 55], [7, 72], [13, 86]], -1);
+    /* El cuello alto de la capa, que se abre por detrás de la cabeza. */
+    const cuello = C().poly([[32, 5], [40, 23], [55, 23], [65, 4], [63, 29], [36, 30]]);
+    sombrear(cuello, g, N, { relieve: 2, max: 3, tramado: 0 });
+    const cuelloF = C().poly([[34.5, 9], [41, 24.5], [54, 24.5], [62.5, 8], [61, 28], [38, 28]]).recortar(cuello);
+    sombrear(cuelloF, g, Rj, { relieve: 3, volumen: 0.6, tramado: 0.15 });
+    trazo(g, cuelloF, Rj, 4, [35, 10, 40, 22]); trazo(g, cuelloF, Rj, 1, [61, 10, 56, 22]);
+    pon(g, N, 4, [32, 5], [33, 6]);
+
+    /* Piernas: pantalón negro y zapatos de punta con hebilla de plata. */
+    const piernas = C().poly([[41, 62], [56, 62], [58, 91], [52, 91], [49, 72], [47, 91], [40, 91]]);
+    sombrear(piernas, g, N, { relieve: 3, max: 3, tramado: 0 });
+    trazo(g, piernas, N, 0, [49, 69, 49, 91]);
+    trazo(g, piernas, N, 3, [42, 64, 41, 90], [51, 72, 53, 90]);
+    const zapatos = C().poly([[40, 90], [47, 90], [47, 94.5], [33, 94.5]]).poly([[50, 90], [58, 90], [58, 94.5], [45, 94.5]]);
+    sombrear(zapatos, g, N, { relieve: 1.5, min: 1, separar: true, tramado: 0 });
+    for (const x of [36, 48]) { pon(g, N, 4, [x, 92], [x + 1, 92]); }
+    for (const x of [42, 53]) { pon(g, Pl, 3, [x, 91], [x + 1, 91]); pon(g, Pl, 4, [x, 91]); }
+
+    /* Levita negra con faldones, chaleco granate con botones de oro y solapas de seda. */
+    const levita = C().poly([[40, 26], [56, 26], [59, 43], [60, 60], [64, 77], [55, 74], [53, 62], [44, 62], [42, 74], [34, 77], [37, 60], [38, 43]]);
+    sombrear(levita, g, N, { relieve: 5, volumen: 0.45, separar: true, tramado: 0.15 });
+    trazo(g, levita, N, 3, [39, 45, 38, 60, 36, 74], [57, 45, 58, 60, 61, 74]);
+    trazo(g, levita, N, 0, [44, 62, 43, 73], [53, 62, 55, 73]);
+    const chaleco = C().poly([[44, 26], [52, 26], [53, 55], [48, 59], [43, 55]]);
+    sombrear(chaleco, g, R.tela.granate, { relieve: 2.5, max: 3, volumen: 0.4, tramado: 0 });
+    /* Brocado del chaleco: rombos pequeños. */
+    for (let y = 34; y < 56; y += 4) for (let x = 44 + (y % 8 ? 2 : 0); x < 53; x += 4) if (chaleco.tiene(x, y) && chaleco.tiene(x + 1, y)) pon(g, R.tela.granate, 1, [x, y]);
+    for (const y of [38, 44, 50]) { pon(g, ORO, 3, [48, y], [49, y]); pon(g, ORO, 4, [48, y - 1]); pon(g, ORO, 1, [49, y + 1]); }
+    const solapas = C().poly([[41.5, 26], [44, 26], [45.6, 48], [41.5, 40]]).poly([[52, 26], [54.5, 26], [54.5, 40], [50.4, 48]]);
+    sombrear(solapas, g, Pl, { relieve: 1.2, max: 2, separar: 1, tramado: 0 });
+    trazo(g, solapas, Pl, 3, [42, 27, 42, 39]);
+    /* Chorrera blanca de encaje y un broche de rubí. */
+    const chorrera = C().poly([[44, 24], [52, 24], [51, 34], [48, 37], [45, 34]]);
+    sombrear(chorrera, g, HUESO, { relieve: 1.8, min: 2, tramado: 0 });
+    trazo(g, chorrera, HUESO, 1, [45, 28, 48, 29.5, 51, 28], [45.5, 31.5, 48, 33, 50.5, 31.5]);
+    pon(g, HUESO, 4, [45, 27], [46, 30], [45, 33]);
+    new Capa(W, H).ell(48, 26, 1.9, 1.8).pintar(g, S, { plano: 3 });
+    pon(g, S, 4, [47, 25]); pon(g, S, 1, [49, 27]); pon(g, ORO, 3, [46, 26], [50, 26], [48, 24], [48, 28]);
+    bordeLuz(g, N, 3, N, (x, y) => y > 24);
+
+    /* Brazo de atrás: sube hasta la mano que sostiene la capa. */
+    const brazoAtras = C().curva(55, 31, 67, 31, 75, 23, 6, 4.8);
+    sombrear(brazoAtras, g, N, { relieve: 2.5, max: 3, separar: 1, tramado: 0 });
+    trazo(g, brazoAtras, N, 4, [56, 29, 66, 28.5, 73, 22]);
+    const punoA = C().poly([[72, 21], [75.5, 19.5], [77, 24], [73, 25.5]]);
+    sombrear(punoA, g, HUESO, { relieve: 1, min: 2, separar: true, tramado: 0 });
+    const manoAtras = C().ell(78, 21.5, 3, 2.6).linea(79, 20, 83, 17, 1).linea(80, 22, 84, 21, 1).linea(78, 19, 79, 15, 1).linea(80, 23.5, 83, 25, 1);
+    sombrear(manoAtras, g, P, { relieve: 1.6, separar: true, tramado: 0 });
+    pon(g, S, 2, [83, 17], [84, 21], [79, 15], [83, 25]);
+
+    /* La cabeza: piel de cera, pelo negro peinado hacia atrás con pico de viuda, oreja puntiaguda. */
+    const cab = C().ell(46.5, 15, 7.2, 8.4).poly([[40, 14], [37, 19.5], [40, 21]]).poly([[40, 20], [52, 20], [49, 27], [42.5, 28.5]]);
+    sombrear(cab, g, P, { relieve: 4, volumen: 0.5, separar: true, tramado: 0 });
+    const pelo = C().poly([[38.6, 11.5], [40.5, 7], [45.6, 4.5], [52, 5], [56.5, 9.5], [57.6, 16], [57, 23.5], [53.5, 21.5], [52, 14.5], [49.6, 11.6], [47.2, 11.5], [44.8, 14.6], [43, 11.8], [40, 12.4]]);
+    sombrear(pelo, g, Pe, { relieve: 3, volumen: 0.5, separar: true, tramado: 0, max: 3, sesgo: -0.15 });
+    /* Mechones engominados: brillos largos que siguen el peinado hacia la nuca. */
+    trazo(g, pelo, Pe, 4, [42, 8, 46.5, 6, 51, 6.5]);
+    trazo(g, pelo, Pe, 3, [44, 10, 49, 8.5, 54, 11.5], [50, 10, 54.5, 13, 55.5, 20], [40.5, 10.5, 43.5, 8.5]);
+    trazo(g, pelo, Pe, 1, [47, 10.5, 51.5, 10.5, 55, 15], [53, 16, 56, 22]);
+    const oreja = C().poly([[52, 15], [59, 8.6], [55.6, 20], [52.6, 20.6]]);
+    sombrear(oreja, g, P, { relieve: 1.6, separar: true, tramado: 0 });
+    pon(g, P, 1, [54, 15], [55, 14], [54, 16], [54, 17], [56, 12]); pon(g, P, 4, [57, 10], [53, 18]);
+    /* Cejas en punta, fruncidas hacia la nariz. */
+    pon(g, Pe, 1, [39, 12], [40, 13], [41, 13], [42, 14], [44, 14], [45, 13], [46, 13], [47, 12], [48, 12]);
+    pon(g, Pe, 3, [40, 12], [46, 12]);
+    /* Ojos: párpado oscuro, iris rojo con su brasa y la ojera fría debajo. */
+    pon(g, P, 0, [40, 14], [41, 14], [45, 14], [46, 14], [47, 14]);
+    pon(g, S, 3, [40, 15]); pon(g, R.fuego, 4, [41, 15]); pon(g, S, 1, [42, 15]);
+    pon(g, S, 3, [44, 15]); pon(g, R.fuego, 4, [45, 15]); pon(g, S, 4, [46, 15]); pon(g, S, 1, [47, 15]);
+    pon(g, P, 1, [40, 16], [41, 16], [45, 16], [46, 16], [47, 16]);
+    /* Nariz larga y aguileña. */
+    pon(g, P, 4, [43, 15], [42, 16], [42, 17], [41, 18]); pon(g, P, 3, [40, 17], [39, 18], [38, 19]);
+    pon(g, P, 1, [43, 17], [43, 18], [42, 19], [41, 20]);
+    pon(g, P, 0, [39, 20], [40, 20]);
+    /* Pómulo alto y mejilla hundida. */
+    pon(g, P, 4, [45, 17], [46, 17]); pon(g, P, 3, [47, 17], [44, 18]);
+    pon(g, P, 1, [47, 19], [48, 20], [47, 21], [46, 20], [49, 19]);
+    /* Boca: sonrisa fina y cruel, colmillos y una gota de sangre. */
+    pon(g, S, 1, [40, 22], [41, 22], [42, 22], [43, 22], [44, 22]); pon(g, S, 0, [45, 21], [46, 21]);
+    pon(g, S, 2, [41, 21]);
+    pon(g, HUESO, 4, [41, 23], [44, 23]); pon(g, HUESO, 2, [41, 24], [44, 24]);
+    pon(g, P, 3, [40, 23], [42, 23], [43, 23]);
+    pon(g, S, 3, [45, 23]); pon(g, S, 4, [45, 24]); pon(g, S, 2, [45, 25]);
+    /* Barbilla en punta. */
+    pon(g, P, 3, [42, 25], [43, 25], [42, 26]); pon(g, P, 1, [44, 26], [46, 24]); pon(g, P, 0, [43, 27], [44, 27]);
+
+    /* Brazo de delante, alzado, con puño de encaje y la mano de garras agarrando la capa. */
+    const brazo = C().curva(41, 33, 30, 33, 23, 24, 6.6, 5.4);
+    sombrear(brazo, g, N, { relieve: 3, max: 3, separar: true, tramado: 0 });
+    trazo(g, brazo, N, 4, [40, 31, 30, 30.5, 24, 22]);
+    trazo(g, brazo, N, 0, [37, 36, 29, 35.5, 25, 29]);
+    const puno = C().poly([[24, 19], [27.6, 22.8], [24, 27.6], [20.4, 24]]);
+    sombrear(puno, g, HUESO, { relieve: 1.2, min: 2, separar: true, tramado: 0 });
+    trazo(g, puno, HUESO, 1, [24, 21.5, 22.8, 25.2]);
+    pon(g, HUESO, 4, [23, 20], [22, 22]);
+    const mano = C().ell(18.6, 21, 3.1, 2.9);
+    sombrear(mano, g, P, { relieve: 1.8, separar: true, tramado: 0 });
+    for (const [x0, y0, x1, y1] of [[17, 19, 13, 14.5], [16.5, 20.5, 11, 18.5], [16.5, 22.5, 11.4, 25], [17.5, 23.5, 14.4, 28.4]]) {
+      new Capa(W, H).linea(x0, y0, x1, y1, 1).pintar(g, P, { plano: 3 });
+      pon(g, P, 1, [Math.round((x0 + x1) / 2) + 1, Math.round((y0 + y1) / 2)]);
+      pon(g, S, 3, [x1, y1]);
+    }
+    pon(g, P, 4, [17, 19], [18, 19]);
+    /* Anillo de sello con un rubí. */
+    pon(g, ORO, 3, [16, 21]); pon(g, S, 4, [15, 21]);
+    contornear(g);
+    return g;
+  }
+
   /* ---------- Registro ---------- */
   window.MONSTRUOS_64 = window.MONSTRUOS_64 || {};
-  Object.assign(window.MONSTRUOS_64, { trol, liche });
+  Object.assign(window.MONSTRUOS_64, { trol, liche, vampiro });
 })();
