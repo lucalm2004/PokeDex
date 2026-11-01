@@ -185,6 +185,7 @@ function tonoEn(f, dur, tipo, vol, t, salida) {
 const hz = n => 440 * Math.pow(2, (n - 69) / 12);
 function musicaTick() {
   const a = SONIDO.ctx;
+  if (MUSICA.m) { if (a && a.state === "running") try { MUSICA.m.tick(); } catch (e) {} return; }
   if (!a || a.state !== "running" || MUSICA.pista === null || !MUSICA.salida) return;
   const P = PISTAS[MUSICA.pista], paso = 60 / P.bpm / 2, mel = melodia(P);
   if (MUSICA.t < a.currentTime) MUSICA.t = a.currentTime + 0.05;
@@ -201,12 +202,21 @@ function musicaTick() {
 function musica(pista) {
   const on = MUSICA.on && SONIDO.on && pista !== null;
   if (!on) {
-    if (MUSICA.salida) { try { MUSICA.salida.disconnect(); } catch (e) {} MUSICA.salida = null; }
+    if (MUSICA.m) { try { MUSICA.m.parar(); } catch (e) {} }
+    else if (MUSICA.salida) { try { MUSICA.salida.disconnect(); } catch (e) {} MUSICA.salida = null; }
     MUSICA.pista = null; clearInterval(MUSICA.iv); MUSICA.iv = null;
     return;
   }
   const a = audio();
   if (!a) return;
+  /* Música medieval de sonido.js (laúd, arpa, órgano, tambores…), si está. */
+  if (typeof SONIDO_MED !== "undefined") {
+    if (!MUSICA.salida) { MUSICA.salida = a.createGain(); MUSICA.salida.gain.value = 1; MUSICA.salida.connect(a.destination); }
+    if (!MUSICA.m) MUSICA.m = new SONIDO_MED.Musica(a, MUSICA.salida);
+    if (MUSICA.pista !== pista) { MUSICA.pista = pista; try { MUSICA.m.pista(pista); } catch (e) {} }
+    if (!MUSICA.iv) MUSICA.iv = setInterval(musicaTick, 80);
+    return;
+  }
   if (!MUSICA.salida) { MUSICA.salida = a.createGain(); MUSICA.salida.gain.value = 0.5; MUSICA.salida.connect(a.destination); }
   if (MUSICA.pista !== pista) { MUSICA.pista = pista; MUSICA.paso = 0; MUSICA.t = a.currentTime + 0.1; }
   if (!MUSICA.iv) MUSICA.iv = setInterval(musicaTick, 80);
@@ -215,6 +225,7 @@ function pistaActual() {
   if (vista !== "juego" || !S) return "taberna";
   if (S.final) return "taberna";
   if (S.combate && S.combate.jefe) return "jefe";
+  if (S.combate && typeof SONIDO_MED !== "undefined") return "combate";
   return Math.max(0, S.acto);
 }
 
@@ -1050,7 +1061,11 @@ function necesitaCertero(v) {
   const p = S.players[heroeVista()], id = p && p.habs[+v], h = id && H(id);
   return !!h && (h.efecto === "dano" || h.efecto === "cura") && (p.pm || 0) >= costeHab(p, h);
 }
-function sonar(k) { if (SONIDO.on && SONIDOS[k]) try { SONIDOS[k](); } catch (e) {} }
+function sonar(k) {
+  if (!SONIDO.on) return;
+  if (typeof SONIDO_MED !== "undefined") { const a = audio(); if (a) { try { SONIDO_MED.efecto(k, a, a.destination); } catch (e) {} } if (k === "herido") vibrar(45); if (k === "nivel") vibrar([30, 40, 30]); if (k === "perfecto") vibrar([15, 25, 15]); return; }
+  if (SONIDOS[k]) try { SONIDOS[k](); } catch (e) {}
+}
 function festejar(titulo, sub, clase = "") {
   const el = $("#festejo");
   if (!el) return;
@@ -1104,13 +1119,13 @@ function efectoLocal(e) {
   if (e.tipo === "cura" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-curado");
   if (e.tipo === "salto" || e.tipo === "victoria") gesto("*", "g-victoria");
   if (e.tipo === "ataque" && /^h\d$/.test(String(e.actor))) gesto(+String(e.actor).slice(1), "g-furia");
-  if (e.tipo === "golpe") sonar(e.objetivo === "e" ? "golpe" : "herido");
-  else if (e.tipo === "magia") sonar("magia");
+  if (e.tipo === "golpe") sonar(e.fuerte ? "critico" : String(e.objetivo)[0] === "e" ? "golpe" : "herido");
+  else if (e.tipo === "magia") sonar(e.rampa === RP.fuego ? "fuego" : "magia");
   else if (e.tipo === "cura") sonar("cura");
   else if (e.tipo === "muerte") sonar("golpe");
   else if (e.tipo === "victoria") sonar("victoria");
   else if (e.tipo === "fase") { sonar("derrota"); festejar(e.texto, e.sub, "fase"); vibrar([60, 40, 60]); }
-  else if (e.tipo === "bloqueo") { sonar("bien"); vibrar(20); }
+  else if (e.tipo === "bloqueo") { sonar("bloqueo"); vibrar(20); }
   else if (e.tipo === "proyectil" || e.tipo === "tajo") sonar(e.forma === "flecha" ? "dado" : "magia");
   else if (e.tipo === "logro") ganarLogro(e.id);
   else if (e.tipo === "runas") { const m = meta(); m.runas += e.n; guardarMeta(m); }
@@ -1650,6 +1665,7 @@ function elegirNodo(j) {
   S.siguiente = cola;
   log(`${S.players[S.turno].nombre} elige el camino: «${nodo.pista || NOMBRE_NODO[nodo.tipo]}».`, "esc");
   if (nodo.rasgo) aplicarRasgo(nodo);
+  sonar("pasos");
   procesarSiguiente();
 }
 function escenaHistoria(parte) {
@@ -1783,6 +1799,7 @@ function comprar(id) {
   if (p.oro < pr) return;
   if (o.tipo !== "consumible" && o.tipo !== "servicio" && p.equipo[o.tipo] === id) return;
   p.oro -= pr;
+  sonar("moneda");
   let t = `${p.nombre} compra ${o.nombre} (${pr} po)`;
   if (o.tipo === "consumible") S.zurron[id]++;
   else if (o.tipo === "servicio") S.players.forEach((x, i) => { x.alma = maxAlma(x); fx({ tipo: "cura", objetivo: "h" + i }); });

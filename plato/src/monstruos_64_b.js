@@ -37,7 +37,7 @@
   const DIABLO = ["#2a0818", "#561226", "#8e1e2c", "#c83c32", "#f0744a"];  // piel del diablillo
   const ALA = ["#170512", "#30091c", "#541224", "#82202e", "#b4403c"];     // membrana de las alas
   const HIERRO = ["#18161a", "#33303a", "#57535c", "#89848a", "#cfc9c2"];  // tridente, puntas
-  const QUITINA = ["#07040b", "#110a18", "#1f1329", "#342243", "#523a68"]; // caparazón de la araña
+  const QUITINA = ["#08050c", "#140c1c", "#251832", "#3e2a52", "#62487e"]; // caparazón de la araña
   const BRILLO = ["#1c0a2a", "#3a1856", "#6a30a0", "#a066d8", "#dcc0ff"];  // reflejos violetas
   const RELOJ = ["#360408", "#680a10", "#ac1a1a", "#e43c28", "#ff8c5a"];   // reloj de arena y ojos
   const HUMO = ["#06040a", "#110a18", "#201430", "#36234a", "#54386e"];    // cuerpo de la sombra
@@ -215,6 +215,19 @@
         g.set(x, y, ram[t], ram);
       }
     }
+  }
+  /* Sombra propia de un volumen redondo: un tono menos en el lado contrario a la luz (abajo a la
+     derecha de (cx, cy)), con el corte tramado para que no quede una línea dura. */
+  function sombraPropia(g, c, ram, cx, cy, corte, d = -1) {
+    tono(g, c, ram, d, (x, y) => (x - cx) * 0.6 + (y - cy) * 0.8 + (umbral(x, y) - 0.5) * 2.2 > corte);
+  }
+  /* Perfil interior: oscurece lo ya pintado justo alrededor de la capa, para despegarla de lo de detrás. */
+  function perfil(g, c, ram, i = 0) {
+    c = c.c || c;
+    const pts = [];
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++)
+      if (!c.tiene(x, y) && g.get(x, y) && (c.tiene(x + 1, y) || c.tiene(x - 1, y) || c.tiene(x, y + 1) || c.tiene(x, y - 1))) pts.push([x, y]);
+    pon(g, ram, i, ...pts);
   }
   /* Distancia (aproximada) de cada píxel de la capa a su borde. */
   function distancia(c) {
@@ -658,7 +671,7 @@
     /* Brazo de atrás alzado, con una bola de fuego en la mano. */
     const atras = m().linea(30, 20, 35, 15, 4).linea(35, 15, 37, 9, 3).ell(37.5, 6.5, 3.4, 3.4);
     atras.lengua(35, 39.5, 5, 38, 0.4).lengua(37.5, 41, 6, 42, 1.5).lengua(34, 36.5, 6, 33.5, 2).lengua(39, 41.5, 8, 44.5, 5.5);
-    brasa(g, atras, F, [1, 2.4, 4], 0);
+    brasa(g, atras, F, [1.2, 2.6], 1);
     brasa(g, m().ell(37.5, 6.8, 1.8, 1.8), C, [1, 2], 1);
     /* Cuerpo: cabeza, pecho ancho y una cintura que se deshace en lenguas de fuego hacia abajo. */
     const cuerpo = m().ell(23, 12.5, 5.2, 5.5).ell(23.5, 24, 8.5, 7).ell(23, 31, 5.5, 4.5)
@@ -669,21 +682,34 @@
     /* Brazo de delante: un zarpazo de fuego hacia los héroes. */
     const brazo = m().linea(17, 21, 12, 25, 4).linea(12, 25, 7, 22, 3).ell(6, 21.5, 2.4, 2.4);
     brazo.lengua(3.5, 6, 21, 1.4, 17).lengua(5, 7.5, 20, 5.5, 15.5).lengua(4, 6.5, 23, 1.2, 23.5).lengua(10, 13, 24, 9, 29.5).lengua(13, 15.5, 25, 13.5, 30);
-    brasa(g, brazo, F, [1, 2.4, 4], 0);
-    brasa(g, cuerpo, F, [1.5, 3, 5.2], 0, (x, y) => (y > 48 ? -(y - 48) * 0.12 : 0));
+    brasa(g, brazo, F, [1.2, 2.6], 1);
+    brasa(g, cuerpo, F, [1.3, 2.8, 4.6], 1, (x, y) => (y > 46 ? -(y - 46) * 0.1 : 0));
     /* Corazón blanco del fuego en el pecho y en la frente. */
-    brasa(g, m().ell(23.5, 24.5, 4, 4.5).ell(22.5, 12.5, 2.3, 2.5).ell(22, 33, 2, 3).ell(20.5, 37.5, 1.2, 1.5).ell(6.3, 21.5, 1.2, 1.2), C, [1, 2.4, 4], 1);
+    brasa(g, m().ell(23.5, 24.5, 4, 4.5).ell(22, 33, 2, 3).ell(20.5, 37.5, 1.2, 1.5).ell(6.3, 21.5, 1.2, 1.2), C, [1, 2.4, 4], 1);
+    brasa(g, capa().ell(29, 18, 3.2, 2.6).ell(31, 10, 1.4, 2.4), C, [1.2], 0);
     /* Vetas oscuras que suben por las llamas, como el humo de dentro. */
-    for (const [x0, y0, x1, y1] of [[21, 47, 19, 41], [33, 46, 35, 41], [26, 56, 27, 50], [36, 54, 37, 49], [16, 31, 17, 27], [41, 25, 40, 20]]) trazo(g, x0, y0, x1, y1, F, 1, cuerpo.c.copia().unir(brazo.c).unir(atras.c));
+    for (const [x0, y0, x1, y1] of [[22, 46, 20, 42], [34, 45, 35, 42], [27, 57, 28, 53], [17, 31, 18, 28], [40, 25, 40, 22]]) trazo(g, x0, y0, x1, y1, F, 1, cuerpo.c.copia().unir(brazo.c).unir(atras.c));
     /* Cara tallada: ojos que arden en blanco bajo un ceño oscuro y una boca abierta. */
-    pon(g, F, 0, [24, 14], [25, 14], [26, 15], [27, 15], [31, 15], [32, 14], [33, 14], [34, 14]);
-    pon(g, F, 1, [25, 15], [32, 15], [24, 15], [33, 15]);
-    pon(g, C, 4, [25, 16], [26, 16], [32, 16], [33, 16]);
-    pon(g, C, 3, [26, 17], [33, 17], [24, 16], [31, 16]);
-    pon(g, F, 0, [27, 20], [28, 20], [29, 20], [30, 20], [27, 21], [28, 22], [29, 22], [30, 21]);
-    pon(g, F, 1, [28, 21], [29, 21]);
-    pon(g, C, 3, [28, 21]);
-    pon(g, F, 3, [26, 20], [31, 20]);
+    /* Lenguas claras que suben por dentro de las llamas. */
+    const todo = cuerpo.c.copia().unir(brazo.c).unir(atras.c);
+    for (const [x, y, l] of [[22, 30, 4], [37, 29, 5], [40, 36, 4], [24, 44, 4], [35, 49, 3], [26, 54, 4], [29, 59, 3], [13, 33, 3], [50, 22, 4], [47, 12, 3], [33, 8, 4], [26, 9, 3], [42, 44, 3]])
+      for (let j = 0; j < l; j++) {
+        const px = x + Math.round(Math.sin((y - j) * 0.7) * 0.6), py = y - j;
+        if (todo.tiene(px, py) && g.rampa(px, py) === F && F.indexOf(g.get(px, py)) < 4) g.set(px, py, F[Math.min(4, F.indexOf(g.get(px, py)) + 1)], F);
+      }
+    /* Ceño en V, de ascuas oscuras. */
+    pon(g, F, 0, [23, 13], [24, 13], [25, 14], [26, 14], [27, 15], [31, 15], [32, 14], [33, 14], [34, 13]);
+    pon(g, F, 1, [24, 14], [33, 13], [35, 13], [22, 13]);
+    /* Ojos al rojo blanco, con la cuenca algo más oscura. */
+    pon(g, F, 2, [24, 15], [28, 16], [30, 16], [34, 15], [24, 17], [27, 17]);
+    pon(g, C, 4, [25, 15], [26, 15], [32, 15], [33, 15], [26, 16], [32, 16]);
+    pon(g, C, 3, [25, 16], [27, 16], [31, 16], [33, 16]);
+    pon(g, C, 2, [26, 17], [32, 17]);
+    /* Boca abierta en un rugido: borde de brasa y el fuego blanco dentro. */
+    pon(g, F, 0, [26, 20], [27, 20], [28, 20], [29, 20], [30, 20], [31, 20], [25, 21], [32, 21], [26, 22], [31, 22], [27, 23], [28, 23], [29, 23], [30, 23]);
+    pon(g, F, 1, [27, 21], [30, 21], [29, 21], [28, 21]);
+    pon(g, C, 3, [27, 22], [30, 22]);
+    pon(g, C, 4, [28, 22], [29, 22]);
     contornear(g, CENIZA[0], CENIZA);
     /* Chispas y pavesas sueltas alrededor. */
     for (const [i, j, k] of [[15, 10, 4], [45, 33, 3], [15, 44, 3], [42, 49, 4], [11, 38, 2], [53, 17, 4], [19, 58, 2], [40, 60, 3], [4, 15, 3], [57, 8, 2], [46, 40, 2], [13, 52, 4], [33, 61, 2], [50, 27, 2], [8, 46, 3], [48, 56, 2]])
@@ -709,7 +735,7 @@
       const h = m().linea(pts[0][0], pts[0][1], muneca[0], muneca[1], 2);
       puntas.forEach(([x, y]) => h.linea(muneca[0], muneca[1], x, y, 1));
       h.pintar(g, Rj, { relieve: 1, min: tonoHueso - 1, max: tonoHueso });
-      pon(g, MARFIL, tonoHueso + 1, [Math.round(mx) - 1, Math.round(my) - 2], [Math.round(mx) - 2, Math.round(my) - 3]);
+      pon(g, MARFIL, tonoHueso - 1, [Math.round(mx) - 1, Math.round(my) - 2]);
       return mem;
     };
     ala([[25, 26], [28, 13], [33, 7], [38, 10], [35, 13], [37.5, 17], [33.5, 17], [31.5, 22]], [28, 13], [[33, 7], [38, 10], [37.5, 17]], { relieve: 1.5, max: 1, profundo: true }, 1);
@@ -723,21 +749,27 @@
     pon(g, Rj, 4, [55, 40], [54, 42], [53, 44]);
     /* Pierna de atrás. */
     m().linea(27, 38, 29.5, 41, 3).linea(29.5, 41, 28.5, 44, 2).pintar(g, Rj, { relieve: 1, max: 2 });
-    m().rect(27, 44, 4, 3).pintar(g, N, { relieve: 1, min: 1, max: 2, separar: true });
+    /* Pezuña de atrás, hendida. */
+    capa().poly([[35, 62.6], [36, 57.6], [40.4, 57.6], [41.4, 62.6]]).pintar(g, N, { relieve: 1.5, min: 1, max: 2, separar: true });
+    pon(g, N, 0, [38, 61], [38, 62]);
     /* Cuerpo: barriga redonda. */
     const cuerpo = m().ell(25, 34, 4.8, 5.2);
     cuerpo.pintar(g, Rj, { relieve: 3, min: 2, separar: true });
+    sombraPropia(g, cuerpo, Rj, 33, 45, 2);
     tono(g, m().ell(23, 35, 2, 2.8), Rj, 1);
     for (const y of [45, 47, 49]) for (let x = 29; x <= 33; x++) if (g.rampa(x, y) === Rj) matiz(g, x, y, -1);
     pon(g, Rj, 1, [32, 51], [33, 51], [34, 50]);
     /* Pierna de delante, de cabra, con pelo y pezuña brillante. */
     const pierna = m().linea(23, 37, 20, 41, 3).linea(20, 41, 21.5, 44, 2);
     pierna.pintar(g, Rj, { relieve: 1.5, min: 2, separar: true });
-    pelaje(g, pierna, Rj, PX.azar(5), { paso: 2, largo: 2, dx: -0.4, dy: 1 });
-    m().rect(18.5, 44, 4.5, 3).pintar(g, N, { relieve: 1, min: 2, separar: true });
-    pon(g, N, 4, [25, 59], [26, 59]);
-    pon(g, N, 0, [27, 61], [27, 62]);
-    pon(g, N, 4, [37, 59]);
+    filo(g, pierna, Rj, 3);
+    /* Mechones de pelo de cabra sobre la pezuña. */
+    for (const [x, y] of [[26, 56], [28, 57], [30, 56]]) { pon(g, Rj, 1, [x, y]); pon(g, Rj, 3, [x - 1, y - 1]); }
+    /* Pezuña negra y brillante, hendida. */
+    capa().poly([[23.6, 62.6], [25, 57.6], [30.4, 57.6], [31.4, 62.6]]).pintar(g, N, { relieve: 1.5, min: 1, separar: true });
+    pon(g, N, 4, [25, 58], [26, 58], [25, 59]);
+    pon(g, N, 3, [27, 58], [24, 61]);
+    pon(g, N, 0, [28, 61], [28, 62]);
     /* Tridente: asta de madera y tres puntas de hierro con fuego en la punta. */
     m().rect(10, 15, 2, 32).pintar(g, MADERA, { relieve: 1, max: 3 });
     for (let y = 23; y <= 62; y += 5) pon(g, MADERA, 1, [14, y], [15, y]);
@@ -758,7 +790,9 @@
       .poly([[17.5, 25], [15, 30.5], [21.5, 28.5]])     // barbilla
       .poly([[25, 21.5], [32, 19], [26, 25.5]])         // oreja
       .poly([[15.5, 22], [12.5, 24.5], [15.5, 25]]);    // nariz
-    cab.pintar(g, Rj, { relieve: 4, min: 2, separar: true });
+    cab.pintar(g, Rj, { relieve: 4, min: 1, separar: true });
+    sombraPropia(g, cab, Rj, 27, 30, 3.5);
+    tono(g, cab, Rj, 1, (x, y) => (x - 25) * 0.6 + (y - 26) * 0.8 + (umbral(x, y) - 0.5) * 2 < -2.5);
     tono(g, m().poly([[26, 22], [31, 19.6], [26.5, 24.5]]), Rj, -1);
     pon(g, ENCIA, 3, [36, 29], [37, 28], [38, 28]);
     /* Cuernos con anillos. */
@@ -767,7 +801,8 @@
     for (const [x, y] of [[21, 22], [20, 20], [32, 22], [33, 20]]) sobre(g, MARFIL, 1, [x, y], [x + 1, y]);
     pon(g, MARFIL, 4, [22, 17], [33, 16]);
     /* Ceja en pico y ojos amarillos con pupila de rendija. */
-    pon(g, N, 0, [20, 27], [21, 27], [22, 28], [23, 28], [26, 28], [27, 27], [28, 27], [29, 27], [30, 28]);
+    pon(g, Rj, 0, [19, 27], [20, 27], [21, 27], [22, 28], [23, 28], [26, 28], [27, 27], [28, 27], [29, 27], [30, 28]);
+    pon(g, Rj, 4, [20, 26], [21, 26], [28, 26], [29, 26]);
     pon(g, ORO, 4, [21, 28], [27, 28], [28, 28]);
     pon(g, ORO, 3, [22, 29], [21, 29], [27, 29], [29, 29], [29, 28]);
     pon(g, ORO, 2, [22, 30], [28, 30], [27, 30]);
@@ -789,7 +824,7 @@
     m().ell(11.5, 30.5, 2, 1.8).pintar(g, Rj, { relieve: 1, min: 2, separar: true });
     pon(g, Rj, 1, [14, 41], [15, 41], [16, 41]);
     pon(g, MARFIL, 3, [13, 40], [13, 42]);
-    pon(g, Rj, 4, [22, 42], [23, 42], [25, 43]);
+    filo(g, capa().rect(14, 38, 16, 6), Rj, 3, { arriba: true, cond: (x, y) => y < 41 });
     bordeLuz(g, S, 2, (x, y) => x > 36);
     return contornear(g);
   }
@@ -797,7 +832,8 @@
   /* ---------- Araña de las sombras: negra violácea, patas acodadas, ojos en racimo y el reloj de arena rojo ---------- */
   function arana() {
     const g = new Rejilla(W, W), S = QUITINA, Sg = RELOJ, Mg = BRILLO, V = VACIO;
-    const m = () => new Molde(0, 0);
+    const m = () => new Molde(0, 0), M = new Molde();
+    const P = (x, y) => M.p(x, y).map(Math.round);
     /* Pata acodada: fémur grueso, tibia y tarso finos. */
     const pata = (pts, ram, op) => {
       const c = m();
@@ -806,72 +842,95 @@
       c.pintar(g, ram, { relieve: 1.2, ...op });
       return c;
     };
-    /* Patas del lado de lejos, casi negras. */
+    /* Patas del lado de lejos, casi negras, con la rodilla apenas marcada. */
     for (const p of [[[16, 31], [11, 17], [6, 37], [5, 41]], [[19, 31], [20, 19], [17, 38], [16, 42]], [[24, 31], [33, 29], [37, 38], [38, 42]], [[25, 30], [44.5, 27], [45.6, 35], [45.6, 40]]]) {
-      pata(p, V, { max: 3 });
-      const [x, y] = new Molde().p(...p[1]);
-      pon(g, V, 4, [Math.round(x), Math.round(y)]);
+      const c = pata(p, V, { max: 2 });
+      filo(g, c, V, 2, { arriba: true });
+      const [x, y] = P(...p[1]);
+      pon(g, V, 4, [x, y]);
     }
     /* Abdomen grande y abombado con el reloj de arena. */
     const abd = m().ell(34, 18, 10, 9).ell(28, 23, 4, 4);
     abd.pintar(g, S, { relieve: 5.5, separar: true });
-    /* Reflejo violeta del caparazón, con un brillo duro. */
-    const reflejo = m().ell(30, 12.8, 5.5, 3.6).c.recortar(abd.c);
-    tramar(g, reflejo, Mg, 1, 2, (x, y) => 0.75 - Math.hypot(x - 40, (y - 17) * 1.5) / 9);
-    pon(g, Mg, 3, [36, 14], [37, 13], [38, 13], [39, 13]);
-    pon(g, Mg, 4, [37, 13]);
-    /* Bandas finas en el abdomen. */
-    for (const [cx, cy, r] of [[46, 25, 9], [46, 25, 12]]) for (let a = -2.4; a < 0.6; a += 0.05) {
-      const x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r * 0.95);
-      if (abd.c.tiene(x, y) && g.rampa(x, y) === S) matiz(g, x, y, -1);
+    sombraPropia(g, abd, S, 46, 24, 5);
+    /* Reflejo violeta del caparazón: una media luna arriba a la izquierda y un brillo duro. */
+    const dAbd = distancia(abd.c);
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (!abd.c.tiene(x, y) || g.rampa(x, y) !== S) continue;
+      const dd = dAbd[y * W + x], lado = (x - 45) * 0.6 + (y - 24) * 0.8;
+      if (lado < -4 && dd > 1 && dd < 3.4) g.set(x, y, Mg[dd < 2.2 && lado < -8 ? 2 : 1], Mg);
     }
+    for (const [x, y, t] of [[37, 14, 3], [38, 13, 3], [39, 13, 3], [40, 13, 2], [36, 15, 2], [38, 14, 2]]) pon(g, Mg, t, [x, y]);
+    pon(g, Mg, 4, [38, 13]);
+    /* Anillos finos del abdomen. */
+    for (const r of [8, 11.5]) for (let a = -2.5; a < 0.9; a += 0.04) {
+      const x = Math.round(46 + Math.cos(a) * r), y = Math.round(25 + Math.sin(a) * r);
+      if (abd.c.tiene(x, y) && g.rampa(x, y) === S && S.indexOf(g.get(x, y)) > 0) matiz(g, x, y, -1);
+    }
+    /* El reloj de arena: brilla con luz propia. */
     const reloj = m().poly([[31, 12], [38, 12], [34.5, 18], [38, 24], [31, 24], [34.5, 18]]).c.recortar(abd.c);
     brasa(g, reloj, Sg, [0.8, 1.8, 2.8], 1);
-    pon(g, Sg, 4, [43, 17], [44, 18], [46, 24], [42, 30], [43, 30]);
-    destello(g, 46, 24, Sg, 0);
-    /* Pelillos en el borde del abdomen. */
-    for (const [x, y] of [[32, 21], [36, 13], [44, 10], [53, 12], [58, 17], [60, 25], [58, 32], [54, 36], [30, 15]]) {
-      for (let s = 0; s < 3; s++) { const px = x + (x > 44 ? s : -s * 0.6), py = y - (y < 20 ? s : -s * 0.3); if (!g.get(Math.round(px), Math.round(py))) pon(g, S, 3, [Math.round(px), Math.round(py)]); }
+    pon(g, Sg, 4, [46, 24], [42, 17], [43, 17]);
+    /* Pelos cortos y tiesos en el borde del abdomen (del lado de la sombra). */
+    for (const [x, y, a, b] of [[55, 13, 1, -1], [60, 22, 1, 0], [58, 33, 1, 1], [50, 12, 0, -1]]) {
+      let px = x, py = y;
+      while (g.get(px, py) && px > 0 && px < 63) { px += a; py += b; }
+      for (let s2 = 0; s2 < 2; s2++) if (px + a * s2 < 63 && !g.get(px + a * s2, py + b * s2)) pon(g, S, 2, [px + a * s2, py + b * s2]);
     }
     /* Cefalotórax y cabeza. */
     const tor = m().ell(20.5, 31.5, 6.5, 5).ell(14, 31.5, 4.4, 4);
     tor.pintar(g, S, { relieve: 3.5, separar: true });
-    for (let x = 22; x <= 32; x++) if (tor.c.tiene(x, 37)) pon(g, Mg, x < 26 ? 2 : 1, [x, 37]);
-    pon(g, Mg, 3, [24, 37], [25, 37]);
-    pon(g, S, 0, [23, 41], [23, 42], [24, 43], [27, 44]);
+    sombraPropia(g, tor, S, 26, 43, 2.5);
+    pon(g, Mg, 2, [24, 37], [25, 37], [26, 37], [27, 37], [23, 38]);
+    pon(g, Mg, 3, [25, 37]);
+    /* Surco del cefalotórax. */
+    trazo(g, 28, 40, 31, 44, S, 0, tor.c);
     /* Patas de este lado: cuatro, bien acodadas, con las articulaciones rojas y púas. */
     for (const p of [[[15, 34], [7, 21], [2, 41], [1.6, 46.4]], [[18, 35], [14, 25], [11, 43], [10, 46.4]], [[22, 35], [28, 29], [27, 42], [25, 46.4]], [[25, 34], [40, 30], [44, 41], [45, 46.4]]]) {
       const c = pata(p, S, { max: 3, separar: true });
-      const M = new Molde();
-      const [rx, ry] = M.p(...p[1]).map(Math.round), [tx, ty] = M.p(...p[2]).map(Math.round);
-      pon(g, S, 4, [rx, ry], [rx - 1, ry + 1]);
-      pon(g, S, 3, [rx - 1, ry + 2], [rx + 1, ry]);
+      filo(g, c, S, 3, { arriba: true });
+      const [rx, ry] = P(...p[1]), [tx, ty] = P(...p[2]);
+      /* Rodilla con brillo y la articulación roja del tarso. */
+      pon(g, Mg, 3, [rx, ry]); pon(g, Mg, 2, [rx - 1, ry + 1], [rx + 1, ry]);
+      pon(g, Mg, 4, [rx, ry]);
       pon(g, Sg, 2, [tx, ty], [tx + 1, ty]);
       pon(g, Sg, 3, [tx, ty - 1]);
       pon(g, S, 0, [tx, ty + 1]);
-      /* Púas en las tibias. */
+      /* Púas en las tibias, hacia fuera. */
       for (let k = 1; k < 5; k++) {
         const x = Math.round(rx + (tx - rx) * k / 5), y = Math.round(ry + (ty - ry) * k / 5);
-        if (!g.get(x + 2, y)) pon(g, S, 3, [x + 2, y]);
-        if (!g.get(x + 3, y - 1) && k % 2) pon(g, S, 2, [x + 3, y - 1]);
+        const dx = tx < rx ? -1 : 1;
+        let px = x;
+        while (g.get(px, y) && g.rampa(px, y) === S && Math.abs(px - x) < 4) px -= dx;
+        if (!g.get(px, y) && k % 2) pon(g, S, 3, [px, y]);
       }
-      /* Brillo a lo largo del fémur. */
-      const [ax, ay] = M.p(...p[0]);
-      trazo(g, Math.round(ax + (rx - ax) * 0.25), Math.round(ay + (ry - ay) * 0.25) - 1, rx, ry, Mg, 2, c.c);
     }
+    /* La cabeza, delante del arranque de las patas. */
+    const cabeza = m().ell(14, 31.2, 4.2, 3.8);
+    perfil(g, cabeza, S, 0);
+    cabeza.pintar(g, S, { relieve: 3, min: 2, sesgo: 0.25 });
+    sombraPropia(g, cabeza, S, 20, 44, 1.5);
+    filo(g, cabeza, Mg, 2);
+    for (let y = 36; y < 48; y++) for (let x = 10; x < 26; x++) if (cabeza.c.tiene(x, y) && (!cabeza.c.tiene(x - 1, y) || !cabeza.c.tiene(x, y - 1)) && x + y < 56) pon(g, Mg, 2, [x, y]);
     /* Quelíceros con colmillos de marfil que gotean veneno. */
-    m().curva(11, 33, 8.5, 36, 10, 39, 3, 1.5).curva(14.5, 34, 13, 37, 14, 40, 3, 1.5).pintar(g, S, { relieve: 1, max: 2, separar: true });
-    pon(g, MARFIL, 3, [13, 52], [19, 53], [13, 51]);
-    pon(g, MARFIL, 4, [13, 53], [19, 54], [12, 52]);
+    const queli = m().curva(11, 33, 8.5, 36, 10, 39, 3, 1.5).curva(14.5, 34, 13, 37, 14, 40, 3, 1.5);
+    queli.pintar(g, S, { relieve: 1, min: 1, max: 3, separar: true });
+    filo(g, queli, Mg, 1);
+    pon(g, MARFIL, 3, [13, 51], [19, 53], [12, 52]);
+    pon(g, MARFIL, 4, [13, 52], [19, 54], [13, 53]);
     hilo(g, 13, 55, 13, 56, BRILLO, 3);
     pon(g, BRILLO, 4, [13, 57]);
-    /* Racimo de ojos rojos encendidos, cada uno con su brillo. */
-    const ojos = [[14, 40, 1.4], [18, 39, 1.2], [21, 40, 1], [16, 42, 1], [20, 42.5, 0.9], [12.5, 43, 0.8], [23, 41.5, 0.7], [17, 37.5, 0.7]];
-    for (const [x, y, r] of ojos) brasa(g, capa().ell(x, y, r, r), Sg, [0.6, 1.2], 1, () => 0, 0);
-    for (const [x, y] of ojos) { pon(g, MARFIL, 4, [Math.round(x - 0.4), Math.round(y - 0.4)]); }
-    pon(g, S, 0, [15, 44], [18, 44], [22, 44]);
+    /* Racimo de ojos: dos grandes delante y cuatro pequeños, rojos y encendidos, cada uno con su brillo. */
+    const ojo = (x, y, grande) => {
+      if (grande) { pon(g, Sg, 4, [x, y]); pon(g, Sg, 3, [x + 1, y], [x, y + 1]); pon(g, Sg, 2, [x + 1, y + 1]); pon(g, MARFIL, 4, [x, y]); }
+      else { pon(g, Sg, 4, [x, y]); }
+    };
+    /* Cuencas oscuras y un resplandor rojo alrededor de los ojos. */
+    for (const [x, y] of [[14, 39], [15, 39], [16, 39], [17, 39], [18, 38], [19, 38], [20, 38], [21, 38], [22, 38], [13, 41], [14, 41], [17, 41], [21, 40], [23, 39], [13, 42], [15, 42], [16, 42], [20, 41], [16, 37], [17, 37], [22, 37]]) pon(g, S, 0, [x, y]);
+    for (const [x, y] of [[13, 43], [14, 43], [17, 42], [21, 41], [22, 41], [23, 40], [18, 37], [24, 39]]) pon(g, Sg, 1, [x, y]);
+    ojo(15, 40, true); ojo(19, 39, true);
+    ojo(17, 38, false); ojo(21, 37, false); ojo(14, 42, false); ojo(22, 39, false);
     bordeLuz(g, S, 3);
-    bordeLuz(g, V, 2);
     return contornear(g);
   }
 
@@ -887,22 +946,26 @@
     const cuerpo = m().ell(24, 11, 6.2, 6.8)
       .poly([[17, 12], [31, 12], [35, 19], [37, 27], [36.5, 34], [34, 39], [28, 42], [21, 42], [16.5, 39], [15, 33], [15, 26], [16, 18]]);
     cuerpo.lengua(26, 31, 7, 34, 3.5); // pico de la capucha, echado hacia atrás
-    for (const [x0, x1, y, px, py] of [[16, 20.5, 38, 13.5, 45], [20, 25, 40, 20.5, 47], [24.5, 29.5, 40, 28.5, 46.5], [29, 34, 39, 35, 46], [33, 37, 34, 41, 42]]) cuerpo.lengua(x0, x1, y, px, py);
+    for (const [x0, x1, y, px, py] of [[16, 20.5, 38, 13.5, 45], [20, 25, 40, 20.5, 47], [24.5, 29.5, 40, 28.5, 46.5], [29, 34, 39, 35, 46], [33, 37, 34, 41, 42], [22, 24, 41, 24, 45], [27, 29.5, 41, 31.5, 45.5], [31.5, 35, 37, 38, 43]]) cuerpo.lengua(x0, x1, y, px, py);
+    /* Huecos entre los jirones. */
+    for (const [x, y] of [[19, 42.5], [26.5, 43], [33, 42.5]]) cuerpo.c.restar(m().poly([[x - 1.3, 48], [x, y], [x + 1.3, 48]]).c);
     cuerpo.pintar(g, S, { relieve: 5, separar: true });
-    /* El humo se apaga hacia abajo (tramado suave). */
-    for (let y = 34; y < W; y++) for (let x = 0; x < W; x++) {
-      if (!cuerpo.c.tiene(x, y)) continue;
-      const f = (y - 34) / 22, k = S.indexOf(g.get(x, y));
-      if (k > 0 && f * 0.9 > umbral(x, y)) pon(g, S, k - 1, [x, y]);
-    }
-    /* Pliegues del manto: sombras largas y luz en los cantos. */
-    for (const [x0, y0, x1, y1] of [[26, 30, 24, 52], [34, 28, 35, 54], [42, 30, 45, 52]]) trazo(g, x0, y0, x1, y1, S, 0, cuerpo.c);
-    for (const [x0, y0, x1, y1] of [[27, 30, 25, 46], [35, 28, 36, 46]]) trazo(g, x0, y0, x1, y1, S, 3, cuerpo.c);
+    /* Volumen: el lado de la derecha, lejos de la luz, en sombra. */
+    sombraPropia(g, cuerpo, S, 33, 24, 7);
+    /* El humo se apaga hacia abajo en hebras verticales: cada columna se oscurece a su altura. */
+    const hebra = x => Math.sin(x * 1.7) * 2.2 + Math.sin(x * 0.53 + 1) * 2.5;
+    tono(g, cuerpo, S, -1, (x, y) => y > 47 + hebra(x));
+    /* Pliegues del manto: surcos largos y luz en los cantos. */
+    for (const [x0, y0, x1, y1] of [[27, 31, 25, 52], [35, 29, 36, 55], [42, 31, 45, 52]]) trazo(g, x0, y0, x1, y1, S, 0, cuerpo.c);
+    for (const [x0, y0, x1, y1] of [[26, 33, 24, 44], [34, 31, 35, 44]]) trazo(g, x0, y0, x1, y1, S, 3, cuerpo.c);
     /* Vetas violetas que serpentean hacia abajo y se apagan. */
-    for (const [x0, fase, y0, y1] of [[24.5, 0, 29, 54], [32, 2, 27, 56], [39.5, 4, 26, 55], [45.5, 1, 33, 53]])
+    for (const [x0, fase, y0, y1] of [[30.5, 0, 27, 50], [39.5, 2.5, 26, 47], [22, 4, 30, 42]])
       for (let y = y0; y <= y1; y++) {
-        const x = Math.round(x0 + Math.sin(y * 0.24 + fase) * 2.2 + (y - y0) * 0.08);
-        if (cuerpo.c.tiene(x, y) && umbral(x, y) > (y - 40) / 18) pon(g, Mg, y < 37 ? 2 : 1, [x, y]);
+        const x = Math.round(x0 + Math.sin(y * 0.22 + fase) * 2.4);
+        if (!cuerpo.c.tiene(x, y)) continue;
+        const t = y < y0 + 6 ? 3 : y < (y0 + y1) / 2 ? 2 : 1;
+        if (y > y1 - 5 && (y & 1)) continue;
+        pon(g, Mg, t, [x, y]);
       }
     /* Hueco de la capucha y el borde iluminado. */
     m().ell(21.5, 13, 3.8, 4.4).rect(18, 13, 6, 5).pintar(g, S, { plano: 0 });
@@ -931,8 +994,8 @@
     pon(g, E, 1, [11, 29], [10, 29]);
     bordeLuz(g, S, 3, (x, y) => y < 40);
     contornear(g, S[0], S);
-    /* El faldón se disuelve en el aire: tramado hacia lo transparente. */
-    for (let y = 56; y < W; y++) for (let x = 0; x < W; x++) if (g.get(x, y) && umbral(x, y) < (y - 55) / 9) g.quitar(x, y);
+    /* Las puntas de los jirones se deshacen en el aire. */
+    for (let y = 57; y < W; y++) for (let x = 0; x < W; x++) if (g.get(x, y) && umbral(x, y) < (y - 56) / 8) g.quitar(x, y);
     /* Jirones sueltos y motas de humo. */
     for (const [x0, y0, x1, y1] of [[17, 58, 15, 62], [48, 60, 50, 62], [19, 47, 14, 52], [55, 55, 58, 58], [36, 60, 37, 62]]) hilo(g, x0, y0, x1, y1, S, 3);
     for (const [i, j, k] of [[10, 57, 2], [56, 44, 3], [48, 10, 3], [14, 14, 2], [55, 35, 2], [8, 44, 3], [51, 61, 2], [40, 2, 2], [58, 52, 2], [6, 36, 2], [28, 62, 2]]) if (!g.get(i, j)) pon(g, Mg, k, [i, j]);

@@ -85,30 +85,33 @@
   /* Como Capa.pintar, pero con el tono continuo y un tramado estrecho entre bandas, para volúmenes grandes.
      op.caida oscurece hacia abajo (luz cenital); op.volumen añade un degradado de esfera desde arriba a la izquierda;
      op.tramado = anchura del tramado (0 = bandas limpias); op.extra(x, y) suma luz a mano (pliegues, ondas). */
+  const DIST = new Float32Array(W * H);
   function sombrear(capa, g, ram, op = {}) {
     const w = W, h = H, Rr = op.relieve || 6, m = capa.m;
-    const d = new Float32Array(w * h);
-    for (let i = 0; i < d.length; i++) d[i] = m[i] ? 1e6 : 0;
+    /* Solo se trabaja dentro de la caja de la capa: las piezas pequeñas (púas, dedos) salen casi gratis. */
+    let y0 = h, y1 = -1, x0 = w, x1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[y * w + x]) { if (y < y0) y0 = y; if (y > y1) y1 = y; if (x < x0) x0 = x; if (x > x1) x1 = x; }
+    if (y1 < 0) return g;
+    const d = DIST;
+    for (let y = Math.max(0, y0 - 1); y <= Math.min(h - 1, y1 + 1); y++) for (let x = Math.max(0, x0 - 1); x <= Math.min(w - 1, x1 + 1); x++) d[y * w + x] = m[y * w + x] ? 1e6 : 0;
     const D = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[y * w + x]);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const i = y * w + x; if (!d[i]) continue;
       d[i] = Math.min(d[i], D(x - 1, y) + 1, D(x, y - 1) + 1, D(x - 1, y - 1) + 1.414, D(x + 1, y - 1) + 1.414);
     }
-    for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+    for (let y = y1; y >= y0; y--) for (let x = x1; x >= x0; x--) {
       const i = y * w + x; if (!d[i]) continue;
       d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
     }
-    const alto = (x, y) => { if (!capa.tiene(x, y)) return 0; const v = Math.min(D(x, y), Rr) / Rr; return Math.sqrt(1 - (1 - v) * (1 - v)); };
+    const alto = (x, y) => { const v0 = d[y * w + x]; if (!v0) return 0; const v = Math.min(v0, Rr) / Rr; return Math.sqrt(1 - (1 - v) * (1 - v)); };
     const L = op.luz || [-0.5, -0.62, 0.6], ln = Math.hypot(...L), k = op.fuerza || 2.4;
-    let y0 = h, y1 = 0, x0 = w, x1 = 0;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[y * w + x]) { y0 = Math.min(y0, y); y1 = Math.max(y1, y); x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
     const cx = op.centro ? op.centro[0] : (x0 + x1) / 2, cy = op.centro ? op.centro[1] : (y0 + y1) / 2;
     const rx = Math.max(1, (x1 - x0) / 2), ry = Math.max(1, (y1 - y0) / 2), vol = op.volumen || 0;
     const TH = [-0.4, 0.02, 0.4, 0.74, 0.965, 1.2], s = op.tramado === undefined ? 0.4 : op.tramado;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       if (!m[y * w + x]) continue;
       const nx = (alto(x - 1, y) - alto(x + 1, y)) * 0.5 * k, ny = (alto(x, y - 1) - alto(x, y + 1)) * 0.5 * k;
-      const l = (nx * L[0] + ny * L[1] + L[2]) / ln / Math.hypot(nx, ny, 1) + (op.sesgo || 0) - (op.caida || 0) * (y - y0) / Math.max(1, y1 - y0)
+      const l = (nx * L[0] + ny * L[1] + L[2]) / ln / Math.sqrt(nx * nx + ny * ny + 1) + (op.sesgo || 0) - (op.caida || 0) * (y - y0) / Math.max(1, y1 - y0)
         - vol * (((x - cx) / rx) * 0.55 + ((y - cy) / ry) * 0.75) + (op.extra ? op.extra(x, y) : 0);
       let v = 0;
       for (let b = 0; b < 5; b++) if (l > TH[b]) v = b + Math.min(1, (l - TH[b]) / (TH[b + 1] - TH[b]));
@@ -151,14 +154,15 @@
     for (const [x, y, i] of cambios) pon(g, ram, i, [x, y]);
   }
   /* Contorno selectivo: oscuro en el lado de la sombra; en el lado iluminado, la sombra del color vecino.
-     «claro» = tono de la rampa vecina para el contorno iluminado (0 = el más oscuro). */
-  function contornear(g, oscuro = PX.CONTORNO, claro = 0) {
+     «claro» = tono de la rampa vecina para el contorno iluminado (0 = el más oscuro); «ramOscuro», la rampa
+     del color oscuro cuando no es el contorno general. */
+  function contornear(g, oscuro = PX.CONTORNO, claro = 0, ramOscuro = null) {
     const nuevos = [];
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       if (g.get(x, y)) continue;
       const ab = g.get(x, y + 1), de = g.get(x + 1, y), iz = g.get(x - 1, y), ar = g.get(x, y - 1);
       if (!(ab || de || iz || ar)) continue;
-      let col = oscuro, ram = null;
+      let col = oscuro, ram = ramOscuro;
       if (!iz && !ar) {
         ram = ab ? g.rampa(x, y + 1) : g.rampa(x + 1, y);
         if (ram) col = ram[claro];
@@ -727,7 +731,301 @@
     return g;
   }
 
+  /* Ala de murciélago: del hombro a la muñeca y de ahí los dedos, con la membrana recortada entre ellos. */
+  function alaMembrana(g, hombro, muneca, puntas, anclaje, membrana, opM, hueso, opH, curva = 0.4) {
+    const c = C(), todos = [...puntas, anclaje];
+    for (let i = 0; i < todos.length - 1; i++) {
+      const [ax, ay] = todos[i], [bx, by] = todos[i + 1];
+      const mx = (ax + bx) / 2 * (1 - curva) + muneca[0] * curva, my = (ay + by) / 2 * (1 - curva) + muneca[1] * curva;
+      c.poly([muneca, [ax, ay], [mx, my], [bx, by]]);
+    }
+    c.poly([hombro, muneca, todos[todos.length - 1]]);
+    sombrear(c, g, membrana, opM);
+    const huesos = C().linea(hombro[0], hombro[1], muneca[0], muneca[1], opH.grueso || 4);
+    puntas.forEach(([x, y], i) => huesos.curva(muneca[0], muneca[1], (muneca[0] + x) / 2 + 1, (muneca[1] + y) / 2 - 1, x, y, i === 0 ? 3 : 2.4, 1));
+    sombrear(huesos, g, hueso, { relieve: 1.5, tramado: 0, ...opH });
+    return [c, huesos];
+  }
+
+  /* =====================================================================
+     Ignárax, el dragón rojo: alas alzadas y fuego en las fauces.
+     El rojo es vivo y frío en la sombra (carmín), cálido en la luz (coral), con borde de lava por la izquierda
+     y vientre dorado: así se despega del fondo pardo y rojizo de su guarida.
+     ===================================================================== */
+  function dragon() {
+    const g = new Rejilla(W, H), E = ESCAMA, O = VIENTRE, F = R.fuego, B = ORO, Cn = CUERNO, Mb = MEMBRANA;
+
+    /* El ala, abierta y alzada por detrás. */
+    const [ala, huesosAla] = alaMembrana(g, [62, 50], [71, 7], [[86, 1], [93, 14], [93, 33], [90, 51]], [79, 63], Mb,
+      { relieve: 3.5, volumen: 0.55, max: 3, tramado: 0.15 }, E, { min: 2, max: 4, grueso: 4.6 }, 0.5);
+    /* Venas de la membrana y su filo, más claro, para que se lea sobre la roca oscura. */
+    for (const [x0, y0, x1, y1] of [[75, 16, 87, 22], [75, 30, 90, 38], [74, 43, 85, 54], [70, 22, 66, 36]]) trazo(g, ala, Mb, 1, [x0, y0, (x0 + x1) / 2 + 1, (y0 + y1) / 2 + 2, x1, y1]);
+    cada(ala, (x, y) => { if (!huesosAla.tiene(x, y) && (!ala.tiene(x + 1, y) || !ala.tiene(x, y + 1)) && g.rampa(x, y) === Mb) pon(g, Mb, 3, [x, y]); });
+    /* La luz de la lava se cuela por la membrana cerca de los huesos. */
+    cada(ala, (x, y) => { if (!huesosAla.tiene(x, y) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => huesosAla.tiene(x + a, y + b)) && umbral(x, y) < 0.5 && g.rampa(x, y) === Mb) pon(g, Mb, Math.min(4, Mb.indexOf(g.get(x, y)) + 1), [x, y]); });
+    pua(g, Cn, 71, 7, 67, 1, 1.6, { relieve: 1, min: 2 });
+    for (const [x, y] of [[86, 1], [93, 14], [93, 33]]) pon(g, E, 4, [x - 1, y + 1]);
+
+    /* La cola, que da la vuelta por delante de la pata de atrás, con su punta de flecha. */
+    const cola = C().curva(86, 70, 95, 92, 66, 91, 10, 5).curva(66, 91, 54, 90.5, 46, 93, 5, 2);
+    sombrear(cola, g, E, { relieve: 3.5, volumen: 0.3, max: 3, tramado: 0.15 });
+    escamas(g, cola, E, 3, 3, 1);
+    const flecha = C().poly([[47, 93], [41, 90], [44, 94.5], [38, 94.5]]).poly([[47, 91], [42, 88], [40, 92]]);
+    sombrear(flecha, g, E, { relieve: 1.5, min: 1, max: 3, separar: 1, tramado: 0 });
+    for (const [x, y] of [[80, 91], [72, 90], [63, 90], [55, 90]]) pua(g, Cn, x, y, x + 2, y - 4, 1.4, { relieve: 1, min: 2 });
+
+    /* El cuerpo y la pata de atrás. */
+    const anca = C().ell(81, 77, 10.5, 12).poly([[73, 84], [88, 84], [91, 94.5], [71, 94.5]]);
+    sombrear(anca, g, E, { relieve: 7, volumen: 0.45, max: 3, tramado: 0.15 });
+    escamas(g, anca, E, 5, 4, 2);
+    trazo(g, anca, E, 1, [74, 74, 77, 82, 76, 88]);
+    const cuerpo = C().ell(68, 68, 18, 15.5).ell(58, 62, 11, 12);
+    sombrear(cuerpo, g, E, { relieve: 12, volumen: 0.5, caida: 0.15, separar: true, tramado: 0.15 });
+    escamas(g, cuerpo, E, 6, 4, 2);
+    for (const x of [74, 80, 86]) pua(g, Cn, x, 93, x - 4, 94.6, 1.3, { relieve: 1, min: 2 });
+
+    /* Pecho y cuello con las placas del vientre, doradas. */
+    const cuello = C().curva(61, 60, 48, 43, 36, 32, 18, 12);
+    sombrear(cuello, g, E, { relieve: 7, volumen: 0.45, separar: true, tramado: 0.15 });
+    escamas(g, cuello, E, 4, 3, 1, 1);
+    const vientre = C().curva(33, 37, 41, 50, 50, 65, 6, 11).ell(54, 72, 7.5, 10).recortar(cuello.copia().unir(cuerpo));
+    sombrear(vientre, g, O, { relieve: 3.5, volumen: 0.45, max: 4, tramado: 0 });
+    /* Placas: una raya oscura cada pocas filas, con un filo de luz encima. */
+    for (let j = 36; j <= 82; j += 3) cada(C().rect(0, j, W, 1).recortar(vientre), (x, y) => { pon(g, O, 1, [x, y]); if (vientre.tiene(x, y - 1)) pon(g, O, Math.min(4, O.indexOf(g.get(x, y - 1)) + 1), [x, y - 1]); });
+    /* Monedas y una gema del tesoro, pegadas a las placas de tanto dormir encima. */
+    for (const [x, y] of [[51, 74], [55, 78], [49, 69], [57, 72]]) if (vientre.tiene(x, y)) { pon(g, B, 4, [x, y]); pon(g, B, 3, [x + 1, y]); pon(g, B, 2, [x, y + 1]); pon(g, B, 1, [x + 1, y + 1]); }
+    if (vientre.tiene(53, 66)) { pon(g, R.magia, 4, [53, 66]); pon(g, R.magia, 2, [54, 66], [53, 67]); }
+    /* Púas del lomo, del cogote hasta la cola. */
+    for (const [x, y, a, b] of [[41, 26, 5, -6], [46, 31, 6, -6], [51, 37, 6, -6], [56, 43, 6, -5], [62, 48, 6, -4], [69, 52, 6, -3], [76, 56, 6, -2], [83, 60, 6, 0], [88, 66, 5, 2]]) {
+      const c = C().poly([[x - 2.6, y + 1.8], [x + a, y + b], [x + 2.6, y + 1.8]]);
+      sombrear(c, g, Cn, { relieve: 1.4, min: 1, separar: 2, tramado: 0 });
+      pon(g, Cn, 4, [Math.round(x + a * 0.4 - 1), Math.round(y + b * 0.4)]);
+    }
+
+    /* La pata de delante, plantada, con zarpas negras. */
+    const brazo = C().curva(56, 68, 49, 78, 43, 86, 13, 9.5).ell(40, 89.4, 8.4, 5);
+    sombrear(brazo, g, E, { relieve: 5, volumen: 0.4, separar: true, tramado: 0.15 });
+    escamas(g, brazo, E, 3, 3, 2);
+    trazo(g, brazo, E, 1, [50, 76, 46, 80, 44, 85]);
+    trazo(g, brazo, E, 4, [53, 69, 49, 74]);
+    for (const [x, y, a] of [[32, 91, -4], [36, 92, -3.5], [41, 92, -2.4], [45, 92.5, -1.2]]) pua(g, UNA, x + 1, y, x + a, 94.7, 1.8, { relieve: 1, min: 2 });
+    /* La otra pata, detrás y más oscura. */
+    const brazo2 = C().curva(65, 79, 62, 86, 60, 90, 8.4, 7.2).ell(58, 91, 5.4, 3.6);
+    detras(g, brazo2, E, { relieve: 2.5, max: 2, tramado: 0 });
+    for (const x of [55, 59]) pua(g, UNA, x, 93, x - 2.5, 94.7, 1.2, { relieve: 1, min: 1 }, false);
+
+    /* La cabeza: cuernos hacia atrás, ceño de púas, ojo de oro y las fauces abiertas con fuego dentro. */
+    const cuernos = C().curva(34, 18, 43, 9, 56, 8, 5.4, 1).curva(37, 24, 46, 19, 54, 20, 4.2, 1);
+    sombrear(cuernos, g, Cn, { relieve: 2.2, volumen: 0.4, min: 1, tramado: 0 });
+    /* Anillos del cuerno. */
+    for (const t of [0.2, 0.35, 0.5, 0.65]) { const [x, y] = bez(34, 18, 43, 9, 56, 8, t); pon(g, Cn, 1, [Math.round(x), Math.round(y) + 1], [Math.round(x) + 1, Math.round(y) + 1]); }
+    trazo(g, cuernos, Cn, 4, [36, 15, 42, 10, 48, 8.5]);
+    const craneo = C().ell(30, 25, 9.6, 7.8).poly([[29, 18], [14, 21], [5, 26], [4, 29], [10, 32], [29, 32], [37, 30]]);
+    sombrear(craneo, g, E, { relieve: 6, volumen: 0.45, separar: true, tramado: 0.15 });
+    escamas(g, craneo, E, 3, 3, 2);
+    const mandibula = C().poly([[37, 34], [29, 36], [17, 40], [7, 44], [6, 47], [14, 47.5], [29, 44], [38, 40]]);
+    sombrear(mandibula, g, E, { relieve: 3.5, volumen: 0.4, separar: true, tramado: 0.15 });
+    trazo(g, mandibula, O, 2, [8, 46.5, 19, 45.5, 33, 41]);
+    trazo(g, mandibula, O, 3, [9, 46, 18, 45]);
+    /* El fuego de la garganta, más claro al fondo. */
+    const boca = C().poly([[36, 31], [29, 32], [10, 32], [6, 34], [7, 44], [17, 40], [29, 36], [37, 34]]);
+    boca.restar(craneo).restar(mandibula);
+    cada(boca, (x, y) => {
+      const f = Math.min(1, (x - 6) / 26) * 4 + (umbral(x, y) - 0.5) * 0.8;
+      g.set(x, y, F[Math.max(1, Math.min(4, Math.round(f)))], F);
+    });
+    /* La lengua bífida. */
+    trazo(g, boca, R.sangre, 3, [24, 37, 16, 39, 9, 40]); pon(g, R.sangre, 4, [20, 37]);
+    /* Dientes arriba y abajo. */
+    for (const x of [8, 11, 15, 19, 23, 27]) pua(g, HUESO, x, 31.5, x + 0.5, 35.5, 1.1, { relieve: 1, min: 3 }, false);
+    for (const [x, y] of [[9, 43.5], [13, 42], [17, 40.5], [21, 39.2]]) pua(g, HUESO, x, y + 0.5, x + 0.5, y - 3, 1, { relieve: 1, min: 3 }, false);
+    /* Ceño con púas, ojo y nariz humeante. */
+    const ceno = C().curva(14, 22, 23, 17, 32, 18, 3.6, 3);
+    sombrear(ceno, g, E, { relieve: 1.6, min: 2, separar: 1, tramado: 0 });
+    for (const [x, y] of [[20, 18], [26, 17], [31, 18]]) pua(g, Cn, x, y, x + 3.5, y - 5, 1.2, { relieve: 1, min: 2 });
+    new Capa(W, H).ell(24, 22, 2.8, 1.6).pintar(g, NEGRO, { plano: 0 });
+    pon(g, B, 4, [23, 21], [24, 21], [22, 22]); pon(g, B, 3, [25, 21], [23, 22]);
+    pon(g, F, 2, [24, 23], [25, 22]); pon(g, NEGRO, 0, [25, 23], [26, 22]);
+    pon(g, HUESO, 4, [22, 21]);
+    /* Ollar. */
+    pon(g, E, 0, [7, 25], [8, 25], [8, 26]); pon(g, E, 1, [9, 26]);
+    pon(g, E, 4, [10, 23], [13, 22], [16, 21], [5, 27], [6, 26]);
+    /* Golas: púas de la mejilla hacia atrás. */
+    for (const [x, y, a, b] of [[36, 29, 8, -2.4], [35, 40, 7, 4]]) {
+      const c = C().poly([[x, y - 1.8], [x + a, y + b], [x, y + 1.8]]);
+      sombrear(c, g, Cn, { relieve: 1, min: 2, separar: 1, tramado: 0 });
+      pon(g, Cn, 4, [x + 1, y - 1]);
+    }
+    /* Sombra que la cabeza echa sobre el cuello. */
+    tono(g, C().ell(43, 46, 8, 5), 1, E);
+    tono(g, C().ell(43, 46, 8, 5), 1, O);
+    trazo(g, craneo, E, 1, [29, 26, 32, 30]);
+    /* Borde de lava: la luz cálida de la izquierda recorta la silueta. */
+    for (const ram of [E, O]) bordeLuz(g, ram, 4, ram, (x, y) => !g.get(x - 1, y) && y > 18);
+    /* Y un rebote más apagado por la derecha y por abajo, que la separa del suelo. */
+    bordeReflejo(g, E, 2, E, (x, y) => y > 46 && E.indexOf(g.get(x, y)) < 2, true);
+    for (let x = 0; x < W; x++) g.quitar(x, H - 1);
+    contornear(g);
+
+    /* Chispas y humo, sin contorno. */
+    for (const [x, y, k] of [[2, 36, 4], [1, 40, 3], [3, 33, 3], [1, 38, 2], [4, 48, 2], [2, 43, 3], [1, 46, 1]]) if (!g.get(x, y)) pon(g, F, k, [x, y]);
+    for (const [x, y, k] of [[5, 22, 3], [3, 19, 2], [6, 18, 2], [2, 15, 1], [4, 13, 1]]) if (!g.get(x, y)) pon(g, R.piedra, k, [x, y]);
+    destello(g, 55, 8, Cn);
+    return g;
+  }
+
+  /* =====================================================================
+     Nhazgul, el Devorador de Estrellas: un ojo, unas fauces y un cielo dentro.
+     ===================================================================== */
+  function devorador() {
+    const g = new Rejilla(W, H), V = VACIO, Mg = R.magia, Ci = CIAN, A = AURA, az = PX.azar(91);
+    const tentaculos = (op, ...l) => { const c = C(); l.forEach(a => c.curva(...a)); sombrear(c, g, V, { relieve: 3.5, tramado: 0.2, ...op }); return c; };
+    /* Ventosas que brillan en la cara de abajo de cada tentáculo. */
+    const ventosas = (c, ram, k = 3) => {
+      for (let y = 1; y < H; y++) for (let x = 1; x < W; x++)
+        if (c.tiene(x, y) && !c.tiene(x, y + 1) && c.tiene(x - 1, y) && c.tiene(x, y - 2) && (x * 3 + y) % 5 === 0 && g.rampa(x, y) === V) {
+          pon(g, ram, k, [x, y - 1]); pon(g, ram, k - 2, [x + 1, y - 1]); pon(g, ram, k - 1, [x, y - 2]);
+        }
+    };
+
+    /* Tentáculos de atrás, más oscuros. */
+    ventosas(tentaculos({ max: 2 }, [74, 53, 94, 58, 92, 36, 9.6, 2.4], [70, 62, 84, 84, 93, 82, 9.6, 2.4], [58, 67, 65, 86, 55, 94.5, 8.4, 2.4]), Ci, 3);
+
+    /* La corona de cuernos, con anillos y las puntas encendidas. */
+    const cuernos = new Capa(W, H);
+    const PUNTAS = [[29, 27, 14, 17, 13, 2, 8.4], [40, 19, 34, 7, 37, 0.5, 7.2], [53, 16, 55, 5, 62, 0.5, 8.4], [66, 19, 76, 11, 82, 1, 7.2], [76, 28, 88, 25, 92, 13, 7.2]];
+    for (const [x0, y0, cx, cy, x1, y1, gr] of PUNTAS) cuernos.curva(x0, y0, cx, cy, x1, y1, gr, 1);
+    sombrear(cuernos, g, Mg, { relieve: 3, max: 3, volumen: 0.3, separar: true, tramado: 0.15 });
+    for (const [x0, y0, cx, cy, x1, y1] of PUNTAS) {
+      for (const t of [0.25, 0.4, 0.55, 0.68]) {
+        const [x, y] = bez(x0, y0, cx, cy, x1, y1, t);
+        pon(g, Mg, 1, [Math.round(x), Math.round(y)], [Math.round(x) + 1, Math.round(y)], [Math.round(x) - 1, Math.round(y)]);
+        pon(g, Mg, 4, [Math.round(x) - 1, Math.round(y) - 1]);
+      }
+      for (const t of [0.8, 0.86, 0.92, 0.97, 1]) {
+        const [x, y] = bez(x0, y0, cx, cy, x1, y1, t);
+        pon(g, Ci, t > 0.95 ? 4 : t > 0.84 ? 3 : 2, [Math.round(x), Math.round(y)]);
+        if (t < 0.9) pon(g, Ci, 2, [Math.round(x) + 1, Math.round(y)]);
+      }
+    }
+
+    /* El cuerpo: una masa de vacío. */
+    const cuerpo = C().ell(53, 41, 30, 24).ell(40, 50, 20, 17).ell(67, 53, 14, 12);
+    sombrear(cuerpo, g, V, { relieve: 14, volumen: 0.5, separar: true, tramado: 0.2 });
+    /* Nebulosa en espiral y estrellas sueltas dentro del vacío. */
+    cada(cuerpo, (x, y) => {
+      const a = Math.atan2(y - 46, x - 60), d = Math.hypot(x - 60, y - 46), v = Math.sin(a * 2 + d * 0.2);
+      if (v > 0.45 && umbral(x, y) < (v - 0.45) * 1.8) pon(g, v > 0.9 && d > 10 ? A : Mg, v > 0.88 && d > 10 ? 1 : 1, [x, y]);
+      else if (v > 0.8 && d < 26 && umbral(x, y) < 0.3) pon(g, Mg, 2, [x, y]);
+      else if (v < -0.8 && d < 24 && umbral(x, y) < 0.2) pon(g, Ci, 1, [x, y]);
+    });
+    for (let i = 0; i < 240; i++) {
+      const x = Math.floor(az() * W), y = Math.floor(az() * H), r = az();
+      if (cuerpo.tiene(x - 2, y) && cuerpo.tiene(x + 2, y) && cuerpo.tiene(x, y - 2) && cuerpo.tiene(x, y + 2)) pon(g, r > 0.85 ? HUESO : r > 0.45 ? Ci : Mg, r > 0.93 ? 4 : 3, [x, y]);
+    }
+    /* Estrellas grandes con sus cuatro puntas, y una galaxia pequeña. */
+    for (const [x, y, ram] of [[70, 36, Ci], [75, 48, HUESO], [60, 26, Mg], [58, 53, Ci], [80, 40, Mg]]) {
+      if (!cuerpo.tiene(x, y)) continue;
+      pon(g, ram, 4, [x, y]); pon(g, ram, 3, [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+      if (ram === HUESO) pon(g, Ci, 2, [x - 2, y], [x + 2, y], [x, y - 2], [x, y + 2]);
+    }
+    for (let t = 0; t < 1; t += 0.04) {
+      const a = t * 9, d = 1 + t * 5;
+      const x = Math.round(68 + Math.cos(a) * d * 1.4), y = Math.round(60 + Math.sin(a) * d * 0.7);
+      if (cuerpo.tiene(x, y)) pon(g, t < 0.3 ? HUESO : A, t < 0.3 ? 4 : 2, [x, y]);
+    }
+    /* Ojillos menores que se abren en la carne del vacío: almendras cian con la pupila rasgada. */
+    for (const [x, y] of [[66, 26], [77, 44], [73, 58]]) {
+      if (!cuerpo.tiene(x - 3, y) || !cuerpo.tiene(x + 3, y)) continue;
+      new Capa(W, H).ell(x, y, 3.2, 1.9).pintar(g, A, { plano: 1 });
+      new Capa(W, H).ell(x, y, 2.2, 1).pintar(g, Ci, { plano: 3 });
+      pon(g, Ci, 4, [x - 1, y - 1], [x - 2, y]); pon(g, Ci, 2, [x + 1, y + 1], [x + 2, y]);
+      pon(g, V, 0, [x, y - 1], [x, y], [x, y + 1]);
+      pon(g, A, 3, [x - 2, y - 2], [x - 1, y - 2], [x, y - 2]);
+    }
+
+    /* El ojo: párpado de vacío con borde violeta, globo cian, iris claro y pupila rasgada. */
+    const ox = 41, oy = 35;
+    new Capa(W, H).ell(ox, oy, 17.4, 13.2).pintar(g, V, { plano: 0 });
+    for (let a = 3.25; a < 6.2; a += 0.04) pon(g, A, a > 3.9 && a < 5.4 ? 3 : 2, [Math.round(ox + Math.cos(a) * 16.8), Math.round(oy + Math.sin(a) * 12.6)]);
+    for (let a = 3.6; a < 5.6; a += 0.06) pon(g, Mg, 1, [Math.round(ox + Math.cos(a) * 15.4), Math.round(oy + Math.sin(a) * 11.5)]);
+    for (let a = 0.4; a < 2.8; a += 0.05) pon(g, V, 3, [Math.round(ox + Math.cos(a) * 16.3), Math.round(oy + Math.sin(a) * 12.2)]);
+    const ojo = C().ell(ox, oy, 14.4, 10.3);
+    sombrear(ojo, g, Ci, { relieve: 6, volumen: 0.45, min: 1, tramado: 0.2 });
+    /* Venas oscuras hacia el borde del ojo, ramificadas. */
+    for (const [x0, y0, x1, y1] of [[27, 32, 32, 33], [28, 39, 33, 37], [29, 35, 31, 36], [53, 29, 49, 32], [54, 38, 50, 37], [43, 45, 42, 41], [36, 44, 37, 41], [47, 26, 46, 29]]) trazo(g, ojo, Ci, 1, [x0, y0, x1, y1]);
+    /* Sombra del párpado de arriba sobre el globo. */
+    cada(ojo, (x, y) => { if (!ojo.tiene(x, y - 2) && y < oy) pon(g, Ci, 1, [x, y]); });
+    const iris = C().ell(ox - 1, oy, 7.7, 7.9).recortar(ojo);
+    sombrear(iris, g, A, { relieve: 3.5, min: 1, max: 3, volumen: 0.45, tramado: 0.2 });
+    /* Fibras del iris, radiales. */
+    for (const a of [3.4, 3.9, 4.4, 4.9]) trazo(g, iris, A, 4, [ox - 1 + Math.cos(a) * 3.5, oy + Math.sin(a) * 3.5, ox - 1 + Math.cos(a) * 6.2, oy + Math.sin(a) * 6.4]);
+    for (const a of [0.3, 0.9, 1.5, 2.1]) trazo(g, iris, A, 1, [ox - 1 + Math.cos(a) * 3.5, oy + Math.sin(a) * 3.5, ox - 1 + Math.cos(a) * 6.2, oy + Math.sin(a) * 6.4]);
+    trazo(g, iris, Ci, 4, [ox - 6, oy - 3, ox - 5, oy - 7, ox - 1, oy - 7.5]);
+    for (let a = 0; a < 6.28; a += 0.06) { const x = Math.round(ox - 1 + Math.cos(a) * 7.8), y = Math.round(oy + Math.sin(a) * 8); if (iris.tiene(x, y)) pon(g, Mg, 0, [x, y]); }
+    const pupila = C().poly([[ox - 1, oy - 7.5], [ox + 0.8, oy], [ox - 1, oy + 7.5], [ox - 2.8, oy]]);
+    pupila.pintar(g, V, { plano: 0 });
+    pon(g, HUESO, 4, [ox - 7, oy - 6], [ox - 6, oy - 6], [ox - 7, oy - 5], [ox + 4, oy - 4]);
+    pon(g, Ci, 4, [ox - 8, oy - 4], [ox + 5, oy + 4], [ox - 6, oy - 7]);
+
+    /* Las fauces, llenas de colmillos y con un resplandor de estrellas tragadas al fondo. */
+    const boca = C().poly([[20, 55], [43, 52], [64, 54], [60, 64], [48, 68.5], [31, 67.5]]);
+    boca.pintar(g, V, { plano: 0 });
+    cada(boca, (x, y) => {
+      const f = 1 - Math.hypot((x - 43) / 17, (y - 61.5) / 5.5);
+      if (f > 0 && umbral(x, y) < f * 1.5) pon(g, Ci, f > 0.6 ? 3 : f > 0.3 ? 2 : 1, [x, y]);
+    });
+    pon(g, HUESO, 4, [42, 61], [48, 62], [36, 62]);
+    pon(g, Ci, 4, [43, 62], [37, 62], [47, 61]);
+    /* La garganta: una espiral de luz que se pierde hacia dentro. */
+    for (let t = 0; t < 1; t += 0.05) { const a = t * 10, d = t * 4; pon(g, t > 0.6 ? Ci : HUESO, t > 0.6 ? 3 : 4, [Math.round(42 + Math.cos(a) * d * 1.6), Math.round(62 + Math.sin(a) * d * 0.6)]); }
+    const labio = C();
+    for (let a = 0; a < 6.28; a += 0.02) {
+      const x = Math.round(42 + Math.cos(a) * 22.2), y = Math.round(60 + Math.sin(a) * 8.2);
+      if ((!boca.tiene(x, y) && boca.tiene(x + Math.sign(42 - x), y)) || (boca.tiene(x, y + Math.sign(60 - y)) && !boca.tiene(x, y))) labio.on(x, y);
+    }
+    cada(boca, (x, y) => { if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !boca.tiene(x + a, y + b) && cuerpo.tiene(x + a, y + b))) labio.on(x, y); });
+    labio.recortar(cuerpo).pintar(g, A, { plano: 1 });
+    /* Colmillos de arriba (largos) y de abajo (cortos), curvados. */
+    const LARGO_A = [6, 4, 8.5, 5, 7.5, 4, 9, 5, 6.5, 4], LARGO_B = [4, 6, 3, 6.5, 4, 5.5, 3, 5];
+    for (let i = 0; i < 10; i++) {
+      const x = 23 + i * 4.1, ya = 54.6 - Math.sin(i / 9 * Math.PI) * 2 + (i > 5 ? (i - 5) * 0.25 : 0);
+      pua(g, HUESO, x, ya, x + (i < 5 ? 1.2 : -0.6), ya + LARGO_A[i], LARGO_A[i] > 6 ? 1.7 : 1.3, { relieve: 1, min: 2 });
+    }
+    for (let i = 0; i < 8; i++) {
+      const x = 28 + i * 4.4, yb = 67 - Math.sin(i / 7 * Math.PI) * 1.2 - (i > 5 ? 1 : 0);
+      pua(g, HUESO, x, yb, x + (i < 4 ? 0.8 : -0.8), yb - LARGO_B[i], 1.4, { relieve: 1, min: 2 });
+    }
+
+    /* Tentáculos de delante, que cuelgan hasta abajo y se enroscan hacia los héroes. */
+    const delante = tentaculos({ separar: true, volumen: 0.3 },
+      [29, 62, 10, 65, 7, 84, 10.8, 3], [36, 67, 31, 86, 17, 92, 10.8, 3], [48, 68, 50, 84, 41, 94.5, 9.6, 2.4], [62, 62, 72, 79, 78, 94.5, 9.6, 3], [22, 46, 5, 43, 2, 60, 8.4, 2.4]);
+    ventosas(delante, A, 3);
+    /* Rizos al final de los tentáculos. */
+    const rizos = C().curva(7, 84, 8, 90, 13, 89, 3, 1.8).curva(17, 92, 12, 94, 11, 89.5, 2.6, 1.4).curva(2, 60, 1, 66, 6, 66, 2.4, 1.4);
+    sombrear(rizos, g, V, { relieve: 1.2, separar: true, tramado: 0 });
+
+    /* Luz magenta por arriba y cian por abajo, para que el vacío se lea sobre el cielo del abismo. */
+    const filos = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (g.rampa(x, y) !== V) continue;
+      if (!g.get(x - 1, y) || !g.get(x, y - 1)) filos.push([x, y, A, 3]);
+      else if (!g.get(x + 1, y) || !g.get(x, y + 1)) filos.push([x, y, Ci, 2]);
+      else if ((!g.get(x - 2, y) || !g.get(x, y - 2)) && umbral(x, y) < 0.5) filos.push([x, y, Mg, 2]);
+      else if ((!g.get(x + 2, y) || !g.get(x, y + 2)) && umbral(x, y) < 0.3) filos.push([x, y, Ci, 1]);
+    }
+    for (const [x, y, ram, k] of filos) pon(g, ram, k, [x, y]);
+    for (let x = 0; x < W; x++) g.quitar(x, H - 1);
+    contornear(g, V[0], 0, V);
+
+    /* Polvo de estrellas alrededor, sin contorno. */
+    for (const [x, y, ram, k] of [[3, 14, Ci, 4], [9, 31, Mg, 3], [93, 60, Ci, 3], [1, 74, Mg, 4], [24, 7, Mg, 3], [89, 89, Ci, 4], [70, 5, Ci, 3], [4, 40, Ci, 3], [93, 42, Mg, 2], [46, 4, Mg, 2], [25, 79, Ci, 2], [71, 72, Mg, 2], [91, 7, Mg, 3], [30, 18, Ci, 2], [86, 70, Ci, 2]])
+      if (!g.get(x, y)) pon(g, ram, k, [x, y]);
+    destello(g, 6, 5, Ci, 2); destello(g, 87, 74, A, 2); destello(g, 19, 77, Ci, 1); destello(g, 47, 8, A, 1);
+    return g;
+  }
+
   /* ---------- Registro ---------- */
   window.MONSTRUOS_64 = window.MONSTRUOS_64 || {};
-  Object.assign(window.MONSTRUOS_64, { trol, liche, vampiro });
+  Object.assign(window.MONSTRUOS_64, { trol, liche, vampiro, dragon, devorador });
 })();

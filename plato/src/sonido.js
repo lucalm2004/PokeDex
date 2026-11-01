@@ -106,7 +106,7 @@
       out[i] = o;
       if (Math.abs(o) > pico) pico = Math.abs(o);
     }
-    const ini = Math.floor(sr * 0.0015), fin = Math.floor(n * 0.3);
+    const ini = Math.floor(sr * 0.0025), fin = Math.floor(n * 0.3);
     for (let i = 0; i < n; i++) {
       let e = 1 / pico;
       if (i < ini) e *= i / ini;
@@ -362,8 +362,10 @@
       curva(s.frequency, t, [[0, 36], [0.3, 56], [0.6, 44], [0.95, 64]]);
       lfo.frequency.value = 7.3; lg.gain.value = 9; lfo.connect(lg); lg.connect(s.frequency);
       sostenida(g.gain, t, 0.08, 1, 1.0, 0.12);
-      s.connect(g);
-      const nodos = [lg, g, sal];
+      const lpf = ctx.createBiquadFilter();
+      lpf.type = "lowpass"; lpf.frequency.value = 3200; lpf.Q.value = 0.5;
+      s.connect(lpf); lpf.connect(g);
+      const nodos = [lg, lpf, g, sal];
       [[520, 6, 0.9], [1250, 8, 0.55], [2600, 10, 0.25]].forEach(([f, q, a]) => {
         const fl = ctx.createBiquadFilter(), ga = ctx.createGain();
         fl.type = "bandpass"; fl.frequency.value = f; fl.Q.value = q; ga.gain.value = a;
@@ -377,8 +379,7 @@
   };
   /* Ganancia de cada efecto para que suenen parejos (calibrado midiendo el RMS de su tramo más fuerte). */
   const NIVEL = {
-    dado: 1, golpe: 1, herido: 1, magia: 1, cura: 1, fallo: 1, victoria: 1, nivel: 1, botin: 1, derrota: 1,
-    perfecto: 1, bien: 1, clic: 1, bloqueo: 1, pasos: 1, fuego: 1, hielo: 1, critico: 1, moneda: 1, puerta: 1
+    dado: 1.54, golpe: 0.43, herido: 0.389, magia: 0.951, cura: 0.573, fallo: 1.82, victoria: 0.235, nivel: 0.775, botin: 0.991, derrota: 0.788, perfecto: 0.768, bien: 0.906, clic: 1.82, bloqueo: 0.486, pasos: 1.05, fuego: 0.775, hielo: 1.17, critico: 0.262, moneda: 0.929, puerta: 0.533
   };
   const VOL_EFECTOS = 1;
   function efecto(nombre, ctx, destino) {
@@ -413,7 +414,7 @@
   function grado(P, g) { return P.raiz + P.modo[md7(g)] + 12 * Math.floor(g / 7); }
   /* Melodía de 8 compases con forma de frase (motivo, respuesta, motivo, cadencia) a partir de una semilla. */
   function componer(P, semilla, prog) {
-    const r = prng(semilla), C = P.compas, fuerte = C === 6 ? 3 : 4, lo = P.rango[0], hi = P.rango[1];
+    const r = prng(semilla), C = P.compas, fuerte = C / 2, lo = P.rango[0], hi = P.rango[1];
     const pick = a => a[Math.floor(r() * a.length)];
     const A = pick(P.ritmos), B = pick(P.ritmos), D = pick(P.ritmos);
     const orden = [A, B, A, D, A, B, D, P.cadencia];
@@ -433,11 +434,11 @@
           while (g > hi) g -= 7;
           while (g < lo) g += 7;
         } else if (o % fuerte === 0) {
-          const obj = g + Math.round((r() - 0.5) * 5);
+          const obj = g + Math.round((r() - 0.5) * 6), repetir = r() < 0.2;
           let mejor = g, bd = 99;
           for (let x = lo; x <= hi; x++) {
             const k = md7(x - ac);
-            if ((k === 0 || k === 2 || k === 4) && Math.abs(x - obj) < bd) { bd = Math.abs(x - obj); mejor = x; }
+            if ((k === 0 || k === 2 || k === 4) && (repetir || x !== g) && Math.abs(x - obj) < bd) { bd = Math.abs(x - obj); mejor = x; }
           }
           g = mejor;
         } else {
@@ -466,7 +467,7 @@
 
   const PISTAS = {
     taberna: {
-      compas: 6, paso: 0.165, raiz: 50, modo: MODOS.mixo, semilla: 31, nivel: 1,
+      compas: 6, paso: 0.165, raiz: 50, modo: MODOS.mixo, semilla: 31,
       prog: [0, 0, 6, 0, 0, 3, 4, 0], progB: [3, 3, 0, 0, 6, 6, 4, 0], ritmos: RIT.r6, cadencia: RIT.c6, rango: [7, 15],
       toca(m, e) {
         const { t, s, ac, P } = e;
@@ -474,13 +475,13 @@
         if (s === 0) m.laud(t, grado(P, ac) - 12, 0.34, 0.9, { tb: BAJO, prio: 2 });
         if (s === 3) m.rasgueo(t, acorde(P, ac, 52, 64), 0.15, 0.55);
         if (s === 5 && e.b % 2) m.rasgueo(t, acorde(P, ac, 52, 64), 0.08, 0.3);
-        m.pandereta(t, s === 0 ? 0.26 : s === 3 ? 0.2 : 0.08);
-        if (s === 0) m.tambor(t, 70, 0.3, 0.25);
+        m.pandereta(t, s === 0 ? 0.18 : s === 3 ? 0.14 : 0.06);
+        if (s === 0) m.tambor(t, 70, 0.2, 0.25);
         if (s === 3 && e.b % 4 === 3) m.tambor(t, 85, 0.18, 0.18);
       }
     },
     0: {   // bosque: flauta y arpa, dórico
-      compas: 16, paso: 0.17, raiz: 52, modo: MODOS.dorico, semilla: 7, nivel: 1,
+      compas: 16, paso: 0.17, raiz: 52, modo: MODOS.dorico, semilla: 7,
       prog: [0, 3, 0, 6, 2, 3, 6, 0], progB: [5, 6, 0, 0, 3, 3, 6, 0], ritmos: RIT.lento, cadencia: RIT.clento, rango: [10, 18],
       toca(m, e) {
         const { t, s, ac, P } = e;
@@ -494,12 +495,12 @@
       }
     },
     1: {   // mazmorra: dron, gotas, campana lejana, frigio
-      compas: 16, paso: 0.24, raiz: 45, modo: MODOS.frigio, semilla: 11, nivel: 1,
+      compas: 16, paso: 0.24, raiz: 45, modo: MODOS.frigio, semilla: 11,
       prog: [0, 0, 1, 0, 0, 1, 6, 0], progB: [5, 5, 1, 1, 0, 0, 1, 0], ritmos: RIT.escaso, cadencia: RIT.cescaso, rango: [7, 12],
       toca(m, e) {
         const { t, s, ac, P, b } = e;
         if (s === 0 && b % 2 === 0) { m.dron(t, grado(P, 0) - 12, 0.16, e.paso * 32 + 1.2); m.dron(t, grado(P, 4) - 12, 0.09, e.paso * 32 + 1.2); }
-        if (e.nota) m.ocarina(t, grado(P, e.nota.g), 0.22, e.nota.d * e.paso, { prio: 2 });
+        if (e.nota) m.ocarina(t, grado(P, e.nota.g), 0.13, e.nota.d * e.paso, { prio: 2 });
         if (hash(P.semilla * 977 + e.n, 1) < 0.07) m.gota(t, 1100 + hash(e.n, 2) * 1500, 0.1);
         if (s === 0 && b % 4 === 2) m.campana(t, grado(P, 7), 0.07, 2.6, "Ra");
         if (s === 0 || s === 9) m.tambor(t, 48, s ? 0.12 : 0.2, 0.5);
@@ -507,7 +508,7 @@
       }
     },
     2: {   // castillo: órgano y coro, solemne, eólico armónico
-      compas: 16, paso: 0.2, raiz: 48, modo: MODOS.armonico, semilla: 5, nivel: 1,
+      compas: 16, paso: 0.2, raiz: 48, modo: MODOS.armonico, semilla: 5,
       prog: [0, 3, 4, 0, 5, 3, 4, 0], progB: [5, 1, 4, 0, 5, 3, 4, 4], ritmos: RIT.lento, cadencia: RIT.clento, rango: [9, 16],
       toca(m, e) {
         const { t, s, ac, P, b } = e, compas = e.paso * 16;
@@ -523,7 +524,7 @@
       }
     },
     3: {   // volcán: tambores graves, metales y yunque, frigio dominante
-      compas: 16, paso: 0.14, raiz: 46, modo: MODOS.frigdom, semilla: 13, nivel: 1,
+      compas: 16, paso: 0.14, raiz: 46, modo: MODOS.frigdom, semilla: 13,
       prog: [0, 0, 1, 0, 0, 6, 1, 0], progB: [5, 5, 6, 6, 0, 1, 1, 0], ritmos: RIT.rapido, cadencia: RIT.crapido, rango: [7, 13],
       toca(m, e) {
         const { t, s, ac, P, b } = e;
@@ -537,7 +538,7 @@
       }
     },
     4: {   // abismo: pads oscuros y disonantes, locrio
-      compas: 16, paso: 0.26, raiz: 43, modo: MODOS.locrio, semilla: 23, nivel: 1,
+      compas: 16, paso: 0.26, raiz: 43, modo: MODOS.locrio, semilla: 23,
       prog: [0, 1, 0, 4, 0, 1, 6, 0], progB: [3, 4, 1, 1, 0, 6, 1, 0], ritmos: RIT.escaso, cadencia: RIT.cescaso, rango: [14, 20],
       toca(m, e) {
         const { t, s, ac, P, b } = e, compas = e.paso * 16;
@@ -549,13 +550,13 @@
       }
     },
     combate: {
-      compas: 16, paso: 0.115, raiz: 50, modo: MODOS.eolico, semilla: 41, nivel: 1,
+      compas: 16, paso: 0.115, raiz: 50, modo: MODOS.eolico, semilla: 41,
       prog: [0, 6, 5, 6, 0, 6, 3, 4], progB: [3, 3, 0, 0, 5, 6, 4, 4], ritmos: RIT.rapido, cadencia: RIT.crapido, rango: [7, 14],
       toca(m, e) {
         const { t, s, ac, P } = e;
-        if (s === 0 || s === 8) m.tambor(t, 80, 0.42, 0.3);
+        if (s === 0 || s === 8) m.tambor(t, 80, 0.3, 0.3);
         if (s === 10 || s === 7) m.tambor(t, 95, 0.2, 0.2);
-        if (s === 4 || s === 12) m.caja(t, 0.3);
+        if (s === 4 || s === 12) m.caja(t, 0.22);
         if (s % 2 === 0) m.pandereta(t, s % 4 === 0 ? 0.1 : 0.06);
         if (e.nota) m.laud(t, grado(P, e.nota.g), 0.36, e.nota.d * e.paso + 0.2, { tb: LAUD_CORTO, prio: 2 });
         const bj = { 0: 0, 6: 4, 8: 0, 14: 4 }[s];
@@ -564,7 +565,7 @@
       }
     },
     jefe: {
-      compas: 16, paso: 0.1, raiz: 40, modo: MODOS.armonico, semilla: 17, nivel: 1,
+      compas: 16, paso: 0.1, raiz: 40, modo: MODOS.armonico, semilla: 17,
       prog: [0, 0, 5, 4, 0, 0, 1, 4], progB: [5, 5, 3, 4, 5, 1, 4, 4], ritmos: RIT.rapido, cadencia: RIT.crapido, rango: [10, 16],
       toca(m, e) {
         const { t, s, ac, P, b } = e;
@@ -578,8 +579,10 @@
       }
     }
   };
+  /* Ganancia de cada pista (calibrada para que todas queden a un volumen de fondo parecido) */
+  const NIVEL_PISTA = { taberna: 0.497, 0: 0.164, 1: 0.178, 2: 0.283, 3: 0.253, 4: 0.358, combate: 0.588, jefe: 0.318 };
   const VOL_MUSICA = 1;
-  const MAX_VOCES = 24;
+  const MAX_VOCES = 22;
   const comps = {};
   function composicion(k) {
     if (!comps[k]) { const P = PISTAS[k]; comps[k] = [componer(P, P.semilla * 101 + 1, P.prog), componer(P, P.semilla * 101 + 77, P.progB)]; }
@@ -595,7 +598,7 @@
       this.conv = ctx.createConvolver();
       this.conv.normalize = false;
       this.conv.buffer = reverb(ctx);
-      this.humedo = ctx.createGain(); this.humedo.gain.value = 0.55;
+      this.humedo = ctx.createGain(); this.humedo.gain.value = 0.6;
       this.conv.connect(this.humedo); this.humedo.connect(this.maestro);
       this.trk = null; this.nombre = null; this.viejas = []; this.voces = [];
       this.n = 0; this.t = 0; this.acPrev = null;
@@ -608,7 +611,7 @@
       const c = this.c, ahora = c.currentTime, P = PISTAS[k];
       this._soltar(ahora);
       const F = c.createGain(), R = c.createGain(), Rb = c.createGain(), Ra = c.createGain();
-      [F, R].forEach(g => { g.gain.setValueAtTime(0, ahora); g.gain.linearRampToValueAtTime(P.nivel, ahora + 0.35); });
+      [F, R].forEach(g => { g.gain.setValueAtTime(0, ahora); g.gain.linearRampToValueAtTime(NIVEL_PISTA[k], ahora + 0.35); });
       Rb.gain.value = 0.25; Ra.gain.value = 0.8;
       F.connect(this.maestro); R.connect(this.conv); Rb.connect(R); Ra.connect(R);
       /* Formantes de "ah" para el coro de la pista */

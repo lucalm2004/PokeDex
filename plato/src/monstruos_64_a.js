@@ -464,50 +464,53 @@
 
   /* ---------- Krug, el jefe goblin: chatarra por armadura, capa roja rota y una cuchilla ---------- */
   function goblin() {
-    const g = new Rejilla(W, W), V = R.piel.verde, F = R.hierro, M = R.madera, T = R.tela.granate, Cu = R.pelo.castano, B = R.bronce, Ro = R.piel.roja;
+    const g = new Rejilla(W, W), V = R.piel.verde, F = R.hierro, M = R.madera, T = R.tela.granate, Cu = R.pelo.castano, B = R.bronce, Ro = R.piel.roja, Oc = R.tela.ocre;
+    /* Pie envuelto en trapos: vendas en diagonal. */
+    const vendas = (x0, x1, y0, max) => { for (let j = y0 + 2; j <= 62; j += 3) { surco(g, M, 1, x0, j + 1, x1, j - 1, M); if (max > 2) surco(g, M, 3, x0, j, x1, j - 2, M); } };
     /* Capa raída detrás, con pliegues y agujeros. */
     const capaT = capa().poly([[31, 32], [43, 32], [48.5, 60], [45.5, 57], [43, 61.4], [39.5, 57.6], [36, 60.8], [33, 55.5]]);
     capaT.pintar(g, T, { relieve: 3, max: 3 });
-    for (const [x0, y0, x1, y1] of [[38, 35, 39.5, 56], [42, 35, 45, 56], [35, 36, 35, 54]]) { surco(g, T, 1, x0, y0, x1, y1); surco(g, T, 3, x0 - 1, y0 + 1, x1 - 1, y1); }
-    g.quitar(44, 47); g.quitar(45, 48); g.quitar(44, 48);
+    for (const [x0, y0, x1, y1] of [[38, 35, 39.5, 56], [42, 35, 45, 56]]) { surco(g, T, 1, x0, y0, x1, y1); surco(g, T, 3, x0 - 1, y0 + 1, x1 - 1, y1); }
+    g.quitar(44, 47); g.quitar(45, 48); g.quitar(44, 48); g.quitar(45, 49);
     penumbra(g, capaT, T, 44, 60, 0.2);
-    /* Oreja de atrás. */
+    /* Oreja de atrás, con el pabellón rojizo en sombra. */
     capa().poly([[33.5, 17], [35.5, 26.5], [44.5, 19.8], [54, 11.5], [43, 14.4]]).pintar(g, V, { relieve: 2.4, max: 3 });
-    surco(g, Ro, 1, 36, 20, 47, 15.5, V); surco(g, Ro, 2, 36, 21, 46, 16.5, V);
-    pon(g, V, 4, [52, 12], [50, 13]);
+    cada(capa().poly([[36.4, 19.8], [37, 23.2], [43.6, 19.4], [49.6, 14.2], [43, 16.4]]), (x, y) => pon(g, Ro, 1, [x, y]));
+    pon(g, V, 4, [52, 12], [50, 13], [48, 14]);
     /* Pierna y brazo de atrás. */
-    capa().linea(34, 49, 36.5, 56.5, 5).pintar(g, V, { relieve: 1.8, max: 2 });
-    const pieA = capa().rect(34, 57, 8, 6).off(41, 57);
-    pieA.pintar(g, M, { relieve: 1.8, max: 2, separar: true });
-    for (const j of [58, 60]) surco(g, M, 0, 34, j, 41, j, M);
-    capa().linea(37.5, 36, 41.5, 42.5, 4).linea(41.5, 42.5, 41.5, 46.5, 4).pintar(g, V, { relieve: 1.8, max: 2, separar: true });
+    volumen(g, V, [["c", 34, 49, 36.5, 56.5, 2.6, 2.2]], { max: 2 });
+    capa().rect(34, 57, 8, 6).off(41, 57).pintar(g, M, { relieve: 1.8, max: 2, separar: true });
+    vendas(34, 41, 57, 2);
+    volumen(g, V, [["c", 37.5, 36, 41.5, 42.5, 2.2, 2], ["c", 41.5, 42.5, 41.5, 46, 2, 2]], { max: 2, separar: true });
     /* Saco del botín. */
     const saco = capa().ell(44, 52, 4.6, 4.8).poly([[42, 45.4], [46, 45.4], [45.6, 48.4], [42.4, 48.4]]);
-    saco.pintar(g, R.tela.ocre, { relieve: 2.5, max: 3, separar: true });
-    trazo(g, R.tela.ocre, 1, 42, 50, 43, 53, 42.5, 56); trazo(g, R.tela.ocre, 1, 45.5, 49, 47, 52, 46, 56);
+    saco.pintar(g, Oc, { relieve: 2.5, max: 3, separar: true });
+    trazo(g, Oc, 1, 42, 50, 43, 53, 42.5, 56); trazo(g, Oc, 1, 45.5, 49, 47, 52, 46, 56);
     surco(g, M, 2, 42, 48, 46, 48, null); pon(g, M, 4, [42, 48]);
     pon(g, ORO, 4, [43, 51]); pon(g, ORO, 3, [44, 51], [43, 52]); pon(g, ORO, 2, [45, 54]); pon(g, ORO, 3, [46, 53]);
-    /* Mano de atrás cerrada sobre el cuello del saco. */
     capa().ell(42, 46.4, 2, 1.8).pintar(g, V, { relieve: 1, max: 2, separar: true });
 
-    /* Torso: jubón de cuero bajo placas de chatarra. */
+    /* Torso: jubón de cuero cosido bajo placas de chatarra. */
     const torso = capa().ell(29.5, 39.4, 8.5, 7.2).rect(21, 38.6, 17, 10.4);
     torso.pintar(g, Cu, { relieve: 3, separar: true });
-    for (let j = 40; j <= 47; j += 2) { pon(g, Cu, 1, [36, j]); pon(g, Cu, 3, [36, j + 1]); }
-    const peto = capa().poly([[22, 35.4], [35.4, 34], [36.6, 44], [29.4, 46.6], [22, 44.6]]);
-    peto.pintar(g, F, { relieve: 3, separar: true });
-    /* Tres chapas desparejas: costura, cantos y remaches. */
-    const chapa1 = capa().poly([[22, 35.4], [35.4, 34], [35.8, 39.6], [22.3, 40.4]]).recortar(peto);
-    bisel(g, chapa1, F, null, 1);
-    surco(g, F, 3, 23, 41, 35, 40.4);
-    surco(g, F, 1, 29, 41, 29.5, 46);
-    surco(g, F, 3, 30, 41, 30.5, 46);
-    for (const [i, j] of [[24, 37], [33, 36], [24, 42], [27, 44], [33, 42]]) remache(g, F, i, j);
-    herrumbre(g, F, 27, 38, 1.6, 3); herrumbre(g, F, 34, 44, 1.4, 5); herrumbre(g, F, 23, 44, 1, 8);
-    pon(g, F, 4, [25, 36], [26, 36], [27, 36]);
-    /* Correa en bandolera y cinturón con hebilla. */
-    capa().linea(35.5, 34.5, 23.5, 46.6, 1.6).recortar(torso).pintar(g, M, { plano: 2 });
+    for (let j = 39; j <= 47; j += 2) { pon(g, Cu, 1, [36, j]); pon(g, Cu, 3, [35, j]); }
+    /* Tres chapas desparejas, cada una con su canto, remaches y herrumbre. */
+    for (const [pts, max, rem, oxi] of [
+      [[[22, 35.4], [35.4, 34], [35.8, 40], [22.4, 40.8]], 4, [[24, 37], [33, 36]], [31, 38, 1.4]],
+      [[[22.4, 41.8], [28.6, 41.4], [28.8, 46.4], [22.4, 45]], 3, [[24, 43]], [26, 45, 1.1]],
+      [[[29.8, 41.2], [36.2, 40.8], [36.6, 44.4], [29.8, 46.4]], 3, [[34, 42]], [32, 44, 1]]]) {
+      const ch = capa().poly(pts);
+      ch.pintar(g, F, { relieve: 2.5, max, separar: true });
+      bisel(g, ch, F, Math.min(max, 4), 1);
+      for (const [i, j] of rem) remache(g, F, i, j, true);
+      herrumbre(g, F, oxi[0], oxi[1], oxi[2], pts.length + max);
+    }
+    /* Abolladura en la chapa grande. */
+    pon(g, F, 1, [27, 37], [28, 37]); pon(g, F, 4, [27, 38], [28, 38]);
+    /* Correa en bandolera con hebilla, y cinturón. */
+    capa().linea(35.5, 34.5, 23.5, 46.6, 1.8).recortar(torso).pintar(g, M, { plano: 2 });
     surco(g, M, 4, 35, 34, 23, 46, M);
+    capa().rect(29, 39, 3, 3).pintar(g, B, { plano: 3 }); pon(g, B, 4, [29, 39]); pon(g, B, 1, [31, 41]); pon(g, M, 0, [30, 40]);
     capa().rect(21, 46.4, 17, 3).pintar(g, M, { relieve: 1, separar: true });
     surco(g, M, 3, 21, 46, 37, 46, M);
     capa().rect(25, 46, 4, 3).pintar(g, B, { plano: 3 });
@@ -516,94 +519,88 @@
     const tapa = capa().poly([[22.2, 49], [35.2, 49], [34, 54.2], [31, 53], [28.7, 56.4], [26, 53.4], [23.5, 54.2]]);
     tapa.pintar(g, Cu, { relieve: 1.8, max: 3, separar: true });
     surco(g, Cu, 0, 26, 50, 26, 53); surco(g, Cu, 0, 31, 50, 31, 52.5);
-    for (let i = 23; i <= 34; i += 3) pon(g, Cu, 4, [i, 49]);
-    /* Pierna de delante y pie envuelto en trapos. */
-    capa().linea(25, 50.5, 22.5, 56.6, 5.2).pintar(g, V, { relieve: 1.8, separar: true });
-    pon(g, V, 4, [22, 53], [21, 55]);
-    const pieD = capa().rect(16, 57, 11, 6).off(26, 57).off(16, 57).off(17, 57);
+    /* Pierna de delante y pie envuelto, con un dedo y su uña asomando. */
+    volumen(g, V, [["c", 25, 50.4, 22.6, 56.4, 2.8, 2.4, 2]], { separar: true, sesgo: -0.12 });
+    const pieD = capa().rect(17, 57, 10, 6).off(26, 57).off(17, 57).off(18, 57);
     pieD.pintar(g, M, { relieve: 1.8, separar: true });
-    for (const [j, a] of [[58, 18], [60, 16]]) { surco(g, M, 1, a, j, 26, j); surco(g, M, 3, a, j + 1, 26, j + 1); }
-    pon(g, V, 2, [16, 62], [17, 62]); pon(g, HUESO, 4, [15, 62]); pon(g, HUESO, 3, [15, 61]);
+    vendas(17, 26, 57, 4);
+    capa().ell(16, 61.2, 1.6, 1.4).pintar(g, V, { relieve: 1, separar: true });
+    pon(g, HUESO, 4, [14, 62]); pon(g, HUESO, 3, [14, 61]);
 
     /* Hombrera con pincho. */
-    const hombrera = capa().ell(23.5, 34.6, 5.4, 4).poly([[20.6, 32], [18.6, 25.6], [24.4, 31.2]]);
-    hombrera.pintar(g, F, { relieve: 2.5, separar: true });
-    surco(g, F, 4, 19, 26.5, 21, 31);
-    herrumbre(g, F, 25, 36, 1.3, 11);
+    volumen(g, F, [["e", 23.5, 34.6, 5.4, 4, 0]], { separar: true });
+    volumen(g, F, [["c", 21.4, 31.4, 19, 25.6, 1.9, 0.5, 2]], { min: 1 });
+    herrumbre(g, F, 26, 36, 1.2, 11);
     remache(g, F, 22, 33, true);
 
-    /* Cabeza grande, orejas de soplillo y nariz ganchuda. */
-    capa().rect(24.5, 30.5, 7, 4).pintar(g, V, { relieve: 1.2, max: 2, separar: true });
-    const cab = capa().ell(27.4, 24.4, 9.1, 8).poly([[21, 24.4], [14.4, 28.9], [16.4, 31.6], [21, 30.2]]).ell(24.4, 29.6, 6.2, 4);
-    cab.pintar(g, V, { relieve: 5, separar: true });
-    /* Oreja de delante con el borde rojo y una muesca. */
+    /* Cuello y cabeza grande: cráneo, mofletes, ceja y nariz ganchuda. */
+    volumen(g, V, [["c", 27, 31, 28, 34.5, 3.2, 3.2]], { max: 2, separar: true });
+    const cab = volumen(g, V, [["e", 28, 24, 8.6, 7.6, 0], ["e", 23.6, 29.4, 6.6, 4.4, 1.5], ["c", 17.5, 23.6, 31, 23.2, 1.7, 1.7, 5.5]], { separar: true });
+    /* Oreja de delante con el pabellón rojo y una muesca. */
     const orD = capa().poly([[21.6, 17.2], [20.3, 26.4], [13.2, 22.4], [4, 12.6], [13.2, 15.2]]);
     orD.pintar(g, V, { relieve: 2.6, separar: true });
-    surco(g, Ro, 1, 18.5, 20.5, 8, 14.5, V); surco(g, Ro, 2, 18.5, 21.5, 9, 15.6, V); pon(g, Ro, 3, [17, 21], [14, 19]);
-    for (const [i, j] of [[5, 13], [7, 14], [9, 15], [11, 16]]) pon(g, V, 4, [i, j]);
+    cada(capa().poly([[19.4, 19.6], [19, 23.6], [14.6, 21.2], [8.4, 15.6], [13.6, 17.6]]), (x, y) => pon(g, Ro, y - 13 < (x - 5) * 0.62 ? 2 : 1, [x, y]));
+    pon(g, Ro, 3, [11, 16], [13, 17]);
+    for (const [i, j] of [[5, 13], [7, 14], [9, 15], [11, 15]]) pon(g, V, 4, [i, j]);
     g.quitar(9, 19); g.quitar(10, 20); g.quitar(10, 19);
+    /* Nariz ganchuda, por delante de la cara. */
+    volumen(g, V, [["c", 20.5, 25, 16, 28.6, 2.2, 1.5, 0], ["e", 15.8, 29, 1.5, 1.6, 0.8]], { separar: true, sesgo: 0.05 });
+    pon(g, V, 4, [19, 24], [18, 25]); pon(g, V, 0, [17, 30]); pon(g, NEGRO, 0, [16, 30]);
+    /* Ojos amarillos bajo un ceño fruncido. */
+    surco(g, NEGRO, 1, 17, 24, 21, 25, null); surco(g, NEGRO, 1, 24, 25, 29, 24, null);
+    pon(g, AMBAR, 4, [18, 26]); pon(g, AMBAR, 3, [19, 26]); pon(g, NEGRO, 0, [20, 26]); pon(g, AMBAR, 1, [18, 27], [19, 27]);
+    pon(g, AMBAR, 4, [24, 26]); pon(g, AMBAR, 3, [25, 26]); pon(g, NEGRO, 0, [26, 26], [26, 27]); pon(g, AMBAR, 2, [27, 26]); pon(g, AMBAR, 1, [24, 27], [25, 27]);
+    pon(g, HUESO, 4, [24, 26]);
+    pon(g, V, 1, [18, 28], [19, 28], [24, 28], [25, 28], [26, 28]);
+    /* Boca de oreja a oreja: labio, dientes torcidos, colmillos y lengua. */
+    surco(g, NEGRO, 0, 17, 31, 28, 31, null); pon(g, NEGRO, 0, [29, 30], [30, 29]);
+    surco(g, NEGRO, 0, 18, 32, 26, 32, null);
+    surco(g, GARGANTA, 3, 20, 32, 24, 32, null);
+    for (const x of [17, 19, 21, 24, 26]) pon(g, HUESO, x === 21 ? 3 : 4, [x, 31]);
+    pon(g, HUESO, 3, [22, 31]);
+    pon(g, HUESO, 4, [19, 33], [25, 33]); pon(g, HUESO, 3, [19, 32], [25, 32]);
+    surco(g, V, 3, 18, 34, 26, 34, null); pon(g, V, 1, [20, 34], [21, 34], [22, 34], [23, 34]);
+    pon(g, V, 4, [16, 31], [28, 29]);
+    /* Arruga del moflete y cicatriz roja. */
+    trazo(g, V, 1, 22, 28, 27, 28.5, 29, 30);
+    surco(g, Ro, 1, 31, 25, 33, 29, V); pon(g, Ro, 3, [31, 26], [32, 28]);
     /* Cuerno de hueso en el casco. */
-    const cuerno = capa().curva(29.4, 16.6, 36, 12.6, 33, 4.6, 4.2, 1.2);
-    cuerno.pintar(g, HUESO, { relieve: 1.8, min: 2 });
-    for (const [i, j] of [[33, 13], [34, 10], [34, 8]]) { pon(g, HUESO, 1, [i, j]); pon(g, HUESO, 1, [i + 1, j]); }
-    /* Casco abollado. */
-    const casco = capa().ell(28, 21.4, 9.9, 7.3);
-    casco.quitarRect(0, 23, W, W);
-    casco.pintar(g, F, { relieve: 3, separar: true });
-    for (let i = 17; i <= 38; i++) if (g.rampa(i, 22) === F) pon(g, F, i % 4 ? 1 : 3, [i, 22]);
-    surco(g, F, 3, 18, 21, 37, 21, F);
-    herrumbre(g, F, 31, 16, 1.6, 21); herrumbre(g, F, 35, 19, 1.2, 22); herrumbre(g, F, 22, 18, 1, 23);
-    /* Abolladura: hondón oscuro con su brillo abajo. */
-    pon(g, F, 1, [25, 17], [26, 16], [27, 16]); pon(g, F, 0, [26, 17]); pon(g, F, 4, [26, 18], [27, 18]);
-    pon(g, F, 4, [22, 15], [23, 15], [21, 16]);
-    remache(g, F, 21, 19, true); remache(g, F, 32, 19, true);
-    /* Cara: ceño, ojos amarillos, nariz y sonrisa de colmillos torcidos. */
-    surco(g, V, 0, 18, 23, 23, 24, null); surco(g, V, 0, 25, 24, 30, 23, null);
-    pon(g, V, 1, [18, 24], [24, 25], [25, 25]);
-    for (const ex of [19, 26]) {
-      pon(g, HUESO, 4, [ex, 25]); pon(g, AMBAR, 4, [ex + 1, 25]); pon(g, AMBAR, 3, [ex + 2, 25]);
-      pon(g, AMBAR, 2, [ex, 26]); pon(g, NEGRO, 0, [ex + 1, 26], [ex + 2, 26]); pon(g, AMBAR, 1, [ex + 3, 26]);
-      pon(g, V, 1, [ex, 27], [ex + 1, 27], [ex + 2, 27]);
-    }
-    /* Nariz ganchuda. */
-    capa().poly([[18, 25], [14, 29.4], [16, 30.4], [19.4, 28.6]]).pintar(g, V, { relieve: 1.4, separar: true });
-    pon(g, V, 4, [17, 26], [16, 27], [15, 28]); pon(g, V, 0, [17, 30], [18, 29]);
-    /* Boca: labio, hueco, colmillos y encías. */
-    surco(g, NEGRO, 0, 16, 31, 27, 32, null);
-    pon(g, NEGRO, 0, [17, 32], [18, 32], [19, 33], [20, 33], [21, 33], [22, 33], [23, 33], [24, 32], [25, 32]);
-    pon(g, Ro, 1, [19, 34], [20, 34], [21, 34], [22, 34]);
-    pon(g, HUESO, 4, [17, 31], [20, 32], [23, 31]); pon(g, HUESO, 3, [17, 32], [21, 32], [24, 31], [25, 31]);
-    pon(g, HUESO, 4, [18, 34]); pon(g, HUESO, 3, [18, 35]); pon(g, HUESO, 3, [23, 34]);
-    pon(g, V, 3, [19, 35], [20, 35], [21, 35]);
-    /* Mejilla, arruga y cicatriz. */
-    trazo(g, V, 1, 27, 27, 30, 29, 28, 32);
-    pon(g, V, 4, [29, 26], [30, 26]);
-    surco(g, Ro, 1, 31, 25, 34, 29, V); pon(g, Ro, 3, [32, 25]);
-    /* Cuchilla de carnicero en la mano de delante. */
+    volumen(g, HUESO, [["c", 29.6, 16.6, 33.6, 12, 2.2, 1.8], ["c", 33.6, 12, 34.4, 8, 1.8, 1.3], ["c", 34.4, 8, 33, 4.4, 1.3, 0.6]], { min: 1 });
+    trazo(g, HUESO, 1, 31, 14, 33, 15, 35, 13); trazo(g, HUESO, 1, 32.5, 9.5, 34, 10.5, 35.5, 9.5);
+    /* Casco abollado: cúpula lisa, banda remachada, una abolladura y dos manchas de herrumbre. */
+    const casco = volumen(g, F, [["e", 28, 22.6, 9.9, 8.4, 0]], { recorte: capa().rect(0, 0, W, 21), separar: true, sesgo: -0.14 });
+    trazo(g, F, 4, 20, 19, 23, 14.5, 29, 14);
+    pon(g, F, 3, [21, 17], [22, 16], [30, 14], [31, 14]);
+    const banda = capa().rect(17, 20, 22, 3).recortar(capa().ell(28, 21.6, 10.6, 8));
+    banda.pintar(g, F, { relieve: 1.2, separar: true });
+    bisel(g, banda, F, 3, 0);
+    for (const i of [20, 26, 32, 36]) remache(g, F, i, 21);
+    pon(g, F, 1, [33, 16], [34, 17]); pon(g, F, 0, [33, 17]); pon(g, F, 4, [32, 18], [33, 18]);
+    herrumbre(g, F, 25, 17, 1.3, 21); herrumbre(g, F, 36, 18, 1.1, 22);
+    /* Cuchilla de carnicero. */
     const hoja = capa().poly([[5.4, 27.6], [13.2, 25], [16.4, 40.6], [8, 43.2]]);
-    hoja.pintar(g, ACERO, { relieve: 2.6, min: 1 });
+    hoja.pintar(g, ACERO, { relieve: 2.6, min: 1, max: 3 });
     surco(g, ACERO, 4, 5.6, 28.4, 8.4, 42.6, null);
     surco(g, ACERO, 3, 6.6, 28.4, 9.4, 42.4);
     surco(g, ACERO, 1, 13.4, 26, 16, 40.2);
     surco(g, ACERO, 0, 13.6, 25.6, 16.4, 40);
-    /* Agujero, muescas del filo y sangre seca. */
+    pon(g, ACERO, 4, [10, 30], [10, 31], [11, 33]);
+    /* Agujero, una mella del filo y sangre seca. */
     pon(g, NEGRO, 1, [11, 28], [12, 28]); pon(g, ACERO, 0, [11, 29]); pon(g, ACERO, 4, [12, 29]);
-    g.quitar(6, 33); g.quitar(6, 34);
-    for (const [i, j, k] of [[6, 31, 3], [7, 32, 2], [7, 36, 3], [8, 37, 2], [8, 39, 1], [9, 40, 2], [8, 41, 1], [6, 29, 2]]) pon(g, R.sangre, k, [i, j]);
+    g.quitar(6, 34); g.quitar(6, 35);
+    for (const [i, j, k] of [[7, 37, 3], [8, 37, 2], [7, 38, 2], [8, 39, 1], [9, 40, 2], [8, 41, 1], [9, 41, 1], [6, 31, 2], [7, 32, 1]]) pon(g, R.sangre, k, [i, j]);
     capa().linea(14.6, 38.4, 15.2, 49, 2.6).pintar(g, M, { relieve: 1, separar: true });
     for (let j = 45; j <= 48; j += 2) pon(g, M, 1, [15, j]);
     pon(g, B, 3, [14, 49], [15, 49]); pon(g, B, 4, [14, 49]);
-    /* Brazo de delante y puño. */
-    capa().linea(23.5, 36, 20.4, 42.5, 4.4).linea(20.4, 42.5, 17.2, 43.8, 4).pintar(g, V, { relieve: 1.8, separar: true });
-    pon(g, V, 4, [22, 37], [21, 38], [21, 39]);
-    capa().ell(15.8, 43.8, 3, 2.6).pintar(g, V, { relieve: 1.4, separar: true });
-    pon(g, V, 0, [14, 43], [14, 45], [15, 44]); pon(g, V, 4, [14, 42], [15, 42]);
-    /* Brazalete de cuero. */
+    /* Brazo de delante, brazalete y puño. */
+    volumen(g, V, [["c", 23.5, 36, 20.4, 42.3, 2.4, 2.1, 0], ["c", 20.4, 42.5, 17.4, 43.8, 2.1, 2, 0]], { separar: true, sesgo: -0.1 });
     capa().rect(18, 41.6, 3, 4).pintar(g, M, { relieve: 1, separar: true });
     pon(g, M, 4, [18, 42]);
+    volumen(g, V, [["e", 15.8, 43.8, 3, 2.6, 0]], { separar: true });
+    pon(g, V, 0, [14, 44], [15, 45]); pon(g, V, 1, [13, 43]);
     contornoSel(g);
-    suavizar(g);
     destello(g, ACERO, 6, 29, true);
+    destello(g, F, 22, 15);
     return g;
   }
 
@@ -611,197 +608,204 @@
   function osolechuza() {
     const g = new Rejilla(W, W), C = R.pelo.castano, O = PLUMA_O, M = R.madera, P = R.piedra;
     /* Brazo levantado de atrás, zarpa abierta. */
-    const brazoA = capa().linea(44.6, 29.5, 51, 20.4, 6.5).linea(51, 20.4, 49.8, 11.4, 6.2).ell(49.8, 10, 4.2, 3.4);
-    brazoA.pintar(g, C, { relieve: 3, max: 2 });
+    const brazoA = volumen(g, C, [["c", 44.6, 29.5, 51, 20.4, 3.4, 3.1], ["c", 51, 20.4, 49.8, 11.4, 3.1, 2.9], ["e", 49.8, 10, 4.2, 3.4, 1]], { max: 3, sesgo: -0.12 });
     pelo(g, brazoA, C, [1, 1], 3, 0);
     garras(g, 49.8, 7.4, [[-4.4, -2.6], [-1.4, -4.6], [1.8, -4.6], [4.4, -2.6]]);
     /* Pierna de atrás. */
-    const piernaA = capa().rect(40.7, 46.4, 10.4, 11).ell(45.9, 46, 5.2, 3).rect(37, 57, 14, 6).off(37, 57).off(50, 57);
-    piernaA.pintar(g, C, { relieve: 3, max: 2 });
+    const piernaA = volumen(g, C, [["e", 45.6, 49.6, 5.6, 8, 0]], { max: 2, sesgo: -0.1 });
+    volumen(g, C, [["e", 44.4, 59.6, 6.8, 3.2, 0], ["e", 39, 60.6, 2.2, 2.2, 1]], { max: 2, separar: true, sesgo: -0.1 });
     pelo(g, piernaA, C, [0, 1], 4, 0);
     /* Cuerpo enorme. */
-    const cuerpo = capa().ell(36.2, 38.6, 14.3, 15).ell(31.6, 45.1, 11.7, 9.1);
-    cuerpo.pintar(g, C, { relieve: 7, separar: true });
-    pelo(g, cuerpo, C, [1, 1], 5, 5);
+    const cuerpo = volumen(g, C, [["e", 36.2, 38.6, 14.3, 15, 0], ["e", 31.6, 45.1, 11.7, 9.1, 1]], { separar: true, rebote: true, sesgo: -0.04 });
+    pelo(g, cuerpo, C, [1, 1], 5, 8);
     /* Mechones en el borde de la espalda. */
-    for (const [i, j] of [[49, 32], [50.5, 38], [50.5, 44], [48.5, 49]]) capa().poly([[i - 1, j - 2.4], [i + 2.4, j + 0.4], [i - 1, j + 2.4]]).pintar(g, C, { plano: 1 });
-    /* Pierna de delante. */
-    const pierna = capa().rect(22.5, 47.7, 11.7, 9.5).ell(28.3, 48, 6, 3).rect(17.4, 57, 16, 6).off(17.4, 57).off(33, 57);
-    pierna.pintar(g, C, { relieve: 3.5, separar: true });
-    pelo(g, pierna, C, [1, 1], 9, 5);
-    surco(g, C, 1, 22, 56.5, 33, 56.5); surco(g, C, 3, 21, 57, 26, 57);
-    pon(g, HUESO, 4, [16, 62], [19, 62], [22, 62], [38, 62], [41, 62]);
-    pon(g, HUESO, 2, [17, 62], [20, 62], [23, 62], [39, 62], [42, 62]);
-    pon(g, HUESO, 3, [16, 61]);
+    crestas(g, C, [[50, 30, 1.4], [51, 36, 1.6], [51, 42, 1.6], [49.6, 48, 1.4]], 1);
+    /* Pierna de delante y pie con garras. */
+    const pierna = volumen(g, C, [["e", 28.2, 50.6, 6.4, 7.4, 3]], { separar: true, sesgo: -0.04 });
+    volumen(g, C, [["e", 26.4, 59.4, 7.4, 3.4, 0], ["e", 19.6, 60.6, 2.4, 2.2, 1], ["e", 23, 60.8, 2.2, 2, 1]], { separar: true, sesgo: -0.04 });
+    pelo(g, pierna, C, [1, 1], 9, 6);
+    for (const [x, y] of [[17, 61], [17, 62], [20, 62], [21, 62]]) pon(g, HUESO, 4, [x, y]);
+    pon(g, HUESO, 2, [18, 62], [22, 62]); pon(g, HUESO, 3, [16, 62], [36, 62]); pon(g, HUESO, 2, [37, 62]);
     /* Pecho de plumas en escamas. */
-    const pecho = capa().ell(29, 39.9, 7.8, 11).recortar(cuerpo);
-    pecho.pintar(g, O, { relieve: 3.5, max: 3 });
+    const pecho = capa().ell(29, 40.4, 7.8, 11).recortar(cuerpo);
+    volumen(g, O, [["e", 29, 40.4, 7.8, 11, 0]], { recorte: pecho, max: 3, sesgo: -0.02 });
     for (let j = 30, f = 0; j <= 52; j += 3, f++) for (let i = 18 + (f % 2 ? 2 : 0); i <= 40; i += 4)
       if (pecho.tiene(i, j) && pecho.tiene(i + 3, j) && pecho.tiene(i, j + 1)) {
         const t = tonoDe(g, i + 1, j, O);
-        pon(g, O, Math.max(0, t - 2), [i, j], [i + 3, j]);
-        pon(g, O, Math.max(0, t - 1), [i + 1, j + 1], [i + 2, j + 1]);
-        if (t >= 2) pon(g, O, Math.min(4, t + 1), [i + 1, j], [i + 2, j]);
+        pon(g, O, Math.max(0, t - 1), [i, j], [i + 3, j], [i + 1, j + 1], [i + 2, j + 1]);
+        if (t >= 2) pon(g, O, Math.min(4, t + 1), [i + 1, j]);
       }
-    penumbra(g, pecho, O, 44, 52, 0.3);
+    penumbra(g, pecho, O, 45, 52, 0.25);
     /* Gorguera de plumas pardas sobre los hombros. */
+    const plumas = [[17.5, 27.4], [21.5, 29], [25.6, 29.6], [29.6, 29.4], [33.5, 28.4], [37.5, 27.6], [41, 27]];
     const gorguera = capa();
-    for (const [i, j] of [[17.5, 27], [21.5, 28.8], [25.6, 29.4], [29.6, 29.4], [33.5, 28.2], [37.5, 27.6], [41, 27], [14.5, 25.6]])
-      gorguera.poly([[i - 3, j - 4], [i + 3, j - 4], [i, j + 3.2]]);
+    for (const [i, j] of plumas) gorguera.poly([[i - 3, j - 4], [i + 3, j - 4], [i, j + 3.2]]);
     gorguera.pintar(g, M, { relieve: 1.8, separar: true });
-    for (const [i, j] of [[17.5, 27], [21.5, 28.8], [25.6, 29.4], [29.6, 29.4], [33.5, 28.2], [37.5, 27.6], [41, 27]]) { surco(g, M, 1, i, j - 3, i, j + 2, M); pon(g, M, 4, [Math.round(i - 1), Math.round(j - 3)]); }
+    for (const [i, j] of plumas) { surco(g, M, 1, i + 0.6, j - 3, i + 0.3, j + 2, M); pon(g, M, 4, [Math.round(i - 1), Math.round(j - 3)]); }
     /* Cabeza de lechuza con penachos. */
-    const cab = capa().ell(25.8, 19.2, 10.4, 9.4).poly([[16.7, 14], [14, 3.6], [22, 10.7]]).poly([[30.3, 10.7], [38, 3.6], [36.2, 14.6]]);
-    cab.pintar(g, M, { relieve: 5, separar: true });
-    /* Plumas de la coronilla: trazos en V. */
-    for (const [i, j] of [[29, 12], [32, 15], [34, 19], [31, 21], [34, 23], [27, 10], [33, 12], [30, 17], [24, 10]]) {
-      pon(g, M, 1, [i, j], [i + 1, j + 1]); pon(g, M, 1, [i + 2, j]);
-      if (tonoDe(g, i, j - 1, M) >= 2) pon(g, M, 4, [i, j - 1]);
-    }
+    capa().poly([[16.7, 14], [14, 3.6], [22, 10.7]]).poly([[30.3, 10.7], [38, 3.6], [36.2, 14.6]]).pintar(g, M, { relieve: 2, separar: true });
+    const cab = volumen(g, M, [["e", 25.8, 19.2, 10.4, 9.4, 0]], { separar: true });
     for (const [x0, y0, x1, y1] of [[15, 4.5, 17, 12], [37, 4.5, 34, 12]]) surco(g, O, 3, x0, y0, x1, y1, M);
     pon(g, O, 4, [14, 4], [15, 5], [37, 4], [36, 5]); pon(g, O, 2, [16, 9], [35, 9]);
+    /* Plumas de la coronilla y la nuca: escamas pequeñas. */
+    for (let j = 11, f = 0; j <= 27; j += 2, f++) for (let i = 26 + (f % 2) * 2; i <= 36; i += 4) {
+      if (!cab.tiene(i, j) || Math.hypot(i - 23.2, (j - 19.9) * 1.15) < 9) continue;
+      const t = tonoDe(g, i, j, M);
+      if (t < 1) continue;
+      pon(g, M, t - 1, [i, j + 1], [i + 1, j + 1]);
+      if (t < 4) pon(g, M, t + 1, [i, j]);
+    }
     /* Disco facial: anillo ocre y cara clara con plumillas radiales. */
-    capa().ell(23.2, 19.8, 8.3, 7.3).pintar(g, O, { relieve: 1.8, min: 2, max: 3 });
-    const cara = capa().ell(23.2, 19.9, 7, 6.1);
-    cara.pintar(g, HUESO, { relieve: 3, min: 2 });
-    for (let a = 0; a < 16; a++) {
-      const an = (a / 16) * Math.PI * 2, x = 23.2 + Math.cos(an) * 5.8, y = 19.9 + Math.sin(an) * 5;
-      if (tonoDe(g, Math.round(x), Math.round(y), HUESO) >= 2) pon(g, HUESO, tonoDe(g, Math.round(x), Math.round(y), HUESO) - 1, [Math.round(x), Math.round(y)]);
+    capa().ell(23.2, 20, 8.8, 7.8).pintar(g, O, { relieve: 1.8, min: 2, max: 3 });
+    pon(g, O, 1, [32, 20], [32, 21], [31, 24], [29, 27]);
+    const cara = capa().ell(23.2, 20.2, 7.5, 6.6);
+    volumen(g, HUESO, [["e", 23.2, 20.2, 7.5, 6.6, 0]], { recorte: cara, min: 1 });
+    for (let a = 0; a < 20; a++) {
+      const an = (a / 20) * Math.PI * 2, x = Math.round(23.2 + Math.cos(an) * 6.1), y = Math.round(20.2 + Math.sin(an) * 5.3);
+      const t = tonoDe(g, x, y, HUESO);
+      if (t >= 2) pon(g, HUESO, t - 1, [x, y]);
     }
     pon(g, O, 2, [23, 14], [23, 15], [24, 14]);
-    /* Ojos enormes ámbar con pupila y brillo; ceño fruncido. */
-    for (const ex of [18.6, 27.4]) {
-      capa().ell(ex, 19.2, 3.4, 3.1).pintar(g, NEGRO, { plano: 1 });
-      capa().ell(ex, 19.2, 2.8, 2.6).pintar(g, AMBAR, { relieve: 2, min: 2 });
-      const cx = Math.round(ex), cy = 19;
-      pon(g, NEGRO, 0, [cx - 1, cy], [cx, cy], [cx - 1, cy + 1], [cx, cy + 1], [cx - 1, cy - 1], [cx, cy + 2]);
-      pon(g, HUESO, 4, [cx - 2, cy - 1]); pon(g, AMBAR, 4, [cx + 1, cy + 1]);
-      pon(g, AMBAR, 1, [cx - 2, cy + 2], [cx - 1, cy + 2], [cx + 1, cy + 2]);
+    /* Ojos enormes ámbar con pupila y brillo. */
+    for (const ex of [19.2, 27.4]) {
+      capa().ell(ex, 20, 3.1, 2.9).pintar(g, NEGRO, { plano: 1 });
+      volumen(g, AMBAR, [["e", ex, 20, 2.5, 2.4, 0]], { min: 2, sesgo: 0.1 });
+      const cx = Math.round(ex), cy = 20;
+      pon(g, NEGRO, 0, [cx - 1, cy], [cx, cy], [cx - 1, cy + 1], [cx, cy + 1], [cx, cy - 1]);
+      pon(g, HUESO, 4, [cx - 2, cy - 1]); pon(g, HUESO, 3, [cx - 1, cy - 1]); pon(g, AMBAR, 4, [cx + 1, cy + 1], [cx + 1, cy + 2]);
+      pon(g, AMBAR, 1, [cx - 2, cy + 2], [cx - 1, cy + 2]);
     }
     /* Ceño en V que se junta sobre el pico. */
-    surco(g, M, 0, 14, 15, 22, 17, null); surco(g, M, 0, 24, 17, 31, 14, null);
-    surco(g, M, 2, 14, 14, 22, 16, null); surco(g, M, 2, 24, 16, 31, 13, null);
+    surco(g, M, 1, 16, 15, 22, 17, HUESO); surco(g, M, 1, 24, 17, 30, 15, HUESO);
+    surco(g, M, 2, 16, 14, 21, 16, HUESO); surco(g, M, 2, 25, 16, 30, 14, HUESO);
     /* Pico ganchudo de piedra. */
     const pico = capa().poly([[21.2, 21], [25.2, 21], [25.2, 25], [23.2, 29], [21.2, 27.6], [20.6, 24.3]]);
-    pico.pintar(g, P, { relieve: 1.8, min: 1, separar: true });
+    volumen(g, P, [["c", 23.2, 21.6, 22.6, 26.6, 2.2, 1.4, 0]], { recorte: pico, min: 1 });
+    cada(pico, (x, y) => { if (!g.get(x, y) || g.rampa(x, y) !== P) pon(g, P, 1, [x, y]); });
     pon(g, P, 4, [21, 22], [22, 22]); pon(g, P, 3, [21, 23], [21, 24]);
     pon(g, P, 0, [24, 26], [24, 27], [23, 28]); pon(g, NEGRO, 0, [22, 26], [23, 26]);
     /* Brazo de delante con zarpa abierta hacia los héroes. */
-    const brazo = capa().linea(27.7, 30.8, 19.9, 38.6, 6.5).linea(19.9, 38.6, 13.4, 38.6, 5.2).ell(11.4, 38.6, 3.6, 3.4);
-    brazo.pintar(g, C, { relieve: 3, separar: true });
+    const brazo = volumen(g, C, [["c", 27.7, 30.8, 19.9, 38.6, 3.4, 3.2, 8], ["c", 19.9, 38.6, 13.4, 38.6, 3.2, 2.6, 8], ["e", 11.4, 38.6, 3.6, 3.4, 8]], { separar: true });
     pelo(g, brazo, C, [1, 1], 13, 5);
     garras(g, 8.6, 38.6, [[-4, -4], [-4.6, -0.6], [-4, 2.6], [-1.4, 4.6]]);
-    pon(g, C, 1, [10, 37], [10, 40]); pon(g, C, 4, [11, 36], [12, 36]);
+    pon(g, C, 1, [10, 37], [10, 40]);
     contornoSel(g);
-    suavizar(g);
     return g;
   }
 
   /* ---------- La guardia esqueleto: yelmo oxidado, escudo con la cruz roja y espada mellada ---------- */
   function esqueleto() {
-    const g = new Rejilla(W, W), H = HUESO, F = R.hierro, Sg = R.sangre, T = R.tela.granate;
-    const hueso = (c, op = {}) => c.pintar(g, H, { relieve: 1.2, min: 2, ...op });
+    const g = new Rejilla(W, W), H = HUESO, F = R.hierro, Sg = R.sangre, T = R.tela.granate, Md = R.madera;
+    /* Hueso largo: cápsula fina con una cabeza en cada punta. */
+    const hueso = (x0, y0, x1, y1, r, op = {}) => volumen(g, H, [["c", x0, y0, x1, y1, r, r, 0], ["e", x0, y0, r + 0.45, r + 0.35, 0.3], ["e", x1, y1, r + 0.45, r + 0.35, 0.3]], { min: 1, separar: true, ...op });
     /* Brazo de atrás, que sujeta el escudo. */
-    hueso(capa().linea(36, 23, 40, 29.5, 2.2).linea(40, 29.5, 42.6, 30.8, 2), { max: 2 });
+    hueso(37, 24, 40.4, 29.4, 0.9, { max: 2 });
+    hueso(40.4, 29.6, 43, 31, 0.7, { max: 2 });
     /* Escudo de cometa de hierro viejo con la cruz roja de Valdren. */
-    const escudo = capa().poly([[38.6, 22.4], [56.4, 22.4], [56.4, 36], [47.5, 48.6], [38.6, 36]]);
+    const escudo = capa().poly([[38.6, 23.4], [56.4, 23.4], [56.4, 37], [47.5, 49.6], [38.6, 37]]);
     escudo.pintar(g, F, { relieve: 3.5, separar: true });
-    const campo = capa().poly([[40.6, 24.4], [54.4, 24.4], [54.4, 35.4], [47.5, 45.6], [40.6, 35.4]]);
-    campo.pintar(g, F, { relieve: 2.5, max: 3 });
+    const campo = capa().poly([[40.6, 25.4], [54.4, 25.4], [54.4, 36.4], [47.5, 46.6], [40.6, 36.4]]);
+    volumen(g, F, [["e", 47.5, 33, 11, 15, 0]], { recorte: campo, max: 3, sesgo: -0.05 });
     bisel(g, campo, F, 1, 3);
-    const cruz = capa().rect(46, 24.4, 3, 21).rect(41, 29, 13, 3).recortar(campo);
-    cruz.pintar(g, Sg, { relieve: 1.4, max: 3 });
+    const cruz = capa().rect(46, 25.4, 3, 21).rect(41, 30, 13, 3).recortar(campo);
+    cada(cruz, (x, y) => pon(g, Sg, lim(tonoDe(g, x, y, F) - 0, 1, 3), [x, y]));
     bisel(g, cruz, Sg, 4, 1);
-    /* Desconchones, óxido y una mella. */
-    herrumbre(g, F, 42, 26, 1.4, 1); herrumbre(g, F, 52, 33, 1.8, 2); herrumbre(g, F, 44, 39, 1.3, 3); herrumbre(g, F, 52, 26, 1, 4);
-    pon(g, Sg, 1, [47, 34], [46, 38], [50, 30]); pon(g, OXIDO, 2, [48, 40], [47, 41]);
-    for (const [i, j] of [[39, 23], [55, 23], [39, 35], [55, 35], [47, 47]]) remache(g, F, i, j, true);
-    for (const [x, y] of [[56, 28], [56, 29], [55, 29], [56, 30]]) g.quitar(x, y);
-    /* Arañazos. */
-    surco(g, F, 4, 50, 37, 53, 34, F); surco(g, F, 1, 50, 38, 53, 35, F);
-    /* Piernas: fémur, rodilla, tibia y pie. */
-    const pierna = (x0, x1, x2, op) => {
-      hueso(capa().linea(x0, 40, x1, 49, 2.6), op);
-      hueso(capa().linea(x1, 51, x2, 58, 2.2).linea(x1 + 1.4, 51, x2 + 1.2, 58, 1), op);
-      hueso(capa().ell(x1 + 0.4, 50, 1.8, 1.6), { ...op, separar: true });
-    };
-    pierna(33.5, 36, 37.4, { max: 3 });
-    hueso(capa().rect(36, 59, 7, 4).off(42, 59).off(36, 59), { max: 3, separar: true });
-    pierna(27, 24.4, 23, {});
-    hueso(capa().rect(18, 59, 7, 4).off(18, 59).off(24, 59), { separar: true });
-    for (const i of [19, 21, 23, 38, 40]) pon(g, H, 1, [i, 62]);
-    pon(g, H, 4, [18, 61], [36, 61]);
-    /* Faldón granate hecho jirones. */
-    const falda = capa().poly([[24.4, 36.6], [36.8, 36.6], [38.2, 47.8], [35.4, 45], [33.6, 49.8], [30.9, 45.8], [28.3, 49.2], [26.3, 45], [23, 47.8]]);
+    /* Desconchones, óxido, arañazos y una mella. */
+    herrumbre(g, F, 42, 27, 1.4, 1); herrumbre(g, F, 52, 34, 1.8, 2); herrumbre(g, F, 44, 40, 1.3, 3); herrumbre(g, F, 52, 27, 1, 4);
+    pon(g, Sg, 1, [47, 35], [46, 39], [50, 31]);
+    for (const [i, j] of [[39, 24], [55, 24], [39, 36], [55, 36], [47, 48]]) remache(g, F, i, j, true);
+    for (const [x, y] of [[56, 29], [56, 30], [55, 30], [56, 31]]) g.quitar(x, y);
+    surco(g, F, 4, 50, 38, 53, 35, F); surco(g, F, 1, 50, 39, 53, 36, F);
+    /* Piernas: fémur, rótula, tibia y peroné, y los huesos del pie. */
+    hueso(34.6, 46, 36.2, 51.2, 1.1, { max: 3 });
+    hueso(37.8, 52.8, 38.8, 58, 0.5, { max: 2 }); hueso(36, 52.4, 37, 58.4, 0.9, { max: 3 });
+    volumen(g, H, [["e", 39.4, 60.6, 2.9, 1.6, 0], ["e", 37.6, 59.6, 1.6, 1.3, 1]], { max: 3, min: 1, separar: true });
+    hueso(27, 46, 25.2, 51.2, 1.1);
+    hueso(27, 52.8, 25.8, 58, 0.5, { max: 3 }); hueso(25.2, 52.4, 24, 58.4, 0.9);
+    volumen(g, H, [["e", 22, 60.6, 3, 1.6, 0], ["e", 24.2, 59.6, 1.6, 1.3, 1]], { min: 1, separar: true });
+    for (const i of [19, 21, 23, 38, 40, 42]) pon(g, H, 1, [i, 62]);
+    pon(g, H, 4, [19, 60], [37, 60]);
+    for (const [x, y] of [[25, 51], [36, 51]]) { pon(g, H, 4, [x - 1, y]); pon(g, H, 1, [x + 1, y + 1]); }
+    /* Faldón granate hecho jirones, bajo un cinto. */
+    const falda = capa().poly([[24.4, 37.6], [36.8, 37.6], [38.2, 48.8], [35.4, 46], [33.6, 50.8], [30.9, 46.8], [28.3, 50.2], [26.3, 46], [23, 48.8]]);
     falda.pintar(g, T, { relieve: 2.5, max: 3, separar: true });
-    for (const [x0, x1] of [[28, 28.3], [31, 31], [34, 34.5]]) { surco(g, T, 1, x0, 39, x1, 45); surco(g, T, 3, x0 - 1, 39, x1 - 1, 44); }
-    surco(g, T, 4, 25, 37, 36, 37, T);
-    /* Cinto con hebilla de bronce. */
-    capa().rect(24, 36, 13, 2).pintar(g, R.madera, { relieve: 1, separar: true });
-    capa().rect(29, 36, 3, 2).pintar(g, R.bronce, { plano: 3 }); pon(g, R.bronce, 4, [29, 36]); pon(g, R.bronce, 1, [31, 37]);
-    /* Pelvis asomando y columna. */
-    hueso(capa().ell(30.2, 34.4, 5.2, 1.8), { separar: true });
-    pon(g, NEGRO, 0, [28, 34], [32, 34]);
-    hueso(capa().rect(29, 28, 3, 6));
-    for (let j = 28; j <= 33; j += 2) { pon(g, H, 1, [29, j], [30, j], [31, j]); pon(g, H, 4, [29, j + 1]); }
-    /* Costillas: arcos con huecos y esternón. */
-    const costillas = capa().ell(30.2, 24.4, 7, 5.4);
-    hueso(costillas, { relieve: 3, separar: true });
-    for (const j of [21, 23.4, 25.8, 28]) for (let i = 22; i <= 38; i++) {
-      const jj = Math.round(j + Math.abs(i - 30) * 0.12);
-      if (costillas.tiene(i, jj) && (i < 29 || i > 31)) pon(g, NEGRO, i > 31 ? 0 : 1, [i, jj]);
+    for (const [x0, x1] of [[28, 28.3], [31, 31], [34, 34.5]]) { surco(g, T, 1, x0, 40, x1, 46); surco(g, T, 3, x0 - 1, 40, x1 - 1, 45); }
+    penumbra(g, falda, T, 44, 50, 0.3);
+    capa().rect(24, 36.6, 13, 2).pintar(g, Md, { relieve: 1, separar: true });
+    surco(g, Md, 3, 24, 36, 36, 36, Md);
+    capa().rect(29, 36.6, 3, 2).pintar(g, R.bronce, { plano: 3 }); pon(g, R.bronce, 4, [29, 37]); pon(g, R.bronce, 1, [31, 38]);
+    /* Crestas de la pelvis asomando sobre el cinto, y columna. */
+    volumen(g, H, [["e", 25.6, 35.6, 2.6, 1.4, 0], ["e", 35, 35.6, 2.6, 1.4, 0]], { min: 1, separar: true, detras: true });
+    for (let j = 31; j <= 35; j += 1.4) volumen(g, H, [["e", 30, j, 1.6, 0.9, 0]], { min: 1, separar: true });
+    /* Caja torácica: hueco oscuro, columna detrás, esternón y costillas curvas. */
+    const caja = capa().ell(30, 27.6, 7.4, 5.6);
+    caja.pintar(g, NEGRO, { plano: 1 });
+    cada(capa().ell(30, 27.6, 7.4, 5.6).quitarEll(29, 27, 6, 4.4), (x, y) => pon(g, NEGRO, 0, [x, y]));
+    for (let j = 24; j <= 31; j += 2) pon(g, H, 1, [31, j], [32, j]);
+    for (let k = 0; k < 4; k++) {
+      const y = 23.6 + k * 2.4, ab = k * 0.3;
+      const c = capa().curva(29.4, y, 25 + k * 0.3, y - 0.2, 23.4 + k * 0.6, y + 2.6 - ab, 1.3, 1);
+      c.curva(30.8, y, 35 - k * 0.3, y - 0.2, 36.6 - k * 0.6, y + 2.6 - ab, 1.3, 1);
+      volumen(g, H, [["e", 30, y + 2, 7.4, 3.4, 0]], { recorte: c, min: 1 });
+      cada(c, (x, yy) => { if (!c.tiene(x, yy - 1)) pon(g, H, Math.min(4, tonoDe(g, x, yy, H) + 1), [x, yy]); else if (!c.tiene(x, yy + 1)) pon(g, H, 1, [x, yy]); });
     }
-    for (let i = 22; i <= 38; i++) for (let j = 19; j <= 30; j++)
-      if (costillas.tiene(i, j) && g.get(i, j - 1) && g.rampa(i, j - 1) === NEGRO && tonoDe(g, i, j, H) >= 0 && i < 29) pon(g, H, 4, [i, j]);
-    pon(g, H, 3, [29, 20], [29, 22], [29, 24], [29, 26]);
-    /* Clavículas y cuello. */
-    hueso(capa().linea(21.8, 19.8, 37.4, 19.8, 1.2).rect(29, 16, 3, 3));
-    pon(g, H, 4, [22, 19], [23, 19], [35, 19]); pon(g, H, 1, [30, 17], [30, 18]);
-    /* Cráneo con mandíbula desencajada. */
-    hueso(capa().ell(27.6, 12, 6, 5.8).rect(23.6, 15, 7, 3.2), { relieve: 3.5, separar: true });
-    hueso(capa().rect(23, 18, 7, 2).off(29, 19), { max: 3, separar: true });
-    /* Cuencas con brasas, nariz y dientes. */
-    for (const [x0, y0] of [[22, 11], [28, 11]]) {
-      pon(g, NEGRO, 0, [x0, y0], [x0 + 1, y0], [x0 + 2, y0], [x0, y0 + 1], [x0 + 1, y0 + 1], [x0 + 2, y0 + 1], [x0 + 1, y0 + 2], [x0 + 2, y0 + 2]);
-      pon(g, FUEGO, 4, [x0 + 1, y0]); pon(g, FUEGO, 3, [x0 + 1, y0 + 1], [x0 + 2, y0]); pon(g, FUEGO, 2, [x0 + 2, y0 + 1]);
+    volumen(g, H, [["c", 30, 23.4, 30, 31.6, 1, 0.8, 1]], { min: 2 });
+    /* Clavículas y vértebras del cuello. */
+    hueso(23, 23, 29, 22.4, 0.7); hueso(31, 22.4, 37, 23, 0.7, { max: 3 });
+    volumen(g, H, [["e", 30.6, 21.2, 1.4, 1, 0], ["e", 30.4, 19.6, 1.3, 0.9, 0]], { min: 1, separar: true });
+    /* Cráneo: bóveda, pómulo, hocico huesudo y mandíbula desencajada. */
+    volumen(g, H, [["e", 28.2, 11.6, 6.3, 5.8, 0], ["e", 25.4, 15.6, 4.2, 2.8, 1], ["e", 30.4, 15.6, 2.4, 2.2, 0.5]], { min: 1, separar: true, sesgo: 0.04 });
+    const mand = capa().poly([[21.6, 18.4], [30.4, 18.2], [31.4, 21.4], [28.6, 21.4], [26.6, 22], [22.6, 21]]);
+    volumen(g, H, [["e", 26.4, 19.4, 5.2, 2.6, 0]], { recorte: mand, min: 1, max: 3, separar: true });
+    /* Cuencas hondas con brasas, cavidad nasal y dientes. */
+    for (const [x0, y0, w] of [[22, 12, 3], [27, 12, 4]]) {
+      for (let j = 0; j < 3; j++) for (let i = 0; i < w; i++) if (!(j === 2 && (i === 0 || i === w - 1))) pon(g, NEGRO, 0, [x0 + i, y0 + j]);
+      pon(g, FUEGO, 4, [x0 + 1, y0 + 1]); pon(g, FUEGO, 3, [x0 + 2, y0 + 1]); pon(g, FUEGO, 2, [x0 + 1, y0 + 2]);
+      pon(g, H, 1, [x0, y0 - 1 + 0], [x0 + w - 1, y0 + 3]);
     }
-    pon(g, H, 1, [22, 13], [31, 13]);
-    pon(g, NEGRO, 0, [26, 14], [26, 15], [25, 15]);
-    for (let i = 23; i <= 30; i++) pon(g, i % 2 ? H : NEGRO, i % 2 ? 4 : 0, [i, 17]);
-    for (let i = 23; i <= 28; i++) pon(g, i % 2 ? NEGRO : H, i % 2 ? 0 : 3, [i, 18]);
-    pon(g, H, 1, [31, 14], [31, 15], [30, 16]);
+    pon(g, NEGRO, 0, [25, 15], [26, 15], [25, 16]);
+    pon(g, H, 4, [23, 15], [24, 15], [29, 16], [30, 16]);
+    pon(g, H, 1, [27, 16], [28, 16], [31, 15]);
+    for (let i = 22; i <= 29; i++) pon(g, H, i % 2 ? 2 : 4, [i, 17]);
+    surco(g, NEGRO, 0, 22, 18, 30, 18, null);
+    for (let i = 23; i <= 29; i++) pon(g, H, i % 2 ? 4 : 2, [i, 19]);
+    pon(g, H, 1, [27, 21], [28, 20]);
     /* Grieta del cráneo. */
-    pon(g, H, 0, [32, 10], [31, 9], [32, 8]); pon(g, H, 4, [33, 10]);
+    pon(g, H, 0, [33, 12], [32, 11], [33, 10]); pon(g, H, 4, [34, 12]);
     /* Yelmo de nasal, oxidado. */
-    const yelmo = capa().ell(28, 9.6, 7.4, 6).rect(19.8, 9, 17, 2);
-    yelmo.quitarRect(0, 11, W, W);
-    yelmo.pintar(g, F, { relieve: 3, separar: true });
-    capa().rect(26, 10, 2, 5).pintar(g, F, { relieve: 1, min: 2 });
-    pon(g, F, 4, [26, 10], [26, 11]); pon(g, F, 1, [27, 13], [27, 14]);
-    for (let i = 20; i <= 36; i++) if (g.rampa(i, 10) === F && i !== 26 && i !== 27) pon(g, F, i % 3 ? 1 : 3, [i, 10]);
-    surco(g, F, 4, 22, 6, 25, 4, F);
-    herrumbre(g, F, 31, 6, 1.5, 7); herrumbre(g, F, 22, 8, 1, 8); herrumbre(g, F, 34, 8, 1, 9);
-    remache(g, F, 22, 9); remache(g, F, 33, 9);
+    const yelmo = volumen(g, F, [["e", 28, 10, 7.6, 6.4, 0]], { recorte: capa().rect(0, 0, W, 10), separar: true, sesgo: -0.1 });
+    const ala = capa().rect(20, 9, 17, 2);
+    ala.pintar(g, F, { relieve: 1, separar: true });
+    bisel(g, ala, F, 3, 0);
+    capa().rect(25, 10, 2, 5).pintar(g, F, { relieve: 1, min: 2, max: 3 });
+    pon(g, F, 4, [25, 10], [25, 11]); pon(g, F, 1, [26, 13], [26, 14]);
+    trazo(g, F, 4, 22, 7, 24, 4.5, 28, 4);
+    herrumbre(g, F, 31, 6, 1.5, 7); herrumbre(g, F, 34, 9, 1, 9);
+    for (const i of [22, 30, 34]) remache(g, F, i, 9);
     /* Brazo de la espada, levantado hacia delante. */
-    hueso(capa().linea(23, 20.4, 19.2, 27, 2.2).linea(19.2, 27, 15.3, 30.8, 2), { separar: true });
-    pon(g, H, 4, [19, 26], [22, 21]); pon(g, H, 1, [19, 28]);
-    /* Espada oxidada y mellada. */
-    const hoja = capa().linea(14, 27, 6.2, 8.6, 2.8).poly([[4.8, 10.8], [5.4, 4.8], [8.4, 9.4]]);
-    hoja.pintar(g, F, { relieve: 1.2, min: 2 });
-    surco(g, F, 4, 12.6, 26.6, 4.8, 8, F);
-    surco(g, F, 1, 14.6, 25.6, 7.4, 8.8, F);
-    surco(g, F, 2, 13.6, 26, 6, 8.4, F);
-    g.quitar(5, 13); g.quitar(5, 12); g.quitar(6, 16);
-    herrumbre(g, F, 9, 18, 1, 31); herrumbre(g, F, 11, 22, 1, 32);
-    capa().linea(10, 31, 18, 27, 2.2).pintar(g, F, { relieve: 1, min: 2, max: 3, separar: true });
-    pon(g, F, 4, [10, 30], [11, 30]);
-    capa().linea(15.4, 31, 16.6, 34.8, 1.6).pintar(g, R.madera, { relieve: 1, separar: true });
-    capa().ell(16.8, 36, 1.4, 1.2).pintar(g, F, { relieve: 1, min: 2 });
-    hueso(capa().ell(14.6, 30.4, 1.8, 1.7), { separar: true });
-    pon(g, H, 1, [14, 31], [15, 31]);
+    hueso(23, 24, 19.4, 28.8, 0.9);
+    hueso(19.2, 29, 15.8, 31.6, 0.6); hueso(19.8, 30.2, 16.6, 32.6, 0.5, { max: 3 });
+    /* Espada oxidada y mellada: filo claro, acanaladura y lomo. */
+    const ux = -0.367, uy = -0.93, nx = 0.93, ny = -0.367;
+    const [bx, by] = [13.6, 28.4];
+    const hoja = capa().poly([[bx - nx * 1.6, by - ny * 1.6], [bx + nx * 1.6, by + ny * 1.6], [bx + ux * 18 + nx * 1.4, by + uy * 18 + ny * 1.4], [bx + ux * 21, by + uy * 21], [bx + ux * 18 - nx * 1.4, by + uy * 18 - ny * 1.4]]);
+    hoja.pintar(g, F, { relieve: 1.2, min: 2, max: 3 });
+    surco(g, F, 4, bx - nx * 1.2, by - ny * 1.2, bx + ux * 18.6 - nx * 1, by + uy * 18.6 - ny * 1, F);
+    surco(g, F, 1, bx + ux * 1, by + uy * 1, bx + ux * 16, by + uy * 16, F);
+    surco(g, F, 1, bx + nx * 1.4, by + ny * 1.4, bx + ux * 18 + nx * 1.2, by + uy * 18 + ny * 1.2, F);
+    for (const t of [6, 10.5]) { const x = Math.round(bx + ux * t - nx * 1.4), y = Math.round(by + uy * t - ny * 1.4); g.quitar(x, y); g.quitar(x, y + 1); }
+    herrumbre(g, F, 10, 19, 1, 31); herrumbre(g, F, 12, 24, 1, 32);
+    /* Gavilanes, puño y pomo. */
+    const guarda = capa().linea(bx - nx * 4.2 + 0.4, by - ny * 4.2 + 0.8, bx + nx * 4.2 + 0.4, by + ny * 4.2 + 0.8, 2);
+    guarda.pintar(g, F, { relieve: 1, min: 2, separar: true });
+    bisel(g, guarda, F, 4, 1);
+    capa().linea(bx + 0.8, by + 2.2, bx + 2, by + 5.4, 1.6).pintar(g, Md, { relieve: 1, separar: true });
+    volumen(g, F, [["e", bx + 2.4, by + 6.4, 1.4, 1.3, 0]], { min: 2, separar: true });
+    /* Mano huesuda alrededor del puño. */
+    volumen(g, H, [["e", 14.6, 32, 1.8, 1.6, 0]], { min: 1, separar: true });
+    pon(g, H, 1, [14, 33], [15, 32]); pon(g, H, 4, [13, 31]);
     contornoSel(g);
-    suavizar(g);
-    destello(g, F, 6, 9);
+    destello(g, F, 7, 10);
     return g;
   }
 
