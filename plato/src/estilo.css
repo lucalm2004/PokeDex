@@ -1065,3 +1065,29 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
   .juego.ver-grafo .nodo canvas { transform: scale(.85); }
 }
 .juego.ver-grafo .mapa { overflow: hidden; }
+
+/* ---------- Línea de turnos con retratos ---------- */
+.hud-turnos { position: absolute; left: 50%; transform: translateX(-50%); z-index: 3; margin: 0; padding: 3px 5px; list-style: none; display: flex; gap: 3px; align-items: center;
+  border: 0 solid transparent; border-image: var(--px-hud) 6 fill / 12px round; image-rendering: pixelated; max-width: calc(100% - 20px); overflow: hidden; }
+.hud-turnos li { width: 26px; height: 26px; display: grid; place-items: center; background: rgba(0, 0, 0, .45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); transition: transform .15s steps(3); }
+.hud-turnos li canvas { width: 22px !important; height: 22px !important; }
+.hud-turnos li.enemigo { box-shadow: inset 0 0 0 1px rgba(255, 106, 85, .55); }
+.hud-turnos li.aliado { box-shadow: inset 0 0 0 1px rgba(143, 212, 98, .45); }
+.hud-turnos li.ahora { transform: translateY(2px) scale(1.18); box-shadow: inset 0 0 0 2px var(--gold), 0 0 10px rgba(255, 215, 106, .6); }
+.hud-turnos li.hecho { opacity: .45; }
+.hud-turnos li.muerto { opacity: .2; filter: grayscale(1); }
+.hud-turnos li.ronda { width: auto; padding: 0 4px; font-size: 10px; font-weight: 700; color: var(--gold); background: none; box-shadow: none; }
+
+/* ---------- Festejos con rayos de luz ---------- */
+.festejo .rayos { position: absolute; left: 50%; top: 50%; width: 320px; height: 320px; margin: -160px 0 0 -160px; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(rgba(255, 215, 106, .22) 0 10deg, transparent 10deg 24deg); -webkit-mask: radial-gradient(circle, #000 25%, transparent 68%); mask: radial-gradient(circle, #000 25%, transparent 68%);
+  animation: girarPx 2.4s steps(12) infinite; }
+@keyframes girarPx { to { transform: rotate(48deg); } }
+.festejo { isolation: isolate; }
+.festejo.victoria p { font-size: 46px; color: var(--gold); text-shadow: 0 3px 0 #5a2a08, 0 0 18px rgba(255, 201, 92, .6); }
+.festejo.victoria { box-shadow: none; background: none; }
+.festejo.nivel .rayos { background: repeating-conic-gradient(rgba(127, 216, 255, .22) 0 10deg, transparent 10deg 24deg); }
+.festejo.r-legendario .rayos { background: repeating-conic-gradient(rgba(255, 179, 71, .3) 0 8deg, transparent 8deg 20deg); }
+.juego.modo-combate .anuncio { top: 104px; }
+.hud-turnos { z-index: 4; }
+.juego.modo-combate .orden, .ocupado .juego.modo-combate .orden { display: none !important; }

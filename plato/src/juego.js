@@ -1070,12 +1070,12 @@ function festejar(titulo, sub, clase = "") {
   const el = $("#festejo");
   if (!el) return;
   el.className = "festejo " + clase;
-  el.innerHTML = `<p>${esc(titulo)}</p>${sub ? `<small>${esc(sub)}</small>` : ""}`;
+  el.innerHTML = `<i class="rayos" aria-hidden="true"></i><p>${esc(titulo)}</p>${sub ? `<small>${esc(sub)}</small>` : ""}`;
   el.hidden = false;
   clearTimeout(festejar.t);
   festejar.t = setTimeout(() => { el.hidden = true; }, 1900);
 }
-const EFECTOS_ESCENA = new Set(["numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
+const EFECTOS_ESCENA = new Set(["conjuro", "numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
 /* Un efecto se ve en el escenario y además suena y, si toca, se celebra (también en los móviles de los demás). */
 /* Rótulo sobre el escenario con el nombre del ataque y quién lo hace. */
 function anunciar(e) {
@@ -1123,7 +1123,7 @@ function efectoLocal(e) {
   else if (e.tipo === "magia") sonar(e.rampa === RP.fuego ? "fuego" : "magia");
   else if (e.tipo === "cura") sonar("cura");
   else if (e.tipo === "muerte") sonar("golpe");
-  else if (e.tipo === "victoria") sonar("victoria");
+  else if (e.tipo === "victoria") { sonar("victoria"); festejar("¡Victoria!", "", "victoria"); }
   else if (e.tipo === "fase") { sonar("derrota"); festejar(e.texto, e.sub, "fase"); vibrar([60, 40, 60]); }
   else if (e.tipo === "bloqueo") { sonar("bloqueo"); vibrar(20); }
   else if (e.tipo === "proyectil" || e.tipo === "tajo") sonar(e.forma === "flecha" ? "dado" : "magia");
@@ -2429,6 +2429,14 @@ function danarHeroe(i, dmg, directo, rk = -1) {
   return t;
 }
 /* Forma del ataque en el escenario según la clase y el tipo de daño. */
+/* Elemento visual de cada habilidad (para sus efectos en el escenario). */
+const ELEM_HAB = { escarcha: "hielo", hielo: "hielo", cadena: "rayo", desintegrar: "rayo", bola: "fuego", meteoro: "fuego", infernal: "fuego", luz: "luz", juicio: "luz", martillo: "luz", plaga: "veneno", veneno: "veneno", drenar: "sombra", hambre: "sombra", descarga: "sombra", acorde: "onda", disonancia: "onda", burla: "onda", truco: "arcano", rayo: "arcano" };
+function elemDe(p, id, h) {
+  if (ELEM_HAB[id]) return ELEM_HAB[id];
+  if (h.tipo === "sagrada") return "luz";
+  if (h.tipo === "arcana") return p.clase === "mago" ? "fuego" : p.clase === "bardo" ? "onda" : p.clase === "brujo" ? "sombra" : "arcano";
+  return null;
+}
 function formaAtaque(p, h) {
   if (h.tipo === "fisica") return p.clase === "explorador" ? ["flecha"] : ["tajo"];
   if (h.tipo === "sagrada") return ["luz"];
@@ -2463,6 +2471,7 @@ function accion(tipo, arg) {
     if (h.efecto === "dano" || h.efecto === "cura") rachar(S.turno, q);
     if (q === 2) { c.perfectos++; c.equipo = Math.min(100, (c.equipo || 0) + 6); if (S.stats) S.stats[S.turno].perfectos++; }
     fx({ tipo: "anuncio", texto: h.nombre, sub: p.nombre, tono: h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo" });
+    if (h.efecto !== "dano") fx({ tipo: "conjuro", actor: yo });
     const m = statHab(p, h);
     const blancos = h.area ? vivosR() : [t];
     const r0 = c.rivales[t], e0 = ENEMIGOS[r0.clave];
@@ -2487,7 +2496,8 @@ function accion(tipo, arg) {
         blancos.forEach(k => {
           const rr = c.rivales[k];
           if (rr.hp <= 0) return;
-          fx({ tipo: forma === "tajo" ? "tajo" : "proyectil", actor: yo, objetivo: "e" + k, forma, rampa });
+          const elem = forma === "tajo" || forma === "flecha" ? null : elemDe(p, id, h);
+          fx({ tipo: forma === "tajo" ? "tajo" : "proyectil", actor: yo, objetivo: "e" + k, forma, rampa, elem });
           const antes = rr.hp;
           for (let g = 0; g < (h.golpes || 1) && rr.hp > 0; g++)
           {
@@ -2525,7 +2535,7 @@ function accion(tipo, arg) {
         if (crit && tiene("vampiro")) { const cu = curar(p, 4); if (cu) partes.push(`sed de sangre +${cu}`); }
         return partes.join(" · ");
       };
-      fx({ tipo: "ataque", actor: yo });
+      fx({ tipo: "ataque", actor: yo, conjuro: h.tipo !== "fisica" });
       if (!h.tirada) {
         const tx = `${p.nombre} usa ${h.nombre}${ritmo} → ${golpes(q === 2, q === 2 ? 1 : q === 0 ? 0.75 : 1)}`;
         log(tx, "ok"); mostrarTirada(tx, true);
@@ -3164,7 +3174,26 @@ function renderJuego() {
   renderHudObjetivo();
 }
 /* Ficha flotante del enemigo al que apuntas: nombre, vida, rasgos y qué hará; sigue al enemigo en pantalla. */
+function renderHudTurnos() {
+  let el = $("#hud-turnos");
+  const c = S && S.combate;
+  if (!c || !$("#p-juego").classList.contains("modo-combate")) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement("ol"); el.id = "hud-turnos"; el.className = "hud-turnos"; $("#caja-juego").appendChild(el); }
+  const items = c.orden.map((a, k) => {
+    const muerto = (a.t === "h" && S.players[a.i].alma <= 0) || (a.t === "e" && c.rivales[a.r].hp <= 0);
+    const ahora = c.fase === "resolver" && k === c.pos;
+    const hecho = c.fase === "resolver" && k < c.pos;
+    const cara = a.t === "h" ? `<canvas class="retrato" data-tam="22" data-look='${esc(JSON.stringify(lookConGesto(a.i)))}'></canvas>`
+      : a.t === "e" ? `<canvas data-tam="22" data-rival="enemigo:${c.rivales[a.r].clave}"></canvas>` : `<b>🐾</b>`;
+    return `<li class="${a.t === "e" ? "enemigo" : "aliado"}${muerto ? " muerto" : ""}${ahora ? " ahora" : ""}${hecho ? " hecho" : ""}">${cara}</li>`;
+  }).join("");
+  const clave = items + c.fase + c.pos;
+  if (el.dataset.h !== clave) { el.dataset.h = clave; el.innerHTML = `<li class="ronda">R${c.ronda}</li>` + items; pintarRetratos(el); }
+  el.hidden = false;
+  el.style.top = Math.round($(".barra").getBoundingClientRect().bottom + 2) + "px";
+}
 function renderHudObjetivo() {
+  renderHudTurnos();
   let el = $("#hud-obj");
   const c = S && S.combate;
   if (!c || !$("#p-juego").classList.contains("modo-combate")) { if (el) el.hidden = true; return; }
@@ -3188,7 +3217,7 @@ function posicionarHud() {
   if (!el || el.hidden || !S || !S.combate || !escJuego) return;
   const pos = escJuego.pantalla("e" + miObjetivo());
   if (!pos) return;
-  const w = el.offsetWidth, h = el.offsetHeight, bar = $(".barra").getBoundingClientRect().bottom + 4;
+  const lt = $("#hud-turnos"), w = el.offsetWidth, h = el.offsetHeight, bar = (lt && !lt.hidden ? lt.getBoundingClientRect().bottom : $(".barra").getBoundingClientRect().bottom) + 4;
   const x = Math.max(6, Math.min(window.innerWidth - w - 6, pos.x - w / 2));
   const y = Math.max(bar, pos.y - h - 14);
   el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;

@@ -10,7 +10,7 @@ const ESCENARIO = (() => {
   const HUECOS = [[80, 140], [44, 137], [116, 135], [62, 125], [98, 124], [24, 125]];
   const POS_MASCOTA = [146, 141];
   /* Con varios enemigos se reparten a la derecha (el principal, delante). */
-  const POS_RIVALES = [[[198, 137]], [[180, 139], [224, 128]], [[170, 140], [206, 133], [236, 124]]];
+  const POS_RIVALES = [[[196, 137]], [[178, 139], [214, 128]], [[166, 140], [198, 132], [224, 124]]];
   const POS_RIVAL = POS_RIVALES[0][0];
 
   const tabla = nombre => (typeof window[nombre] === "object" && window[nombre]) || null;
@@ -160,6 +160,33 @@ const ESCENARIO = (() => {
     return cv;
   }
 
+  /* ---------- Brillos (se suman con "lighter") ---------- */
+  const cacheBrillo = new Map();
+  function brillo(color, r) {
+    const k = color + r;
+    if (cacheBrillo.has(k)) return cacheBrillo.get(k);
+    const d = r * 2 + 1, cv = Object.assign(document.createElement("canvas"), { width: d, height: d }), c = cv.getContext("2d");
+    for (let y = 0; y < d; y++) for (let x = 0; x < d; x++) {
+      const t = Math.hypot(x - r, y - r) / r;
+      if (t > 1) continue;
+      const a = (1 - t) * (1 - t);
+      if (a > PX.umbral(x, y) * 0.9) { c.globalAlpha = Math.min(1, a * 0.9 + 0.1); c.fillStyle = color; c.fillRect(x, y, 1, 1); }
+    }
+    cacheBrillo.set(k, cv);
+    return cv;
+  }
+  /* Elemento de cada efecto: color de brillo y rampa. */
+  const ELEM = {
+    fuego: { brillo: "#ff7a2a", rampa: () => R.fuego, nucleo: "#fff2b0" },
+    hielo: { brillo: "#7fd8ff", rampa: () => R.mar, nucleo: "#ffffff" },
+    rayo: { brillo: "#b9a8ff", rampa: () => R.magia, nucleo: "#ffffff" },
+    luz: { brillo: "#ffd76a", rampa: () => R.bronce, nucleo: "#fffbe0" },
+    veneno: { brillo: "#8fe05a", rampa: () => R.hoja, nucleo: "#e8ffd0" },
+    sombra: { brillo: "#a45cff", rampa: () => R.magia, nucleo: "#f0d8ff" },
+    onda: { brillo: "#5ee0d0", rampa: () => R.mar, nucleo: "#e0fffa" },
+    arcano: { brillo: "#9a7bff", rampa: () => R.magia, nucleo: "#ffffff" }
+  };
+
   /* ---------- Instancias de escenario ---------- */
   const instancias = new Set();
 
@@ -172,11 +199,12 @@ const ESCENARIO = (() => {
     const ctx = lienzo.getContext("2d");
     let vista = { fondo: "taberna", heroes: [], rival: null, activo: -1 };
     /* Pantalla completa (combate): el escenario se alarga por arriba (cielo) y por abajo (suelo) hasta llenar la pantalla. */
-    let completa = null, ext = { arriba: 0, abajo: 0 }, escCss = 1;
+    let completa = null, ext = { arriba: 0, abajo: 0 }, escCss = 1, offX = 0;
     const efectos = [];
     /* Partículas: chispas de impacto, polvo, humo de muerte, destellos de conjuro. */
     const parts = [];
-    let temblor = 0;
+    let temblor = 0, zum = null, transicion = null;
+    const amb = [];
     const chispa = (x, y, o) => { if (parts.length < 160) parts.push(Object.assign({ x, y, vx: 0, vy: 0, g: 0.12, vida: 420, t0: performance.now(), color: "#fff7ea", tam: 1 }, o)); };
     /* Altura visible de cada actor en el último fotograma (para colocar números y efectos). */
     const marcas = {};
@@ -186,7 +214,10 @@ const ESCENARIO = (() => {
       if (!caja || (!caja.offsetParent && !(completa && caja.getClientRects().length))) return;
       const dpr = window.devicePixelRatio || 1;
       if (completa) {
-        const aw = window.innerWidth, ah = window.innerHeight, sc = aw / W;
+        const aw = window.innerWidth, ah = window.innerHeight;
+        /* Cámara más cerca: se recortan un poco los lados (se ven ~206 de 256 px) si hay alto de sobra. */
+        const sc = Math.max(aw / W, Math.min(aw / 206, (completa.fin - 60) / H));
+        offX = Math.max(0, (W - aw / sc) / 2);
         const arriba = Math.max(0, Math.round(completa.fin / sc - H)), total = Math.max(H, Math.ceil(ah / sc));
         ext = { arriba, abajo: Math.max(0, total - H - arriba) };
         escCss = sc;
@@ -198,7 +229,7 @@ const ESCENARIO = (() => {
         caja.style.height = "";
         return;
       }
-      ext = { arriba: 0, abajo: 0 };
+      ext = { arriba: 0, abajo: 0 }; offX = 0;
       if (buf.height !== H) buf.height = H;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
@@ -229,7 +260,10 @@ const ESCENARIO = (() => {
     }
     function alto(obj) { const m = marcas[normalizar(obj)]; return m ? Math.max(14, m.alto) : 36; }
     function mostrar(v) {
-      if (v.fondo && v.fondo !== vista.fondo) efectos.length = 0;
+      if (v.fondo && v.fondo !== vista.fondo) {
+        efectos.length = 0; amb.length = 0;
+        if (!reducido && buf.width) { const cp = Object.assign(document.createElement("canvas"), { width: buf.width, height: buf.height }); cp.getContext("2d").drawImage(buf, 0, 0); transicion = { cv: cp, t0: performance.now(), dur: 520 }; }
+      }
       if ("rival" in v && !("rivales" in v)) v = Object.assign({}, v, { rivales: v.rival ? [v.rival] : [] });
       vista = Object.assign({}, vista, v);
     }
@@ -237,8 +271,14 @@ const ESCENARIO = (() => {
       if (reducido && e.tipo !== "numero") return;
       if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
       if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900 }[e.tipo] || 500 }, e));
-      if (e.tipo === "golpe" && e.fuerte) temblor = performance.now() + 260;
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900, conjuro: 650 }[e.tipo] || 500 }, e));
+      if (e.tipo === "golpe" && e.fuerte) {
+        const t = performance.now();
+        temblor = t + 300;
+        /* Pausa de impacto: todo se congela un instante; y la cámara se acerca al golpeado. */
+        efectos.forEach(x => { if (x !== efectos[efectos.length - 1]) x.t0 += 90; });
+        zum = { t0: t, dur: 420, id: e.objetivo };
+      }
     }
     function desplazamiento(id, ahora) {
       let dx = 0, dy = 0, blanco = false;
@@ -406,7 +446,16 @@ const ESCENARIO = (() => {
           continue;
         }
         if (a.h) {
-          const v = spriteHeroe(a.h.look);
+          let pose = "normal";
+          if (!reducido) for (const e of efectos) {
+            const p = (ahora - e.t0) / e.dur;
+            if (p < 0 || p > 1) continue;
+            if (e.tipo === "ataque" && e.actor === a.id && p > 0.18 && p < 0.78) pose = e.conjuro ? "conjuro" : "ataque";
+            else if (e.tipo === "conjuro" && e.actor === a.id) pose = "conjuro";
+            else if (e.tipo === "golpe" && e.objetivo === a.id && p < 0.7 && pose === "normal") pose = "herido";
+            else if (e.tipo === "salto" && (e.actor === a.id || e.actor === "h*") && pose === "normal") pose = "victoria";
+          }
+          const v = spriteHeroe(pose === "normal" ? a.h.look : Object.assign({}, a.h.look, { pose }));
           if (a.h.caido) {
             sombraSuelo(a.fx, a.fy, v.ancho * 0.9);
             b.drawImage(v.tumbado, Math.round(a.fx - v.tcx), Math.round(a.fy - v.tpie));
@@ -477,7 +526,46 @@ const ESCENARIO = (() => {
           const yy = Math.max(10, y - al - 4 - sube - (e.fila || 0) * 8);
           if (p < 0.85 || Math.floor(p * 20) % 2) PX.texto(b, e.texto, Math.round(x - ancho / 2), yy, e.color || "#fff7ea", PX.CONTORNO, esc);
         }
-        if (e.tipo === "proyectil") {
+        if (e.tipo === "proyectil" && e.elem && ELEM[e.elem] && !reducido) {
+          const E = ELEM[e.elem], [ox, oy] = posicion(e.actor), oal = alto(e.actor), sy = oy - oal * 0.55, ty = y - al * 0.5;
+          b.save(); b.globalCompositeOperation = "lighter";
+          if (e.elem === "rayo") {
+            /* Rayo en zigzag que parpadea entre lanzador y objetivo. */
+            if (Math.floor(p * 12) % 3 !== 2) {
+              let px0 = ox, py0 = sy;
+              b.fillStyle = E.nucleo;
+              for (let t = 1; t <= 8; t++) { const px1 = ox + (x - ox) * (t / 8), py1 = sy + (ty - sy) * (t / 8) + (t < 8 ? (PX.umbral(t * 3, Math.floor(p * 9)) - 0.5) * 14 : 0); const n = Math.max(Math.abs(px1 - px0), Math.abs(py1 - py0)); for (let u = 0; u <= n; u++) b.fillRect(Math.round(px0 + (px1 - px0) * u / n), Math.round(py0 + (py1 - py0) * u / n), 1, 1); px0 = px1; py0 = py1; }
+              b.drawImage(brillo(E.brillo, 10), Math.round(x - 10), Math.round(ty - 10));
+            }
+          } else if (e.elem === "luz") {
+            /* Haz de luz que cae del cielo sobre el objetivo. */
+            const ancho = Math.round(4 + Math.sin(p * Math.PI) * 6);
+            b.globalAlpha = Math.sin(p * Math.PI);
+            b.fillStyle = E.brillo; b.fillRect(Math.round(x - ancho), -ext.arriba, ancho * 2, y + ext.arriba);
+            b.fillStyle = E.nucleo; b.fillRect(Math.round(x - ancho / 3), -ext.arriba, Math.max(1, Math.round(ancho * 2 / 3)), y + ext.arriba);
+            b.globalAlpha = 1;
+            b.drawImage(brillo(E.brillo, 14), Math.round(x - 14), Math.round(y - 20));
+          } else if (e.elem === "onda") {
+            /* Ondas de sonido concéntricas. */
+            for (let k2 = 0; k2 < 3; k2++) { const q = Math.min(1, p * 1.3 - k2 * 0.15); if (q <= 0) continue; const cx = ox + (x - ox) * q, cy = sy + (ty - sy) * q; b.fillStyle = E.brillo; for (let a2 = -0.9; a2 <= 0.9; a2 += 0.15) b.fillRect(Math.round(cx + Math.cos(a2) * (4 + k2 * 2)), Math.round(cy + Math.sin(a2) * (5 + k2 * 2)), 1, 2); }
+          } else {
+            /* Bola (fuego, hielo, veneno, sombra, arcano) con estela y brillo. */
+            const q = Math.min(1, p * 1.15), px = Math.round(ox + (x - ox) * q), py = Math.round(sy + (ty - sy) * q - Math.sin(q * Math.PI) * 6);
+            const rp = E.rampa();
+            if (q < 1) {
+              for (let t = 1; t <= 5; t++) { const qq = Math.max(0, q - t * 0.05); const tx = Math.round(ox + (x - ox) * qq), tyy = Math.round(sy + (ty - sy) * qq - Math.sin(qq * Math.PI) * 6); b.fillStyle = rp[Math.max(0, 4 - t)]; const sz = Math.max(1, 4 - t); b.fillRect(tx - (sz >> 1), tyy - (sz >> 1), sz, sz); }
+              b.drawImage(brillo(E.brillo, 9), px - 9, py - 9);
+              if (e.elem === "hielo") { b.fillStyle = E.nucleo; b.fillRect(px - 1, py - 4, 2, 8); b.fillRect(px - 4, py - 1, 8, 2); b.fillStyle = rp[3]; b.fillRect(px - 2, py - 2, 4, 4); }
+              else { b.fillStyle = rp[3]; b.fillRect(px - 3, py - 3, 7, 7); b.fillStyle = rp[4]; b.fillRect(px - 2, py - 2, 5, 5); b.fillStyle = E.nucleo; b.fillRect(px - 1, py - 1, 2, 2); if (Math.floor(ahora / 60) % 2) { b.fillStyle = rp[4]; b.fillRect(px - 4, py, 1, 1); b.fillRect(px + 3, py - 3, 1, 1); } }
+            } else if (!e.estallido) {
+              e.estallido = true;
+              for (let k2 = 0; k2 < 16; k2++) { const a2 = (k2 / 16) * Math.PI * 2, v2 = 0.8 + Math.random() * 1.8; chispa(x, ty, { vx: Math.cos(a2) * v2, vy: Math.sin(a2) * v2 - 0.5, color: k2 % 3 ? rp[4] : E.nucleo, vida: 380 + Math.random() * 300, tam: k2 % 4 ? 1 : 2, g: e.elem === "fuego" ? -0.02 : 0.08 }); }
+            }
+            if (q >= 1) { const f = Math.max(0, 1 - (p - 0.87) / 0.13); b.globalAlpha = f; b.drawImage(brillo(E.brillo, 16), Math.round(x - 16), Math.round(ty - 16)); b.globalAlpha = 1; }
+          }
+          b.restore();
+        }
+        else if (e.tipo === "proyectil") {
           const [ox, oy] = posicion(e.actor), oal = alto(e.actor), q = Math.min(1, p * 1.15);
           const sy = oy - oal * 0.55, ty = y - al * 0.5;
           const px = Math.round(ox + (x - ox) * q), py = Math.round(sy + (ty - sy) * q - Math.sin(q * Math.PI) * (e.forma === "flecha" ? 8 : 4));
@@ -492,17 +580,23 @@ const ESCENARIO = (() => {
           }
         }
         if (e.tipo === "tajo") {
-          const cy = Math.round(y - al * 0.75);
-          const n = Math.round(p * 20);
-          b.fillStyle = "#fff7ea";
-          for (let t = 0; t < n; t++) b.fillRect(x - 11 + t, cy + t, 3, 1);
-          b.fillStyle = e.color || R.bronce[4];
-          for (let t = 0; t < n - 4; t++) b.fillRect(x - 10 + t, cy - 1 + t, 1, 1);
+          /* Arco de tajo en media luna que se abre y se desvanece. */
+          const cy = y - al * 0.6, rad = 12 + al * 0.12, fin = Math.min(1, p * 2), ini = Math.max(0, p * 2 - 1);
+          b.save(); b.globalCompositeOperation = "lighter";
+          for (let t = ini; t <= fin; t += 0.03) {
+            const a2 = -2.2 + t * 2.6, gr = 1 + Math.round(Math.sin(t * Math.PI) * 2);
+            const px = Math.round(x + Math.cos(a2) * rad), py = Math.round(cy + Math.sin(a2) * rad * 0.9);
+            b.fillStyle = "#fff7ea"; b.fillRect(px, py, gr, gr);
+            b.fillStyle = e.color || "#ffd27a"; b.fillRect(px - 1, py + 1, 1, 1);
+          }
+          if (p < 0.5) b.drawImage(brillo("#ffcf6a", 8), Math.round(x - 8), Math.round(cy - 8));
+          b.restore();
         }
         if (e.tipo === "destello" && Math.floor(p * 6) % 2 === 0) { b.fillStyle = e.color || "rgba(255,247,234,0.55)"; b.fillRect(0, 0, W, H); }
         if (e.tipo === "magia" || e.tipo === "cura") {
           const col = e.tipo === "cura" ? R.hoja : (e.rampa || R.magia);
           const cy = y - al * 0.45;
+          if (!reducido) { b.save(); b.globalCompositeOperation = "lighter"; b.globalAlpha = Math.sin(p * Math.PI) * 0.8; b.drawImage(brillo(e.tipo === "cura" ? "#7fe08a" : (col[3] || "#9a7bff"), 14), Math.round(x - 14), Math.round(cy - 14)); b.restore(); }
           for (let n = 0; n < 14; n++) {
             const ang = n * 0.45 + p * 5;
             const rad = 5 + p * 16;
@@ -514,15 +608,72 @@ const ESCENARIO = (() => {
         }
       }
       pintarParticulas(ahora);
+      if (!reducido) pintarAmbiente(ahora);
       if (!ext.arriba && !ext.abajo) b.drawImage(capaVineta(), 0, 0);
       b.restore();
+      if (transicion) pintarTransicion(ahora);
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(buf, 0, 0, lienzo.width, lienzo.height);
+      let zx = Math.round(offX), zy = 0, zw = Math.round(buf.width - 2 * offX), zh = buf.height;
+      if (zum && !reducido) {
+        const p = (ahora - zum.t0) / zum.dur;
+        if (p > 1) zum = null;
+        else {
+          const f = 1 + 0.07 * Math.sin(Math.min(1, p) * Math.PI), [cx, cy] = posicion(zum.id);
+          const bw = buf.width - 2 * offX;
+          zw = Math.round(bw / f); zh = Math.round(buf.height / f);
+          zx = Math.max(Math.round(offX), Math.min(Math.round(offX + bw - zw), Math.round(cx - zw / 2))); zy = Math.max(0, Math.min(buf.height - zh, Math.round(cy + ext.arriba - alto(zum.id) / 2 - zh / 2)));
+        }
+      }
+      ctx.drawImage(buf, zx, zy, zw, zh, 0, 0, lienzo.width, lienzo.height);
+    }
+    /* Ambiente según el lugar: brasas, polvo, luciérnagas, nieve o motas del vacío. */
+    const TIPO_AMB = { pico: "brasas", forja: "brasas", guarida: "brasas", bosque: "luciernagas", camino: "hojas", aldea: "luciernagas", sotano: "polvo", cripta: "polvo", mina: "polvo", castillo: "polvo", trono: "polvo", puente: "nieve", abismo: "vacio", telarana: "esporas", ruinas: "hojas", taberna: "polvo", encrucijada: "hojas" };
+    function pintarAmbiente(ahora) {
+      const tipo = TIPO_AMB[vista.fondo];
+      if (!tipo) return;
+      const max = tipo === "nieve" ? 40 : tipo === "polvo" ? 16 : 22;
+      const alto0 = -ext.arriba, alto1 = H + ext.abajo;
+      while (amb.length < max) {
+        const nuevo = { x: Math.random() * W, y: alto0 + Math.random() * (alto1 - alto0), f: Math.random() * 6.28, t0: ahora - Math.random() * 6000, vida: 4000 + Math.random() * 5000 };
+        if (tipo === "brasas" || tipo === "esporas" || tipo === "vacio") nuevo.y = H - 10 + Math.random() * 20;
+        if (tipo === "nieve" || tipo === "hojas") nuevo.y = alto0 - Math.random() * 30;
+        amb.push(nuevo);
+      }
+      b.save();
+      if (tipo !== "hojas" && tipo !== "nieve") b.globalCompositeOperation = "lighter";
+      for (let k = amb.length - 1; k >= 0; k--) {
+        const q = amb[k], t = (ahora - q.t0) / 1000;
+        if (ahora - q.t0 > q.vida) { amb.splice(k, 1); continue; }
+        let x = q.x, y = q.y, col = "#fff", tam = 1, alfa = 1;
+        if (tipo === "brasas") { y -= t * 14; x += Math.sin(t * 2 + q.f) * 4; col = t % 1 < 0.5 ? "#ff9a3a" : "#ffd27a"; alfa = Math.max(0, 1 - t / 5); }
+        if (tipo === "esporas") { y -= t * 6; x += Math.sin(t + q.f) * 5; col = q.f > 3 ? "#7ff0e8" : "#e08aff"; alfa = Math.max(0, 1 - t / 7); }
+        if (tipo === "vacio") { y -= t * 5; x += Math.sin(t * 0.7 + q.f) * 3; col = q.f > 3 ? "#9a7bff" : "#5ec8ff"; alfa = Math.max(0, 1 - t / 8); }
+        if (tipo === "luciernagas") { x += Math.sin(t * 0.8 + q.f) * 10; y += Math.cos(t * 0.6 + q.f) * 6; col = "#d8ff7a"; alfa = (Math.sin(t * 3 + q.f) + 1) / 2; if (q.y < 40) alfa = 0; }
+        if (tipo === "polvo") { x += Math.sin(t * 0.4 + q.f) * 6 + t * 1.5; y += Math.cos(t * 0.3 + q.f) * 4; col = "#e8dcc0"; alfa = 0.35 + Math.sin(t + q.f) * 0.25; }
+        if (tipo === "nieve") { y += t * 16; x += Math.sin(t * 1.2 + q.f) * 6 - t * 3; col = "#f4f8ff"; tam = q.f > 4 ? 2 : 1; if (y > alto1) { amb.splice(k, 1); continue; } }
+        if (tipo === "hojas") { y += t * 10; x += Math.sin(t * 1.5 + q.f) * 9 - t * 4; col = q.f > 3 ? "#d88a3a" : "#a8c050"; tam = 2; alfa = 0.9; if (y > alto1) { amb.splice(k, 1); continue; } }
+        b.globalAlpha = Math.max(0, Math.min(1, alfa));
+        b.fillStyle = col; b.fillRect(Math.round(x), Math.round(y), tam, tam);
+        if (tipo === "luciernagas" && alfa > 0.6) { b.globalAlpha = (alfa - 0.6) * 1.5; b.drawImage(brillo("#c8ff5a", 3), Math.round(x) - 3, Math.round(y) - 3); }
+      }
+      b.restore();
+    }
+    /* Disolución en bloques tramados entre la escena anterior y la nueva. */
+    function pintarTransicion(ahora) {
+      const p = (ahora - transicion.t0) / transicion.dur;
+      if (p >= 1 || transicion.cv.width !== buf.width || transicion.cv.height !== buf.height) { transicion = null; return; }
+      const m = transicion.m || (transicion.m = Object.assign(document.createElement("canvas"), { width: buf.width, height: buf.height }));
+      const c = m.getContext("2d");
+      c.globalCompositeOperation = "source-over"; c.clearRect(0, 0, m.width, m.height); c.drawImage(transicion.cv, 0, 0);
+      c.globalCompositeOperation = "destination-out"; c.fillStyle = "#000";
+      const B = 4;
+      for (let y = 0; y < m.height; y += B) for (let x = 0; x < m.width; x += B) if (PX.umbral(x / B, y / B) < p * 1.05) c.fillRect(x, y, B, B);
+      b.drawImage(m, 0, 0);
     }
 
     /* Qué actor hay en un punto del lienzo (px CSS) y dónde está la cabeza de un actor en pantalla. */
     function actorEn(x, y) {
-      const ax = x / escCss, ay = y / escCss - ext.arriba;
+      const ax = x / escCss + offX, ay = y / escCss - ext.arriba;
       let mejor = null, d = 1e9;
       for (const [id, m] of Object.entries(marcas)) {
         if (!m || m.x0 === undefined) continue;
@@ -533,7 +684,7 @@ const ESCENARIO = (() => {
     function pantalla(id) {
       const m = marcas[id];
       if (!m || m.x0 === undefined) return null;
-      return { x: m.cx * escCss, y: (m.y0 + ext.arriba) * escCss, pie: (m.y1 + ext.arriba) * escCss };
+      return { x: (m.cx - offX) * escCss, y: (m.y0 + ext.arriba) * escCss, pie: (m.y1 + ext.arriba) * escCss };
     }
     function ponerCompleta(fin) {
       const nuevo = fin === null ? null : { fin };
