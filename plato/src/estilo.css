@@ -166,8 +166,8 @@ h1, h2, h3 { text-wrap: balance; }
 .progreso i { width: 22px; height: 4px; border-radius: 4px; background: var(--line); }
 .progreso i.hecho { background: var(--accent); }
 .progreso i.ahora { background: var(--gold); }
-.juego.modo-mapa #caja-juego { display: none; }
-.juego:not(.modo-mapa) .mapa { display: none; }
+.juego.modo-mapa.ver-grafo #caja-juego { display: none; }
+.juego:not(.modo-mapa) .mapa, .juego.modo-mapa:not(.ver-grafo) .mapa { display: none; }
 .juego.modo-panel #caja-juego { display: none; }
 
 .grupo { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
@@ -221,7 +221,10 @@ h1, h2, h3 { text-wrap: balance; }
   flex: 1 1 auto !important; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px;
   display: flex; flex-direction: column; gap: 10px; border-radius: var(--radio); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);
 }
-.juego.modo-mapa .panel { flex: none !important; padding: 10px 12px; }
+.juego.modo-mapa .panel { padding: 10px 12px; gap: 8px; }
+.juego.modo-mapa.ver-grafo .panel { flex: none !important; }
+.mapa-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mapa-cab > :first-child { min-width: 0; }
 .panel h2 { margin: 0; font-weight: 700; font-size: 18px; line-height: 1.2; }
 .panel h2.ko { color: var(--ko); }
 .texto { margin: 0; font-size: 14px; color: var(--muted); }
@@ -666,17 +669,21 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* Caminos con pistas y acampar */
 .caminos { display: grid; gap: 5px; }
-.camino { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; text-align: left; border: 0; padding: 9px 12px; border-radius: 12px; background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.camino { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; text-align: left; border: 0; padding: 8px 12px 8px 8px; border-radius: 12px; background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); transition: background .15s, box-shadow .15s; }
+.camino canvas, .acampar canvas { padding: 4px; border-radius: 9px; background: rgba(0, 0, 0, .22); }
+.c-txt { display: grid; gap: 1px; min-width: 0; }
 .camino b { font-size: 13px; font-weight: 700; color: var(--accent); white-space: nowrap; }
-.camino span { font-size: 13px; font-style: italic; color: var(--muted); min-width: 0; }
+.camino .c-txt > span { font-size: 12.5px; font-style: italic; color: var(--muted); min-width: 0; line-height: 1.25; }
+.camino.visto { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent), 0 6px 18px -10px var(--accent); }
+.camino .ir { padding: 5px 10px; border-radius: 999px; background: var(--accent); color: var(--bg); font-size: 12px; animation: latido 1.4s ease-in-out infinite; }
 .camino i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--gold); }
 .camino.jefe b { color: var(--ko); }
 .camino.votado { box-shadow: inset 0 0 0 2px var(--gold); }
 .camino:active:not(:disabled) { background: var(--accent-soft); transform: scale(.98); }
 .camino:disabled { opacity: .5; }
-.acampar { display: grid; gap: 1px; text-align: left; border: 0; padding: 8px 12px; border-radius: 12px; background: rgba(255, 159, 90, .1); color: var(--text); box-shadow: inset 0 0 0 1px rgba(255, 159, 90, .45); }
+.acampar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 1px 10px; text-align: left; border: 0; padding: 8px 12px; border-radius: 12px; background: rgba(255, 159, 90, .1); color: var(--text); box-shadow: inset 0 0 0 1px rgba(255, 159, 90, .45); }
 .acampar b { font-size: 14px; color: var(--fisica); }
-.acampar span { font-size: 11px; color: var(--muted); }
+.acampar .c-txt > span { font-size: 11px; color: var(--muted); }
 .acampar:disabled { opacity: .45; }
 .nodo.niebla { width: 14px !important; height: 14px !important; opacity: .35; box-shadow: none; background: var(--line); }
 .nodo.n-oculto.libre { background: rgba(139, 123, 255, .2); }

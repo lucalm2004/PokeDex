@@ -1012,6 +1012,12 @@ function generarMapa() {
     b.forEach((_, j) => { if (!a.some(x => x.sig.includes(j))) a[Math.min(a.length - 1, Math.round((j * (a.length - 1)) / Math.max(1, b.length - 1)))].sig.push(j); });
   }
   filas[0][0].hecho = true;
+  /* Cada camino tiene su paisaje: se ve al elegirlo y es donde ocurre lo que haya. */
+  const A = ACTOS[Math.max(0, S ? S.acto : 0)];
+  filas.forEach((fila, f) => {
+    const fs = A.fondos.slice().sort(() => Math.random() - 0.5);
+    fila.forEach((x, j) => { x.fondo = x.tipo === "jefe" ? A.fondoJefe : fs[j % fs.length]; });
+  });
   return { filas, fila: 0, col: 0 };
 }
 /* Pistas de los caminos: describen lo que se intuye, no lo que hay (y a veces engañan). */
@@ -1246,14 +1252,21 @@ function escenaViaje() {
   S.vistosEv.push(ev.id);
   return Object.assign({ tipo: "prueba", viaje: true, fondo: azarDe(ACTOS[S.acto].fondos) }, JSON.parse(JSON.stringify(ev)));
 }
+function fondoNodo(f, j) {
+  const A = ACTOS[Math.max(0, S.acto)], n = S.mapa && S.mapa.filas[f] && S.mapa.filas[f][j];
+  if (n && n.tipo === "jefe") return A.fondoJefe;
+  return (n && n.fondo) || A.fondos[(f + j) % A.fondos.length];
+}
 function procesarSiguiente() {
   const sig = (S.siguiente || []).shift();
   if (!sig) return volverAlMapa();
   S.modo = "escena"; S.fase = "elegir"; S.resultado = null; S.botin = [];
-  if (sig.historia) { S.esc = escenaHistoria(sig.historia); log(`Historia · ${S.esc.titulo}`, "esc"); }
-  else if (sig.viaje) { const e = escenaViaje(); if (!e) return procesarSiguiente(); S.esc = e; log(`Por el camino · ${e.titulo}`, "esc"); }
+  const paisaje = fondoNodo(S.mapa.fila, S.mapa.col);
+  if (sig.historia) { S.esc = escenaHistoria(sig.historia); S.esc.fondo = paisaje; log(`Historia · ${S.esc.titulo}`, "esc"); }
+  else if (sig.viaje) { const e = escenaViaje(); if (!e) return procesarSiguiente(); S.esc = e; e.fondo = paisaje; log(`Por el camino · ${e.titulo}`, "esc"); }
   else {
     S.esc = crearEscena(sig.nodo);
+    if (sig.nodo !== "jefe" && S.esc.tipo !== "tienda") S.esc.fondo = paisaje;
     log(`${NOMBRE_NODO[sig.nodo]} · ${S.esc.titulo}`, "esc");
     if (S.esc.tipo === "combate") return iniciarCombate(S.esc);
     if (S.esc.tipo === "tienda") abrirTienda(S.esc);
@@ -2340,6 +2353,7 @@ function iconoNodo(tipo) {
 }
 function pintarIconos(raiz) {
   raiz.querySelectorAll("canvas[data-icono]").forEach(cv => {
+    if (ESCENARIO.icono(cv, cv.dataset.icono, +cv.dataset.tam || 28)) return;
     const img = iconoNodo(cv.dataset.icono), dpr = window.devicePixelRatio || 1;
     const s = Math.max(1, Math.round(((+cv.dataset.tam || 28) * dpr) / 14));
     cv.width = cv.height = 14 * s; cv.style.width = cv.style.height = (14 * s) / dpr + "px";
@@ -2420,7 +2434,7 @@ function renderSeleccion() {
   const h = heroeEditado();
   $("#sel-codigo").innerHTML = sel.online ? `Código <b>${esc(red.mesa || "")}</b>` : "En este móvil";
   const jugadores = sel.online ? jugadoresSala() : sel.heroes.map((x, i) => ({ id: "l" + i, heroe: x, listo: false }));
-  if (!escSel) escSel = ESCENARIO.crear($("#lienzo-sel"), { observar: $("#p-seleccion"), limites: () => [$("#caja-sel").clientWidth - 12, Math.max(64, window.innerHeight * (window.innerHeight < 760 ? 0.11 : 0.17))] });
+  if (!escSel) escSel = ESCENARIO.crear($("#lienzo-sel"), { observar: $("#p-seleccion"), limites: () => [$("#caja-sel").clientWidth - 12, Math.max(60, window.innerHeight * (window.innerHeight < 600 ? 0.11 : window.innerHeight < 760 ? 0.15 : 0.25))] });
   escSel.ajustar();
   escSel.mostrar({ fondo: "taberna", heroes: jugadores.map(j => ({ look: Object.assign({ raza: j.heroe.raza, clase: j.heroe.clase }, j.heroe.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: sel.online ? 0 : sel.actual });
   const nombre = $("#sel-nombre");
@@ -2477,7 +2491,7 @@ function cambiarSeleccion(campo, paso) {
 /* ---------- Pantalla de juego ---------- */
 function limitesJuego() {
   const ancho = $("#p-juego").clientWidth;
-  return [ancho - 12, Math.max(96, Math.min(window.innerHeight * 0.27, (ancho * 9) / 16))];
+  return [ancho - 12, Math.max(108, Math.min(window.innerHeight * 0.3, (ancho * 9) / 16))];
 }
 function renderJuego() {
   if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
@@ -2489,6 +2503,7 @@ function renderJuego() {
   const historiaLarga = vivo && S.esc && (S.esc.historia || S.esc.viaje) && S.fase !== "resultado";
   const enPanel = enTienda || historiaLarga || !!S.final || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
+  $("#p-juego").classList.toggle("ver-grafo", enMapa && verGrafo);
   $("#p-juego").classList.toggle("modo-panel", enPanel);
   escJuego.ajustar();
   if (!$("#dado").dataset.listo) { $("#dado").dataset.listo = "1"; ESCENARIO.dibujarDado($("#dado"), 20); }
@@ -2519,9 +2534,22 @@ function sincronizarEscenario() {
     flota: r.clave === "elemental" || (r.clave === "dragon" && r.fase === 2), derrotado: r.hp <= 0 }));
   else if (S.resultado && S.resultado.tipo === "victoria") rivales = (S.resultado.rivales || [S.resultado.enemigo]).map(k => ({ tipo: "enemigo", clave: k, derrotado: true }));
   else if (sc && sc.pnj) rivales = [{ tipo: tipoRival(sc.pnj), clave: sc.pnj, flota: sc.pnj === "fantasma" }];
-  const fondo = (sc && sc.fondo) || ACTOS[Math.max(0, S.acto)].fondos[0];
+  let fondo = (sc && sc.fondo) || ACTOS[Math.max(0, S.acto)].fondos[0], niebla = 0, marcha = false;
+  if (S.modo === "mapa" && S.mapa && !S.final && !S.derrota) {
+    /* En el mapa se ve el camino que estás mirando, envuelto en niebla si no sabes qué hay. */
+    const j = caminoMirado(), f = S.mapa.fila + 1, n = j !== null && S.mapa.filas[f] ? S.mapa.filas[f][j] : null;
+    rivales = [];
+    if (n) {
+      fondo = fondoNodo(f, j); marcha = true;
+      niebla = n.tipo === "jefe" ? 0.3 : n.hecho ? 0 : 0.75;
+      if (n.tipo === "jefe") rivales = [{ tipo: "enemigo", clave: ACTOS[S.acto].jefe, silueta: true }];
+    } else {
+      fondo = typeof FONDOS_HD !== "undefined" && FONDOS_HD.encrucijada ? "encrucijada" : fondoNodo(S.mapa.fila, S.mapa.col);
+      niebla = 0.35;
+    }
+  }
   escJuego.mostrar({
-    fondo, rivales, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
+    fondo, rivales, niebla, marcha, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
     heroes: S.players.map((p, i) => ({ look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
 }
@@ -2593,21 +2621,37 @@ function renderMapa() {
     return `<button type="button" class="${cls}" data-f="${f}" data-j="${j}" ${libre && mio ? `data-juego="nodo" data-v="${j}"` : "disabled"} aria-label="${visible ? NOMBRE_NODO[n.tipo] : "Camino desconocido"}">
       ${visible || libre ? `<canvas data-icono="${visible ? n.tipo : "huellas"}" data-tam="${n.tipo === "jefe" ? 32 : 22}"></canvas>` : ""}${vt.n ? `<span class="votos">${vt.n}</span>` : ""}</button>`;
   }).join("")}</div>`).reverse().join("");
-  $("#mapa").innerHTML = `<svg class="lineas" aria-hidden="true"></svg>${filas}`;
-  pintarIconos($("#mapa"));
-  requestAnimationFrame(dibujarLineas);
+  $("#mapa").innerHTML = verGrafo ? `<svg class="lineas" aria-hidden="true"></svg>${filas}` : "";
+  if (verGrafo) { pintarIconos($("#mapa")); requestAnimationFrame(dibujarLineas); }
   const nombres = { 1: ["Seguir adelante"], 2: ["Izquierda", "Derecha"], 3: ["Izquierda", "Centro", "Derecha"], 4: ["Muy a la izquierda", "Izquierda", "Derecha", "Muy a la derecha"] }[libres.length] || [];
+  const visto = caminoMirado();
   const caminos = libres.map((j, k) => {
     const n = m.filas[m.fila + 1][j], vt = votosDe("nodo", j);
-    const jefe = n.tipo === "jefe";
-    return `<button type="button" class="camino${jefe ? " jefe" : ""}${vt.mio ? " votado" : ""}" ${mio ? `data-juego="nodo" data-v="${j}"` : "disabled"}>
-      <b>${jefe ? `☠ ${ENEMIGOS[ACTOS[S.acto].jefe].nombre}` : nombres[k] || "Camino"}</b><span>${jefe ? "El final del acto. Preparaos." : `«${esc(n.pista || "Un sendero cualquiera")}»`}</span>${vt.n ? `<i>${vt.n} voto${vt.n > 1 ? "s" : ""}</i>` : ""}</button>`;
+    const jefe = n.tipo === "jefe", sel = visto === j;
+    /* Primer toque: mirar el camino en el escenario. Segundo: ir (o votar). */
+    const accion = sel ? (mio ? `data-juego="nodo" data-v="${j}"` : "disabled") : `data-ui="ver-camino" data-v="${j}"`;
+    return `<button type="button" class="camino${jefe ? " jefe" : ""}${vt.mio ? " votado" : ""}${sel ? " visto" : ""}" ${accion}>
+      <canvas data-icono="${jefe ? "jefe" : n.hecho ? n.tipo : "huellas"}" data-tam="22" aria-hidden="true"></canvas>
+      <span class="c-txt"><b>${jefe ? `${ENEMIGOS[ACTOS[S.acto].jefe].nombre}` : nombres[k] || "Camino"}</b><span>${jefe ? "El final del acto. Preparaos." : `«${esc(n.pista || "Un sendero cualquiera")}»`}</span></span>
+      ${vt.n ? `<i>${vt.n} voto${vt.n > 1 ? "s" : ""}</i>` : sel && mio ? `<i class="ir">${hayVotacion() ? "Votar" : "Ir"} ▸</i>` : ""}</button>`;
   }).join("");
   const comida = S.zurron.racion || 0, coste = costeAcampar(), caidos = S.players.filter(x => x.alma <= 0).length;
   const motivo = S.descanso === m.fila ? "ya habéis descansado aquí" : comida < coste ? "no queda comida" : caidos ? `levanta a ${caidos} caído${caidos > 1 ? "s" : ""}` : "cura y recarga el maná";
-  $("#panel").innerHTML = `${hayVotacion() ? lineaVotacion() : quienLinea(p, "¿Por dónde seguís?")}
+  $("#panel").innerHTML = `<div class="mapa-cab">${hayVotacion() ? lineaVotacion() : quienLinea(p, visto === null ? "Toca un camino para verlo" : "Toca otra vez para ir")}
+      <button type="button" class="boton sec mini" data-ui="grafo">${verGrafo ? "Ver camino" : "Mapa"}</button></div>
     <div class="caminos">${caminos}</div>
-    <button type="button" class="acampar" data-juego="acampar" ${puedeAcampar() && turnoMio() && !esperandoHost ? "" : "disabled"}><b>🔥 Acampar</b><span>−${coste} comida (tenéis ${comida}) · ${motivo}</span></button>`;
+    <button type="button" class="acampar" data-juego="acampar" ${puedeAcampar() && turnoMio() && !esperandoHost ? "" : "disabled"}><canvas data-icono="hoguera" data-tam="22" aria-hidden="true"></canvas><span class="c-txt"><b>Acampar</b><span>−${coste} comida (tenéis ${comida}) · ${motivo}</span></span></button>`;
+  pintarIconos($("#panel"));
+}
+/* Camino que se está mirando en el mapa (solo en este dispositivo). Se olvida al avanzar de tramo. */
+let caminoVisto = null, caminoClave = "", verGrafo = false;
+function caminoMirado() {
+  if (!S || !S.mapa) return null;
+  const m = S.mapa, clave = `${S.acto}:${m.fila}:${m.col}`;
+  if (clave !== caminoClave) { caminoClave = clave; caminoVisto = null; }
+  const libres = (m.filas[m.fila][m.col] || { sig: [] }).sig;
+  if (libres.length === 1) return libres[0];
+  return libres.includes(caminoVisto) ? caminoVisto : null;
 }
 function dibujarLineas() {
   const mapa = $("#mapa"), svg = mapa && mapa.querySelector(".lineas");
@@ -2984,6 +3028,8 @@ document.addEventListener("click", ev => {
     case "bestia": return abrirModal({ tipo: "compendio", pestana: "bestiario", k: ds.k });
     case "pestana": modal.pestana = ds.p; return renderModal();
     case "cronica": return abrirModal({ tipo: "cronica" });
+    case "ver-camino": caminoMirado(); caminoVisto = +ds.v; verGrafo = false; sonar("clic"); return render();
+    case "grafo": verGrafo = !verGrafo; return render();
     case "objetos": submenu = "objetos"; return renderEscena();
     case "objetivo": objetivoLocal = +ds.k; if (S && S.combate && !S.online) S.combate.objetivo = +ds.k; renderEscena(); return sincronizarEscenario();
     case "resolver-ya": if (S && S.combate && S.combate.fase === "plan" && (!S.online || esHost())) resolverRonda(); return;

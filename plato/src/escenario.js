@@ -1,71 +1,100 @@
-/* Dados y Mazmorras · escenario: fondo, héroes, rival y efectos en un lienzo de 192×108 píxeles de arte,
-   escalado a múltiplos enteros de los píxeles del dispositivo para que el pixel art quede nítido. */
+/* Dados y Mazmorras · escenario: fondo, héroes, rivales y efectos en un lienzo de 256×144 píxeles de arte.
+   Usa el arte HD (48×48, jefes 80×80) cuando está registrado y, si falta alguna pieza, el arte antiguo de 36×36. */
 const ESCENARIO = (() => {
   "use strict";
-  const W = 192, H = 108;
+  const W = 256, H = 144;
+  const W0 = 192, H0 = 108; /* tamaño de los fondos antiguos */
   const R = PX.RAMPAS;
   const reducido = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-  /* Pies de cada héroe en el escenario (x centro, y suelo) y del rival. */
-  const HUECOS = [[62, 101], [34, 97], [92, 97], [48, 88], [78, 88], [18, 89]];
-  const POS_RIVAL = [150, 99];
-  const POS_MASCOTA = [106, 104];
+  /* Pies de cada héroe (x centro, y suelo): tres delante y tres detrás. */
+  const HUECOS = [[84, 139], [54, 135], [114, 133], [68, 124], [100, 124], [28, 127]];
+  const POS_MASCOTA = [140, 141];
   /* Con varios enemigos se reparten a la derecha (el principal, delante). */
-  const POS_RIVALES = [[[150, 99]], [[138, 101], [170, 93]], [[132, 102], [162, 97], [180, 89]]];
+  const POS_RIVALES = [[[198, 137]], [[180, 139], [224, 128]], [[170, 140], [206, 133], [236, 124]]];
+  const POS_RIVAL = POS_RIVALES[0][0];
 
+  const tabla = nombre => (typeof window[nombre] === "object" && window[nombre]) || null;
   const cacheFondo = new Map();
   const cacheSprite = new Map();
 
   function lienzoDe(rej) { return rej.aCanvas(1); }
+  /* Un fondo es { cv, anim, viejo }: los antiguos (192×108) se pintan en su tamaño y se escalan al dibujar. */
   function fondo(clave) {
     if (cacheFondo.has(clave)) return cacheFondo.get(clave);
-    const g = new PX.Rejilla(W, H);
-    const def = typeof FONDOS !== "undefined" && FONDOS[clave];
-    if (def && def.base) {
-      try { def.base(g); } catch (e) { console.error("fondo", clave, e); }
-    } else {
-      g.degradado(0, 0, W, 72, R.tela.violeta[1], R.tela.terracota[1]);
-      g.degradado(0, 72, W, 36, R.madera[1], R.madera[0]);
+    const hd = tabla("FONDOS_HD"), viejo = typeof FONDOS !== "undefined" ? FONDOS : {};
+    let res = null;
+    if (hd && hd[clave] && hd[clave].base) {
+      try { const g = new PX.Rejilla(W, H); hd[clave].base(g); res = { cv: lienzoDe(g), anim: hd[clave].anim, viejo: false }; }
+      catch (e) { console.error("fondo HD", clave, e); }
     }
-    const cv = lienzoDe(g);
-    cacheFondo.set(clave, cv);
-    return cv;
+    if (!res) {
+      const def = viejo[clave];
+      const g = new PX.Rejilla(W0, H0);
+      if (def && def.base) { try { def.base(g); } catch (e) { console.error("fondo", clave, e); } }
+      else { g.degradado(0, 0, W0, 72, R.tela.violeta[1], R.tela.terracota[1]); g.degradado(0, 72, W0, 36, R.madera[1], R.madera[0]); }
+      res = { cv: lienzoDe(g), anim: def && def.anim, viejo: true };
+    }
+    cacheFondo.set(clave, res);
+    return res;
   }
   function provisional() {
-    const g = new PX.Rejilla(36, 36);
-    new PX.Capa().ell(18, 20, 9, 12).pintar(g, R.sombra, { relieve: 4 });
-    g.set(14, 16, R.bronce[4]).set(20, 16, R.bronce[4]);
+    const g = new PX.Rejilla(48, 48);
+    new PX.Capa(48, 48).ell(24, 30, 11, 15).pintar(g, R.sombra, { relieve: 4 });
+    g.set(19, 25, R.bronce[4]).set(27, 25, R.bronce[4]);
     return g.contorno();
   }
-  /* Cada sprite guarda sus variantes ya dibujadas: normal, blanco (golpe), tumbado (caído) y piedra. */
-  function sprite(clave, fabrica) {
+  /* Caja de lo pintado: fila más alta (cima), más baja (pie) y columnas. */
+  function medir(rej) {
+    let x0 = rej.w, x1 = -1, y0 = rej.h, y1 = -1;
+    for (let y = 0; y < rej.h; y++) for (let x = 0; x < rej.w; x++) if (rej.c[y * rej.w + x]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return { x0: 0, x1: rej.w - 1, y0: 0, y1: rej.h - 1 };
+    return { x0, x1, y0, y1 };
+  }
+  /* Cada sprite guarda sus variantes ya dibujadas y sus medidas. */
+  function sprite(clave, fabricas) {
     if (cacheSprite.has(clave)) return cacheSprite.get(clave);
-    let rej;
-    try { rej = fabrica(); } catch (e) { console.error("sprite", clave, e); }
+    let rej = null;
+    for (const f of fabricas) {
+      if (!f) continue;
+      try { rej = f(); } catch (e) { console.error("sprite", clave, e); rej = null; }
+      if (rej) break;
+    }
     if (!rej) rej = provisional();
+    const tum = rej.tumbada().tenida(R.piedra);
+    const m = medir(rej), mt = medir(tum);
     const v = {
       normal: lienzoDe(rej),
       blanco: lienzoDe(rej.silueta("#fff7ea")),
-      tumbado: lienzoDe(rej.tumbada().tenida(R.piedra)),
+      tumbado: lienzoDe(tum),
       piedra: lienzoDe(rej.tenida(R.marmol)),
-      oscuro: lienzoDe(rej.tenida(R.sombra))
+      oscuro: lienzoDe(rej.tenida(R.sombra)),
+      w: rej.w, h: rej.h, cima: m.y0, pie: m.y1, ancho: m.x1 - m.x0 + 1, cx: (m.x0 + m.x1 + 1) / 2,
+      tw: tum.w, tpie: mt.y1, tcx: (mt.x0 + mt.x1 + 1) / 2
     };
     cacheSprite.set(clave, v);
     return v;
   }
-  const spriteHeroe = look => sprite("h:" + JSON.stringify(look), () => HEROES.componer(look));
-  const spriteMascota = clave => sprite("m:" + clave, () => (typeof MASCOTAS !== "undefined" && MASCOTAS[clave] ? MASCOTAS[clave]() : null));
-  const spriteRival = (tipo, clave) => sprite(tipo + ":" + clave, () => {
-    const tabla = tipo === "pnj" ? (typeof PNJ !== "undefined" ? PNJ : null) : (typeof MONSTRUOS !== "undefined" ? MONSTRUOS : null);
-    return tabla && tabla[clave] ? tabla[clave]() : null;
-  });
+  const spriteHeroe = look => sprite("h:" + JSON.stringify(look), [
+    tabla("HEROES_HD") && tabla("HEROES_HD").componer ? () => tabla("HEROES_HD").componer(look) : null,
+    () => HEROES.componer(look)
+  ]);
+  const hayMascota = clave => !!((tabla("MASCOTAS_HD") || {})[clave] || (typeof MASCOTAS !== "undefined" && MASCOTAS[clave]));
+  const spriteMascota = clave => sprite("m:" + clave, [
+    (tabla("MASCOTAS_HD") || {})[clave],
+    typeof MASCOTAS !== "undefined" ? MASCOTAS[clave] : null
+  ]);
+  const spriteRival = (tipo, clave) => sprite(tipo + ":" + clave, tipo === "pnj"
+    ? [(tabla("PNJ_HD") || {})[clave], typeof PNJ !== "undefined" ? PNJ[clave] : null]
+    : [(tabla("MONSTRUOS_HD") || {})[clave], typeof MONSTRUOS !== "undefined" ? MONSTRUOS[clave] : null]);
 
-  /* Ajusta un lienzo pequeño (36×36 de arte) al múltiplo entero de píxeles del dispositivo más cercano a su tamaño pedido. */
-  function prepararLienzo(cv, tamPorDefecto) {
+  /* Ajusta un lienzo pequeño al múltiplo entero de píxeles del dispositivo más cercano a su tamaño pedido.
+     base es el lado en píxeles de arte de lo que se va a dibujar. */
+  function prepararLienzo(cv, tamPorDefecto, base = 36) {
     const dpr = window.devicePixelRatio || 1;
     const tam = +cv.dataset.tam || parseFloat(getComputedStyle(cv).getPropertyValue("--tam")) || tamPorDefecto;
-    const s = Math.max(1, Math.round((tam * dpr) / 36));
-    if (cv.width !== 36 * s) { cv.width = 36 * s; cv.height = 36 * s; }
-    const css = (36 * s) / dpr + "px";
+    const s = Math.max(1, Math.round((tam * dpr) / base));
+    if (cv.width !== base * s || cv.height !== base * s) { cv.width = base * s; cv.height = base * s; }
+    const css = (base * s) / dpr + "px";
     if (cv.style.width !== css) { cv.style.width = css; cv.style.height = css; }
     const c = cv.getContext("2d");
     c.imageSmoothingEnabled = false;
@@ -81,7 +110,7 @@ const ESCENARIO = (() => {
     const cara = variante ? [[10, 12], [26, 12], [18, 27]] : [[18, 8], [28, 25], [8, 25]];
     new PX.Capa().poly(cara).pintar(g, R.tela.terracota, { min: 3, max: 4, relieve: 2 });
     const aristas = new PX.Capa();
-    cara.forEach(([x, y], i) => { const [x2, y2] = hex[(variante ? [0, 2, 4] : [0, 2, 4])[i]]; aristas.linea(x, y, x2, y2, 1); });
+    cara.forEach(([x, y], i) => { const [x2, y2] = hex[[0, 2, 4][i]]; aristas.linea(x, y, x2, y2, 1); });
     aristas.pintar(g, R.tela.terracota, { plano: 1 });
     return g.contorno();
   }
@@ -100,18 +129,49 @@ const ESCENARIO = (() => {
     c.drawImage(tmp, 0, 0, 36 * s, 36 * s);
   }
 
+  /* ---------- Capas de ambiente: niebla del camino y viñeta ---------- */
+  let nieblaCv = null, vinetaCv = null;
+  function capaNiebla() {
+    if (nieblaCv) return nieblaCv;
+    const cv = Object.assign(document.createElement("canvas"), { width: W, height: H });
+    const c = cv.getContext("2d");
+    /* Bancos de niebla hechos con ondas y tramado: más densos abajo y a lo lejos (derecha). */
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const ola = Math.sin(x * 0.045 + y * 0.11) * 0.5 + Math.sin(x * 0.017 - y * 0.06 + 1.7) * 0.5 + Math.sin(x * 0.09 + 3.1) * 0.25;
+      const banda = Math.max(0, 1 - Math.abs(y - 108) / 40);
+      const v = 0.12 + ola * 0.22 + banda * 0.5 + (x / W) * 0.22;
+      if (v > PX.umbral(x, y) + 0.2) { c.fillStyle = v > 0.82 ? "rgba(228,224,238,0.55)" : "rgba(198,196,220,0.42)"; c.fillRect(x, y, 1, 1); }
+    }
+    nieblaCv = cv;
+    return cv;
+  }
+  function capaVineta() {
+    if (vinetaCv) return vinetaCv;
+    const cv = Object.assign(document.createElement("canvas"), { width: W, height: H });
+    const c = cv.getContext("2d");
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = (x - W / 2) / (W / 2), dy = (y - H / 2) / (H / 2);
+      const d = dx * dx * 0.7 + dy * dy * 0.9;
+      if (d > 0.62 + PX.umbral(x, y) * 0.5) { c.fillStyle = d > 1.05 ? "rgba(8,5,12,0.42)" : "rgba(8,5,12,0.22)"; c.fillRect(x, y, 1, 1); }
+    }
+    vinetaCv = cv;
+    return cv;
+  }
+
   /* ---------- Instancias de escenario ---------- */
   const instancias = new Set();
 
-  /* opciones.limites() devuelve el ancho y alto máximos (px CSS) que puede ocupar el escenario;
-     el lienzo toma el mayor múltiplo entero que cabe y la caja se ajusta a su altura. */
+  /* opciones.limites() devuelve el ancho y alto máximos (px CSS) que puede ocupar el escenario. */
   function crear(lienzo, opciones = {}) {
     const buf = Object.assign(document.createElement("canvas"), { width: W, height: H });
     const b = buf.getContext("2d");
+    const viejoBuf = Object.assign(document.createElement("canvas"), { width: W0, height: H0 });
+    const vb = viejoBuf.getContext("2d");
     const ctx = lienzo.getContext("2d");
-    let escala = 1;
     let vista = { fondo: "taberna", heroes: [], rival: null, activo: -1 };
     const efectos = [];
+    /* Altura visible de cada actor en el último fotograma (para colocar números y efectos). */
+    const marcas = {};
 
     function ajustar() {
       const caja = lienzo.parentElement;
@@ -119,13 +179,16 @@ const ESCENARIO = (() => {
       const dpr = window.devicePixelRatio || 1;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
-      let s = Math.floor(Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H));
-      if (s < 1) s = 1;
-      escala = s;
-      if (lienzo.width !== W * s) { lienzo.width = W * s; lienzo.height = H * s; }
-      const cw = (W * s) / dpr + "px", ch = (H * s) / dpr + "px";
+      let s = Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H);
+      /* Un múltiplo entero queda más nítido: se usa si apenas encoge la imagen. */
+      const ent = Math.floor(s);
+      if (ent >= 1 && ent >= s * 0.86) s = ent;
+      s = Math.max(1, s);
+      const pw = Math.round(W * s), ph = Math.round(H * s);
+      if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
+      const cw = pw / dpr + "px", ch = ph / dpr + "px";
       if (lienzo.style.width !== cw) { lienzo.style.width = cw; lienzo.style.height = ch; }
-      if (opciones.limites) { const alto = (H * s) / dpr + 12 + "px"; if (caja.style.height !== alto) caja.style.height = alto; }
+      if (opciones.limites) { const alto = ph / dpr + 12 + "px"; if (caja.style.height !== alto) caja.style.height = alto; }
     }
     const ro = window.ResizeObserver ? new ResizeObserver(() => ajustar()) : null;
     if (ro) ro.observe(opciones.observar || lienzo.parentElement);
@@ -133,13 +196,14 @@ const ESCENARIO = (() => {
     ajustar();
 
     const posRivales = () => POS_RIVALES[Math.min(3, Math.max(1, (vista.rivales || []).length)) - 1];
+    function normalizar(obj) { const o = String(obj || "e"); return o === "e" ? "e0" : o; }
     function posicion(obj) {
-      const o = String(obj || "e");
+      const o = normalizar(obj);
       if (o === "m") return POS_MASCOTA;
-      if (o[0] === "e") { const k = o === "e" ? 0 : +o.slice(1); return posRivales()[k] || POS_RIVAL; }
-      const i = +o.slice(1);
-      return HUECOS[i] || HUECOS[0];
+      if (o[0] === "e") return posRivales()[+o.slice(1)] || POS_RIVAL;
+      return HUECOS[+o.slice(1)] || HUECOS[0];
     }
+    function alto(obj) { const m = marcas[normalizar(obj)]; return m ? Math.max(14, m.alto) : 36; }
     function mostrar(v) {
       if (v.fondo && v.fondo !== vista.fondo) efectos.length = 0;
       if ("rival" in v && !("rivales" in v)) v = Object.assign({}, v, { rivales: v.rival ? [v.rival] : [] });
@@ -156,80 +220,126 @@ const ESCENARIO = (() => {
       for (const e of efectos) {
         const p = (ahora - e.t0) / e.dur;
         if (p < 0 || p > 1) continue;
-        if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 10) * (id[0] === "e" ? -1 : 1);
-        if (e.tipo === "golpe" && e.objetivo === id) { blanco = p < 0.45; dx += p < 0.8 ? (Math.floor(p * 12) % 2 ? 1 : -1) : 0; }
-        if (e.tipo === "salto" && (e.actor === id || (e.actor === "h*" && id[0] === "h"))) dy -= Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 6);
+        if (e.tipo === "ataque" && e.actor === id) dx += Math.round(Math.sin(p * Math.PI) * 14) * (id[0] === "e" ? -1 : 1);
+        if (e.tipo === "golpe" && e.objetivo === id) { blanco = p < 0.45; dx += p < 0.8 ? (Math.floor(p * 12) % 2 ? 2 : -2) : 0; }
+        if (e.tipo === "salto" && (e.actor === id || (e.actor === "h*" && id[0] === "h"))) dy -= Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 8);
       }
       return [dx, dy, blanco];
     }
     function sombraSuelo(x, y, ancho) {
-      b.fillStyle = "rgba(10,6,4,0.38)";
-      b.fillRect(x - ancho / 2 + 2, y, ancho - 4, 1);
-      b.fillRect(x - ancho / 2, y + 1, ancho, 1);
-      b.fillRect(x - ancho / 2 + 2, y + 2, ancho - 4, 1);
+      ancho = Math.round(ancho);
+      b.fillStyle = "rgba(10,6,4,0.36)";
+      b.fillRect(Math.round(x - ancho / 2 + 3), y - 1, ancho - 6, 1);
+      b.fillRect(Math.round(x - ancho / 2), y, ancho, 2);
+      b.fillRect(Math.round(x - ancho / 2 + 3), y + 2, ancho - 6, 1);
     }
     function flecha(x, y, color) {
+      x = Math.round(x); y = Math.round(y);
       b.fillStyle = PX.CONTORNO;
-      b.fillRect(x - 3, y - 1, 7, 1); b.fillRect(x - 3, y, 7, 2); b.fillRect(x - 2, y + 2, 5, 1); b.fillRect(x - 1, y + 3, 3, 1); b.fillRect(x, y + 4, 1, 1);
+      b.fillRect(x - 4, y - 1, 9, 1); b.fillRect(x - 4, y, 9, 2); b.fillRect(x - 3, y + 2, 7, 1); b.fillRect(x - 2, y + 3, 5, 1); b.fillRect(x - 1, y + 4, 3, 1); b.fillRect(x, y + 5, 1, 1);
       b.fillStyle = color;
-      b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y + 1, 3, 1); b.fillRect(x, y + 2, 1, 1);
+      b.fillRect(x - 3, y, 7, 1); b.fillRect(x - 2, y + 1, 5, 1); b.fillRect(x - 1, y + 2, 3, 1); b.fillRect(x, y + 3, 1, 1);
+      b.fillStyle = "rgba(255,255,255,0.5)"; b.fillRect(x - 3, y, 3, 1);
     }
     /* Fila de puntitos de color, uno por estado (veneno, quemadura…). */
     function puntos(x, y, colores) {
       const n = (colores || []).length;
       if (!n) return;
-      const x0 = Math.round(x - (n * 4 - 1) / 2);
-      colores.forEach((col, k) => { b.fillStyle = PX.CONTORNO; b.fillRect(x0 + k * 4 - 1, y - 1, 5, 5); b.fillStyle = col; b.fillRect(x0 + k * 4, y, 3, 3); });
+      const x0 = Math.round(x - (n * 5 - 1) / 2);
+      colores.forEach((col, k) => { b.fillStyle = PX.CONTORNO; b.fillRect(x0 + k * 5 - 1, y - 1, 6, 6); b.fillStyle = col; b.fillRect(x0 + k * 5, y, 4, 4); b.fillStyle = "rgba(255,255,255,0.45)"; b.fillRect(x0 + k * 5, y, 2, 1); });
     }
     function barra(x, y, ancho, valor, max, color) {
-      b.fillStyle = PX.CONTORNO; b.fillRect(x - 1, y - 1, ancho + 2, 4);
-      b.fillStyle = R.sangre[0]; b.fillRect(x, y, ancho, 2);
-      b.fillStyle = color; b.fillRect(x, y, Math.max(0, Math.round((ancho * valor) / max)), 2);
-      b.fillStyle = "rgba(255,255,255,0.35)"; b.fillRect(x, y, Math.max(0, Math.round((ancho * valor) / max)), 1);
+      x = Math.round(x); y = Math.round(y);
+      const lleno = Math.max(0, Math.round((ancho * valor) / max));
+      b.fillStyle = PX.CONTORNO; b.fillRect(x - 1, y - 1, ancho + 2, 5);
+      b.fillStyle = R.sangre[0]; b.fillRect(x, y, ancho, 3);
+      b.fillStyle = color; b.fillRect(x, y, lleno, 3);
+      b.fillStyle = "rgba(255,255,255,0.4)"; b.fillRect(x, y, lleno, 1);
+      b.fillStyle = "rgba(0,0,0,0.25)"; b.fillRect(x, y + 2, lleno, 1);
+    }
+    function zz(x, y, ahora) {
+      const f = reducido ? 0 : Math.floor(ahora / 380) % 3;
+      PX.texto(b, "Z", Math.round(x), Math.round(y - f), R.mar[4]);
+      if (f) PX.texto(b, "z", Math.round(x + 5), Math.round(y - 4 - f), R.mar[3]);
+    }
+
+    function pintarFondo(ahora) {
+      const fd = fondo(vista.fondo);
+      if (fd.viejo) {
+        vb.clearRect(0, 0, W0, H0);
+        vb.drawImage(fd.cv, 0, 0);
+        if (fd.anim && !reducido) { try { fd.anim(vb, ahora); } catch (e) { /* un fallo de animación no debe parar el juego */ } }
+        b.imageSmoothingEnabled = false;
+        b.drawImage(viejoBuf, 0, 0, W, H);
+      } else {
+        b.drawImage(fd.cv, 0, 0);
+        if (fd.anim && !reducido) { try { fd.anim(b, ahora); } catch (e) { /* idem */ } }
+      }
+    }
+    function pintarNiebla(ahora, fuerza) {
+      if (!fuerza) return;
+      const n = capaNiebla();
+      const off = reducido ? 0 : (ahora / 90) % W;
+      b.globalAlpha = Math.min(1, fuerza);
+      b.drawImage(n, -off, 0); b.drawImage(n, W - off, 0);
+      b.globalAlpha = Math.min(1, fuerza) * 0.6;
+      const off2 = reducido ? 0 : (ahora / 47) % W;
+      b.drawImage(n, off2 - W, 8); b.drawImage(n, off2, 8);
+      b.globalAlpha = 1;
     }
 
     function pintar(ahora) {
       b.clearRect(0, 0, W, H);
-      b.drawImage(fondo(vista.fondo), 0, 0);
-      const def = typeof FONDOS !== "undefined" && FONDOS[vista.fondo];
-      if (def && def.anim && !reducido) { try { def.anim(b, ahora); } catch (e) { /* un fallo de animación no debe parar el juego */ } }
+      pintarFondo(ahora);
+      if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
+      const marcha = !!vista.marcha && !reducido;
       vista.heroes.forEach((h, i) => {
         const [fx, fy] = HUECOS[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });
       });
-      if (vista.mascota && typeof MASCOTAS !== "undefined" && MASCOTAS[vista.mascota]) actores.push({ id: "m", mascota: vista.mascota, fx: POS_MASCOTA[0], fy: POS_MASCOTA[1] });
+      if (vista.mascota && hayMascota(vista.mascota)) actores.push({ id: "m", mascota: vista.mascota, fx: POS_MASCOTA[0], fy: POS_MASCOTA[1] });
       const pr = posRivales();
       (vista.rivales || []).forEach((rv, k) => { if (rv && pr[k]) actores.push({ id: "e" + k, k, rival: rv, fx: pr[k][0], fy: pr[k][1] }); });
       actores.sort((a, c) => a.fy - c.fy);
       for (const a of actores) {
         const [dx, dy, blanco] = desplazamiento(a.id, ahora);
         if (a.mascota) {
-          const v = spriteMascota(a.mascota), bob = reducido ? 0 : Math.floor((ahora / 420) % 2);
-          sombraSuelo(a.fx, a.fy - 1, 12);
-          b.drawImage(blanco ? v.blanco : v.normal, a.fx - 18 + dx, a.fy - 35 + bob + dy);
+          const v = spriteMascota(a.mascota);
+          const bob = reducido ? 0 : marcha ? -Math.abs(Math.round(Math.sin(ahora / 120) * 2)) : Math.floor((ahora / 420) % 2);
+          const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
+          sombraSuelo(a.fx, a.fy, Math.max(12, v.ancho * 0.7));
+          b.drawImage(blanco ? v.blanco : v.normal, x, y);
+          marcas.m = { alto: v.pie - v.cima };
           continue;
         }
         if (a.h) {
           const v = spriteHeroe(a.h.look);
           if (a.h.caido) {
-            sombraSuelo(a.fx, a.fy - 1, 26);
-            b.drawImage(v.tumbado, a.fx - 18, a.fy - 30 + 12);
+            sombraSuelo(a.fx, a.fy, v.ancho * 0.9);
+            b.drawImage(v.tumbado, Math.round(a.fx - v.tcx), Math.round(a.fy - v.tpie));
+            marcas[a.id] = { alto: 12 };
             continue;
           }
-          const bob = reducido ? 0 : Math.floor((ahora / 520 + a.i * 0.37) % 2);
-          sombraSuelo(a.fx, a.fy - 1, 16);
+          let bob;
+          if (reducido) bob = 0;
+          else if (marcha) bob = -Math.abs(Math.round(Math.sin(ahora / 160 + a.i * 1.3) * 2));
+          else bob = Math.floor((ahora / 520 + a.i * 0.37) % 2);
+          sombraSuelo(a.fx, a.fy, Math.max(16, v.ancho * 0.8));
           const img = blanco ? v.blanco : a.h.piedra ? v.piedra : v.normal;
-          b.drawImage(img, a.fx - 18 + dx, a.fy - 35 + bob + dy);
-          if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, a.fy - 43 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
-          let iy = a.fy - 40;
-          if (a.h.aturdido) { PX.texto(b, "ZZ", a.fx - 9, iy, R.mar[4]); }
-          puntos(a.fx + 1, a.fy - 48, a.h.estados);
+          const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
+          b.drawImage(img, x, y);
+          const cima = y + v.cima;
+          marcas[a.id] = { alto: v.pie - v.cima };
+          if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, cima - 10 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
+          if (a.h.aturdido) zz(a.fx + 8, cima - 2, ahora);
+          puntos(a.fx + 1, cima - (vista.activo === a.i ? 17 : 8), a.h.estados);
         } else {
           const r = a.rival;
           const v = spriteRival(r.tipo, r.clave);
-          let ix = a.fx - 18 + dx, iy = a.fy - 35 + dy;
-          if (!reducido && r.flota) iy += Math.round(Math.sin(ahora / 400) * 2) - 3;
+          const ix = Math.round(a.fx - v.w / 2 + dx);
+          let iy = Math.round(a.fy - v.pie + dy);
+          if (!reducido && r.flota) iy += Math.round(Math.sin(ahora / 400) * 2) - 4;
           else if (!reducido) iy += Math.floor((ahora / 640) % 2);
           const muerte = efectos.find(e => e.tipo === "muerte" && e.objetivo === a.id);
           if (r.derrotado && !muerte) continue;
@@ -238,57 +348,74 @@ const ESCENARIO = (() => {
             if (p > 1) continue;
             if (Math.floor(p * 10) % 2) continue;
           }
-          if (r.tipo === "enemigo") sombraSuelo(a.fx, a.fy - 1, 22);
-          b.drawImage(blanco ? v.blanco : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
+          if (r.tipo === "enemigo" && !r.silueta) sombraSuelo(a.fx, a.fy, Math.max(18, v.ancho * 0.8));
+          b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
+          const cima = iy + v.cima;
+          marcas[a.id] = { alto: v.pie - v.cima };
           if (r.tipo === "enemigo" && r.max) {
-            barra(a.fx - 15, a.fy - 41, 30, r.hp, r.max, R.sangre[4]);
-            if (r.aturdido) PX.texto(b, "ZZ", a.fx - 22, a.fy - 43, R.mar[4]);
-            puntos(a.fx, a.fy - 47, r.estados);
-            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, a.fy - 55 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
+            const ancho = v.h > 60 ? 46 : 32;
+            const by = Math.max(4, cima - 7);
+            barra(a.fx - ancho / 2, by, ancho, r.hp, r.max, R.sangre[4]);
+            if (r.aturdido) zz(a.fx - ancho / 2 - 9, by - 2, ahora);
+            puntos(a.fx, by - 8, r.estados);
+            if (vista.objetivo === a.k && (vista.rivales || []).length > 1 && !r.derrotado) flecha(a.fx, by - (r.estados && r.estados.length ? 17 : 10) + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.sangre[4]);
           }
         }
       }
+      if (vista.niebla) pintarNiebla(ahora + 4000, vista.niebla * 0.35);
       for (let k = efectos.length - 1; k >= 0; k--) {
         const e = efectos[k];
         const p = (ahora - e.t0) / e.dur;
         if (p > 1) { efectos.splice(k, 1); continue; }
         if (p < 0) continue;
         const [x, y] = posicion(e.objetivo || e.actor);
+        const al = alto(e.objetivo || e.actor);
         if (e.tipo === "numero") {
-          const sube = Math.round(Math.min(1, p * 1.6) * 12);
+          const sube = Math.round(Math.min(1, p * 1.6) * 14);
           const esc = e.grande ? 2 : 1;
           const ancho = PX.anchoTexto(e.texto, esc);
-          if (p < 0.85 || Math.floor(p * 20) % 2) PX.texto(b, e.texto, Math.round(x - ancho / 2), y - 30 - sube - (e.fila || 0) * 7, e.color || "#fff7ea", PX.CONTORNO, esc);
+          const yy = Math.max(10, y - al - 4 - sube - (e.fila || 0) * 8);
+          if (p < 0.85 || Math.floor(p * 20) % 2) PX.texto(b, e.texto, Math.round(x - ancho / 2), yy, e.color || "#fff7ea", PX.CONTORNO, esc);
         }
         if (e.tipo === "proyectil") {
-          const [ox, oy] = posicion(e.actor), q = Math.min(1, p * 1.15);
-          const px = Math.round(ox + (x - ox) * q), py = Math.round(oy - 20 + (y - oy) * q - Math.sin(q * Math.PI) * (e.forma === "flecha" ? 6 : 3));
+          const [ox, oy] = posicion(e.actor), oal = alto(e.actor), q = Math.min(1, p * 1.15);
+          const sy = oy - oal * 0.55, ty = y - al * 0.5;
+          const px = Math.round(ox + (x - ox) * q), py = Math.round(sy + (ty - sy) * q - Math.sin(q * Math.PI) * (e.forma === "flecha" ? 8 : 4));
           const col = e.forma === "luz" ? R.bronce : e.forma === "flecha" ? R.madera : (e.rampa || R.magia);
-          if (e.forma === "flecha") { b.fillStyle = col[3]; b.fillRect(px - 4, py, 6, 1); b.fillStyle = R.hueso[4]; b.fillRect(px + 2, py - 1, 2, 3); }
-          else if (e.forma === "luz") { b.fillStyle = col[4]; for (let t = 0; t < 7; t++) b.fillRect(Math.round(ox + (x - ox) * q * (t / 6)), Math.round(oy - 20 + (y - oy) * q * (t / 6)), 2, 1); b.fillRect(px - 1, py - 1, 3, 3); }
-          else { b.fillStyle = col[2]; b.fillRect(px - 2, py - 2, 5, 5); b.fillStyle = col[4]; b.fillRect(px - 1, py - 1, 3, 3); b.fillStyle = "#fff7ea"; b.fillRect(px, py, 1, 1); }
+          if (e.forma === "flecha") { b.fillStyle = col[3]; b.fillRect(px - 6, py, 8, 1); b.fillStyle = R.hueso[4]; b.fillRect(px + 2, py - 1, 3, 3); b.fillStyle = R.tela.terracota[3]; b.fillRect(px - 7, py - 1, 2, 3); }
+          else if (e.forma === "luz") { b.fillStyle = col[4]; for (let t = 0; t < 9; t++) b.fillRect(Math.round(ox + (x - ox) * q * (t / 8)), Math.round(sy + (ty - sy) * q * (t / 8)), 2, 1); b.fillRect(px - 2, py - 2, 4, 4); b.fillStyle = "#fff7ea"; b.fillRect(px - 1, py - 1, 2, 2); }
+          else {
+            b.fillStyle = col[1]; b.fillRect(px - 5, py - 1, 3, 3);
+            b.fillStyle = col[2]; b.fillRect(px - 3, py - 3, 7, 7);
+            b.fillStyle = col[4]; b.fillRect(px - 2, py - 2, 5, 5);
+            b.fillStyle = "#fff7ea"; b.fillRect(px - 1, py - 1, 2, 2);
+          }
         }
         if (e.tipo === "tajo") {
+          const cy = Math.round(y - al * 0.75);
+          const n = Math.round(p * 20);
           b.fillStyle = "#fff7ea";
-          const n = Math.round(p * 14);
-          for (let t = 0; t < n; t++) b.fillRect(x - 8 + t, y - 30 + t, 2, 1);
+          for (let t = 0; t < n; t++) b.fillRect(x - 11 + t, cy + t, 3, 1);
           b.fillStyle = e.color || R.bronce[4];
-          for (let t = 0; t < n - 3; t++) b.fillRect(x - 7 + t, y - 31 + t, 1, 1);
+          for (let t = 0; t < n - 4; t++) b.fillRect(x - 10 + t, cy - 1 + t, 1, 1);
         }
         if (e.tipo === "destello" && Math.floor(p * 6) % 2 === 0) { b.fillStyle = e.color || "rgba(255,247,234,0.55)"; b.fillRect(0, 0, W, H); }
         if (e.tipo === "magia" || e.tipo === "cura") {
           const col = e.tipo === "cura" ? R.hoja : (e.rampa || R.magia);
-          for (let n = 0; n < 9; n++) {
-            const ang = n * 0.7 + p * 5;
-            const rad = 4 + p * 12;
-            const px = Math.round(x + Math.cos(ang) * rad * 0.8), py = Math.round(y - 16 + Math.sin(ang) * rad * 0.6 - p * 8);
+          const cy = y - al * 0.45;
+          for (let n = 0; n < 14; n++) {
+            const ang = n * 0.45 + p * 5;
+            const rad = 5 + p * 16;
+            const px = Math.round(x + Math.cos(ang) * rad * 0.8), py = Math.round(cy + Math.sin(ang) * rad * 0.6 - p * 10);
+            const t = n % 3 === 0 ? 2 : 1;
             b.fillStyle = col[n % 2 ? 3 : 4];
-            b.fillRect(px, py, 1 + (n % 3 === 0 ? 1 : 0), 1 + (n % 3 === 0 ? 1 : 0));
+            b.fillRect(px, py, t, t);
           }
         }
       }
+      b.drawImage(capaVineta(), 0, 0);
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(buf, 0, 0, W * escala, H * escala);
+      ctx.drawImage(buf, 0, 0, lienzo.width, lienzo.height);
     }
 
     const inst = { mostrar, efecto, ajustar, pintar, lienzo, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
@@ -305,17 +432,44 @@ const ESCENARIO = (() => {
   }
   requestAnimationFrame(bucle);
 
-  /* Retrato pequeño de un héroe para fichas y botones. */
+  /* Retrato de un héroe: en fichas pequeñas, cabeza y hombros; en grande, de cuerpo entero. */
   function retrato(cv, look, opciones = {}) {
     const v = spriteHeroe(look);
-    const [c, s] = prepararLienzo(cv, cv.classList.contains("retrato-grande") ? 144 : cv.classList.contains("mini") ? 54 : 60);
-    c.drawImage(opciones.caido ? v.tumbado : v.normal, 0, 0, 36 * s, 36 * s);
+    const grande = cv.classList.contains("retrato-grande");
+    const tamCss = +cv.dataset.tam || (grande ? 144 : cv.classList.contains("mini") ? 54 : 60);
+    if (opciones.caido) {
+      const [c, s] = prepararLienzo(cv, tamCss, v.tw);
+      c.drawImage(v.tumbado, 0, 0, v.tw * s, v.tw * s);
+      return;
+    }
+    if (grande || tamCss >= 90) {
+      const [c, s] = prepararLienzo(cv, tamCss, v.w);
+      c.drawImage(v.normal, 0, 0, v.w * s, v.h * s);
+      return;
+    }
+    /* Recorte cuadrado desde la cabeza. */
+    const lado = Math.max(20, Math.round((v.pie - v.cima) * 0.6));
+    const [c, s] = prepararLienzo(cv, tamCss, lado);
+    const sx = Math.round(v.cx - lado / 2), sy = Math.max(0, v.cima - 1);
+    c.drawImage(v.normal, sx, sy, lado, lado, 0, 0, lado * s, lado * s);
   }
   function retratoRival(cv, tipo, clave) {
     const v = spriteRival(tipo, clave);
-    const [c, s] = prepararLienzo(cv, 72);
-    c.drawImage(cv.classList.contains("oculto") ? v.oscuro : v.normal, 0, 0, 36 * s, 36 * s);
+    const [c, s] = prepararLienzo(cv, 72, v.w);
+    c.drawImage(cv.classList.contains("oculto") ? v.oscuro : v.normal, 0, 0, v.w * s, v.h * s);
   }
 
-  return { W, H, HUECOS, crear, dibujarDado, retrato, retratoRival, limpiarCache() { cacheFondo.clear(); cacheSprite.clear(); } };
+  /* Icono de interfaz HD (20×20); devuelve false si no existe para que se use el antiguo. */
+  const cacheIcono = new Map();
+  function icono(cv, clave, tamCss) {
+    const T = tabla("ICONOS_HD");
+    if (!T || !T[clave]) return false;
+    let img = cacheIcono.get(clave);
+    if (!img) { try { const g = T[clave](); img = { cv: lienzoDe(g), w: g.w }; } catch (e) { console.error("icono", clave, e); return false; } cacheIcono.set(clave, img); }
+    const [c, s] = prepararLienzo(cv, tamCss || 22, img.w);
+    c.drawImage(img.cv, 0, 0, img.w * s, img.w * s);
+    return true;
+  }
+
+  return { W, H, HUECOS, crear, dibujarDado, retrato, retratoRival, icono, hayIcono: k => !!(tabla("ICONOS_HD") || {})[k], limpiarCache() { cacheFondo.clear(); cacheSprite.clear(); cacheIcono.clear(); } };
 })();
