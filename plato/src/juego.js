@@ -852,8 +852,8 @@ function minijuego(tipo, o, cb) {
   /* Ritmo: cuatro notas llegan a la línea; tócalas al compás. */
   if (tipo === "ritmo") {
     const VIAJE = 1100, golpes = [0, 1, 2, 3].map(k => 950 + k * (430 + Math.floor(azar() * 3) * 90));
-    zonaEl.insertAdjacentHTML("beforeend", golpes.map((_, k) => `<i class="nota" data-k="${k}"></i>`).join(""));
-    const notas = [...zonaEl.querySelectorAll(".nota")], juicio = golpes.map(() => null);
+    zonaEl.insertAdjacentHTML("beforeend", golpes.map((_, k) => `<i class="nota-r" data-k="${k}"></i>`).join(""));
+    const notas = [...zonaEl.querySelectorAll(".nota-r")], juicio = golpes.map(() => null);
     const cerrar = () => { const perf = juicio.filter(j => j === 2).length, buenos = juicio.filter(j => j >= 1).length; fin(buenos === 4 && perf >= 3 ? 2 : buenos >= 3 ? 1 : 0); };
     clearTimeout(limite); limite = setTimeout(cerrar, golpes[3] + 350);
     el.querySelector(".prec-tiempo").style.animationDuration = golpes[3] + 350 + "ms";
@@ -2826,6 +2826,7 @@ function pintarIconos(raiz) {
   });
 }
 function pintarRetratos(raiz = document) {
+  if (typeof INTERFAZ !== "undefined") INTERFAZ.pintar(raiz);
   raiz.querySelectorAll("canvas[data-look]").forEach(cv => { try { ESCENARIO.retrato(cv, JSON.parse(cv.dataset.look)); } catch (e) {} });
   raiz.querySelectorAll("canvas[data-rival]").forEach(cv => { const [t, k] = cv.dataset.rival.split(":"); ESCENARIO.retratoRival(cv, t, k); });
   pintarIconos(raiz);
@@ -2965,7 +2966,7 @@ function renderJuego() {
   /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */
   const vivo = !enMapa && !S.final && !S.derrota;
   const enTienda = vivo && !(S.fase === "resultado" && S.resultado) && S.esc && S.esc.tipo === "tienda";
-  const historiaLarga = vivo && S.esc && (S.esc.historia || S.esc.viaje) && S.fase !== "resultado";
+  const historiaLarga = vivo && S.esc && S.fase !== "resultado" && (S.esc.historia || S.esc.viaje || (S.esc.tipo === "prueba" && (S.esc.opciones || []).length >= 4 && window.innerHeight < 700));
   const enPanel = enTienda || historiaLarga || !!S.final || (vivo && S.aprender.length > 0) || (vivo && !!S.ofertaB) || (vivo && S.fase === "resultado" && S.botin.length > 0);
   $("#p-juego").classList.toggle("modo-mapa", enMapa);
   $("#p-juego").classList.toggle("ver-grafo", enMapa && verGrafo);
@@ -3176,7 +3177,7 @@ function renderEscena() {
           <small>${n.hab ? `<i class="t-tag">Habilidad</i> ${resumenHab(n.hab, q)}` : `<i class="t-tag pas">Pasiva</i> ${esc(n.desc)}`}</small>
           ${n.hab ? `<small class="t-desc">${esc(n.desc)}</small>` : ""}</button>`;
       }).join("")}</div>
-      ${htmlArbol(q, true)}`;
+      <p class="quien">${(TALENTOS[q.clase] || []).map((r, ri) => `${esc(r.nombre)} ${(q.talentos || []).filter(x => x.startsWith(ri + ".")).length}/4`).join(" · ")}</p>`;
     return;
   }
   if (S.aprender.length) {
@@ -3366,7 +3367,7 @@ function renderModal() {
       ${boton('data-ui="musica"', `Música: ${MUSICA.on ? "sí" : "no"}`, "", "", false)}
       ${boton('data-ui="altar"', "Altar de runas y logros", `${meta().runas} ᚱ`, "", false)}
       ${S && S.online ? boton('data-ui="salir"', "Salir de la partida", "", "Sigue para los demás", false) : S ? boton('data-ui="abandonar"', "Volver al inicio", "", "La partida queda guardada", false) : ""}</div>`;
-  el.innerHTML = `<button type="button" class="cerrar" data-ui="cerrar" aria-label="Cerrar">×</button>${html}`;
+  el.innerHTML = `<button type="button" class="cerrar" data-ui="cerrar" aria-label="Cerrar"><canvas data-pxicono="cerrar" data-tam="24" aria-hidden="true"></canvas></button>${html}`;
   pintarRetratos(el);
 }
 /* Árbol de talentos: tres columnas (ramas) con cuatro nodos; los cogidos brillan y el siguiente se marca. */
@@ -3571,5 +3572,6 @@ window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAni
 
 if (/^#prueba/.test(location.hash)) window.__dym = { xp: n => { ganarXp(n); render(); }, mini: (t, o) => minijuego(t, o || {}, q => { window.__dym.q = q; }), estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo(), interno: () => ({ resolviendo, ocupado, tiradaEnCurso, terminar: !!terminarAccion, ventana: !!ventana, certeroActivo, vista, esperandoHost }) };
 render();
+if (typeof INTERFAZ !== "undefined") INTERFAZ.pintar(document);
 conectar();
 })();

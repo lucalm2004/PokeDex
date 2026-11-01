@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+12&family=Outfit:wght@400;500;600;700;800&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
 <style>
 /*CSS*/
 </style>
@@ -20,7 +20,7 @@
 
 <section id="p-unirse" class="pantalla unirse" hidden>
   <header class="cabecera">
-    <button type="button" class="icono" data-ui="volver-inicio" aria-label="Volver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button type="button" class="icono" data-ui="volver-inicio" aria-label="Volver"><canvas data-pxicono="volver" data-tam="30" aria-hidden="true"></canvas></button>
     <h2>Unirse a una partida</h2>
   </header>
   <form id="form-unirse" class="form-unirse tarjeta" autocomplete="off">
@@ -37,7 +37,7 @@
 
 <section id="p-seleccion" class="pantalla seleccion" hidden>
   <header class="cabecera sel-cab">
-    <button type="button" class="icono" data-ui="sel-salir" aria-label="Salir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button type="button" class="icono" data-ui="sel-salir" aria-label="Salir"><canvas data-pxicono="volver" data-tam="30" aria-hidden="true"></canvas></button>
     <div class="sel-titulo"><h2>Elige tu héroe</h2><p class="etiqueta" id="sel-codigo"></p></div>
     <p class="reloj" id="sel-reloj" aria-live="off">1:30</p>
   </header>
@@ -70,8 +70,8 @@
 <section id="p-juego" class="pantalla juego" hidden>
   <header class="cabecera barra">
     <p class="barra-titulo" id="barra-titulo"></p>
-    <button type="button" class="icono" data-ui="mochila" aria-label="Mochila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M9 13h6"/></svg></button>
-    <button type="button" class="icono" data-ui="menu" aria-label="Menú"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <button type="button" class="icono" data-ui="mochila" aria-label="Mochila"><canvas data-pxicono="mochila" data-tam="30" aria-hidden="true"></canvas></button>
+    <button type="button" class="icono" data-ui="menu" aria-label="Menú"><canvas data-pxicono="menu" data-tam="30" aria-hidden="true"></canvas></button>
   </header>
   <div class="escenario" id="caja-juego"><canvas id="lienzo" aria-label="Escenario"></canvas><p id="anuncio" class="anuncio" hidden></p></div>
   <div class="grupo" id="grupo" aria-label="El grupo"></div>
@@ -80,7 +80,7 @@
   <div class="mesa">
     <canvas id="dado" class="dado" data-tam="34" aria-hidden="true"></canvas>
     <p id="dado-info"></p>
-    <button type="button" class="icono" data-ui="cronica" aria-label="Crónica"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg></button>
+    <button type="button" class="icono" data-ui="cronica" aria-label="Crónica"><canvas data-pxicono="cronica" data-tam="30" aria-hidden="true"></canvas></button>
   </div>
 </section>
 </main>
