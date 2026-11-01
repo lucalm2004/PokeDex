@@ -154,6 +154,7 @@ h1, h2, h3 { text-wrap: balance; }
 .sel-info p { margin: 0; font-size: 13px; line-height: 1.3; color: var(--muted); }
 .sel-info p b { color: var(--text); font-weight: 600; }
 .sel-tit { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sel-tit .etiqueta { margin-left: 2px; }
 .sel-info .sel-tit strong { font-weight: 700; font-size: 17px; color: var(--text); }
 .habs-ini { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .habs-ini li { display: grid; padding: 4px 9px; border-radius: 9px; background: var(--accent-soft); line-height: 1.2; }
@@ -710,9 +711,31 @@ h1, h2, h3 { text-wrap: balance; }
 .planes span.ok { color: var(--ok); box-shadow: inset 0 0 0 1px rgba(61, 220, 151, .5); }
 .planes span.mio { color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
 .planes span.mio.ok { color: var(--ok); }
-.cuenta-plan { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.planes { margin: 0; }
+.planes > span { box-shadow: none !important; background: none !important; padding: 0 !important; color: var(--muted) !important; }
+.cuenta-plan { margin-right: 4px; font-size: 13px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
 .resolver-ya { width: 100%; }
-.planeado { font-style: normal; color: var(--ok); font-size: 11px; margin-left: 2px; }
+.heroe { position: relative; overflow: hidden; }
+.grupo:has(> .heroe:nth-child(4)) .heroe { padding: 4px 5px 4px 3px; gap: 4px; }
+.grupo:has(> .heroe:nth-child(4)) .heroe .retrato { width: 24px !important; height: 24px !important; }
+.grupo:has(> .heroe:nth-child(4)) .heroe-datos strong { font-size: 12px; }
+.grupo:has(> .heroe:nth-child(4)) .cifras .nv { display: none; }
+.aviso { pointer-events: none; }
+.aspecto-vista { display: grid; place-items: center; padding: 6px 0; }
+@media (max-height: 760px) {
+  .sel-dif-desc { display: none; }
+  .seleccion { gap: 6px; }
+  .sel-info { padding: 7px 4px; gap: 4px; }
+  .sel-info p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .habs-ini li { padding: 3px 8px; }
+}
+.sel-cuerpo { grid-template-rows: none !important; grid-auto-rows: max-content; }
+.heroe .planeado { position: absolute; top: 3px; right: 6px; font-style: normal; color: var(--ok); font-size: 12px; line-height: 1; font-weight: 800; }
+.planes span.nada { color: var(--ko); box-shadow: inset 0 0 0 1px rgba(255, 107, 129, .5); }
+.cuenta-plan.urgente { color: var(--ko); animation: parpadeo 1s steps(2) infinite; }
+.sin-host { color: var(--ko) !important; }
+.juego .panel .fila-extra { position: sticky; bottom: -10px; z-index: 1; padding-top: 6px; background: var(--surface); box-shadow: 0 -10px 10px -6px var(--surface); }
+@media (max-height: 760px) { .ocupado .juego .orden { display: flex; } }
 
 @keyframes parpadeo { 50% { opacity: .4; } }
 @keyframes latido { 50% { transform: scale(1.07); } }
@@ -798,7 +821,8 @@ h1, h2, h3 { text-wrap: balance; }
   <div class="sel-jugadores" id="sel-jugadores" aria-label="Jugadores"></div>
   <div class="sel-nombre">
     <input id="sel-nombre" maxlength="16" aria-label="Nombre del héroe" autocomplete="off" spellcheck="false">
-    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">Al azar</button>
+    <button type="button" class="boton sec mini" data-ui="aspecto" title="Piel, pelo, peinado y ropa">Aspecto</button>
+    <button type="button" class="boton sec mini" data-ui="sel-azar" title="Héroe al azar">Azar</button>
   </div>
   <div class="sel-cuerpo">
     <div class="selector">
@@ -811,12 +835,6 @@ h1, h2, h3 { text-wrap: balance; }
       <div class="sel-info" id="sel-raza"></div>
       <button type="button" class="flecha" data-ui="sel-sig" data-c="raza" aria-label="Raza siguiente">›</button>
     </div>
-  </div>
-  <div class="sel-aspecto" aria-label="Aspecto">
-    <button type="button" data-ui="sel-sig" data-c="piel">Piel</button>
-    <button type="button" data-ui="sel-sig" data-c="pelo">Pelo</button>
-    <button type="button" data-ui="sel-sig" data-c="peinado">Peinado</button>
-    <button type="button" data-ui="sel-sig" data-c="tela">Ropa</button>
   </div>
   <p class="sel-stats" id="sel-stats"></p>
   <div class="sel-dif" id="sel-dif" aria-label="Dificultad"></div>
@@ -5027,7 +5045,7 @@ const DATOS = (() => {
   const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán", "El Abismo"];
   const ROMANOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
-  const NIVELES = [0, 8, 18, 30, 44, 60, 78, 98, 120, 145];
+  const NIVELES = [0, 8, 20, 38, 60, 86, 116, 150, 190, 235];
   const NOMBRES = ["Aldric", "Lyra", "Borin", "Elowen", "Garrick", "Isolde", "Kael", "Mirela", "Rowan", "Sylva", "Thalor", "Vesna", "Wulfric", "Yara", "Corwin", "Ilsa"];
 
   const RAZAS = {
@@ -6880,7 +6898,7 @@ function ofrecerBendiciones() {
 function elegirBendicion(id) {
   if (!S.ofertaB || !S.ofertaB.includes(id)) return;
   S.bendiciones.push(id);
-  if (id === "vigor") S.players.forEach(p => { p.almaBase += 6; p.alma += 6; });
+  if (id === "vigor") S.players.forEach(p => { p.almaBase += 6; if (p.alma > 0) p.alma += 6; });
   S.ofertaB = null;
   log(`Bendición: ${BENDICIONES[id].nombre}.`, "nivel");
   fx({ tipo: "nivel", texto: BENDICIONES[id].nombre, sub: "Nueva bendición" });
@@ -7070,7 +7088,7 @@ const EJEMPLO = [
 ];
 
 /* ---------- Estado local, en línea y turnos ---------- */
-const red = { listo: false, db: null, room: null, sala: null, mesa: null, doc: null, peers: [], subs: [], ultimo: null, pendiente: null, escribiendo: false, vistoAcc: {}, empezando: false };
+const red = { vistoEn: {}, listo: false, db: null, room: null, sala: null, mesa: null, doc: null, peers: [], subs: [], ultimo: null, pendiente: null, escribiendo: false, vistoAcc: {}, empezando: false };
 const sel = { heroes: [heroeAlAzar(0)], actual: 0, listo: false, fin: 0, online: false, dif: leer("dym-dif", "normal") };
 
 const esHost = () => !!red.doc && red.doc.host === miId;
@@ -7094,7 +7112,17 @@ function guardar() {
   }
   escribir(CLAVE, JSON.stringify(S));
 }
-function cargar() { try { const g = JSON.parse(leer(CLAVE, "null")); return g && g.v === 5 && !g.online ? g : null; } catch (e) { return null; } }
+function cargar() {
+  try {
+    const g = JSON.parse(leer(CLAVE, "null"));
+    if (!g || g.v !== 5 || g.online) return null;
+    g.bloqueo = null;
+    /* Partidas guardadas antes de las rondas simultáneas: el combate pasa a planificarse. */
+    if (g.combate && !g.combate.fase) { g.combate.fase = "plan"; g.combate.planes = {}; g.combate.pos = 0; g.combate.hecho = -1; g.combate.enemigoActua = false; }
+    if (g.combate && g.combate.fase === "resolver") g.combate.enemigoActua = false;
+    return g;
+  } catch (e) { return null; }
+}
 
 function avisar(t) {
   const a = $("#aviso");
@@ -7150,10 +7178,17 @@ function entrarPartida(codigo, silencioso) {
     if (red.mesa !== codigo) return r.leave();
     red.sala = r;
     publicarPresencia();
-    red.subs.push(r.onPeers(ch => { red.peers = ch.peers.slice(); procesarAcciones(); if (S) renderGrupo(); else render(); }, () => {}));
+    red.subs.push(r.onPeers(ch => {
+      red.peers = ch.peers.slice();
+      const ahora = Date.now();
+      red.peers.forEach(x => { if (x.presence && x.presence.id) red.vistoEn[x.presence.id] = ahora; });
+      procesarAcciones();
+      if (S) { if (S.combate) render(); else renderGrupo(); comprobarPlanes(); } else render();
+    }, () => {}));
   }).catch(() => avisar("No se pudo entrar en la sala. Comprueba que tienes la sesión iniciada en claude.ai."));
 }
 function salirPartida(silencioso) {
+  soltarCombateLocal();
   red.subs.forEach(u => u()); red.subs = [];
   if (red.sala) red.sala.leave().catch(() => {});
   red.sala = null; red.peers = []; red.doc = null; red.ultimo = null; red.vistoAcc = {}; red.empezando = false;
@@ -7193,7 +7228,11 @@ function recibirPartida(m) {
   try { nuevo = JSON.parse(m.juego); } catch (e) { return; }
   const primero = !S || !S.online;
   if (!primero && (nuevo.rev || 0) <= (S.rev || 0)) return;
+  if (primero) soltarCombateLocal();
   S = nuevo; red.ultimo = m.juego; esperandoHost = false; vista = "juego";
+  if (S.rechazo && S.rechazo.uid === miId && S.rechazo.n !== recibirPartida.rechazo) { recibirPartida.rechazo = S.rechazo.n; avisar(S.rechazo.texto); }
+  /* El anfitrión que vuelve renueva la cuenta atrás: nadie pudo planear mientras no estaba. */
+  if (primero && esHost() && S.combate && S.combate.fase === "plan" && S.combate.planFin) { S.combate.planFin = Date.now() + PLAN_MS; S.bloqueo = null; guardar(); }
   const t = S.dado;
   const lista = S.efectos && S.efectos.seq > efectosVistos ? S.efectos.lista : [];
   if (S.efectos) efectosVistos = S.efectos.seq;
@@ -7229,20 +7268,24 @@ async function vaciarCola() {
 /* El anfitrión ejecuta las jugadas que los demás publican en su presencia. */
 function procesarAcciones() {
   if (!S || !S.online || !esHost()) return;
+  let pendiente = false;
   for (const p of red.peers) {
     const pr = p.presence || {};
     if (!pr.id || pr.id === miId) continue;
     const visto = red.vistoAcc[pr.id] || 0;
     if (!pr.acc || pr.acc.n <= visto) continue;
-    if (ocupado && pr.acc.k !== "bloquear") return setTimeout(procesarAcciones, 300);
+    if (ocupado && pr.acc.k !== "bloquear") { pendiente = true; continue; }
     red.vistoAcc[pr.id] = pr.acc.n;
-    /* De alguien sin historial (p. ej. tras recargar el anfitrión) solo se acepta una jugada hecha sobre el estado actual. */
-    if (!visto && pr.acc.rev !== S.rev && pr.acc.k !== "bloquear") continue;
+    /* De alguien sin historial (p. ej. tras recargar el anfitrión) solo se acepta una jugada hecha sobre el estado actual;
+       las de combate llevan su ronda (#n) y se validan solas. */
+    const deCombate = typeof pr.acc.v === "string" && pr.acc.v.includes("#");
+    if (!visto && pr.acc.rev !== S.rev && pr.acc.k !== "bloquear" && !deCombate) continue;
     /* Solo vale si quien la manda puede hacerla ahora (una jugada vieja se descarta). */
     if (pr.acc.k === "reintentar" || !permitido(pr.acc.k, pr.id)) continue;
     remoto = pr.id;
     try { ejecutar(pr.acc.k, pr.acc.v); } finally { remoto = null; }
   }
+  if (pendiente) { clearTimeout(procesarAcciones.t); procesarAcciones.t = setTimeout(procesarAcciones, 300); }
 }
 /* ¿Puede el jugador uid hacer la jugada k? Equipar botín vale para cualquiera; aprender, para el dueño del héroe. */
 function permitido(k, uid) {
@@ -7306,11 +7349,12 @@ setInterval(() => {
   const cb = S.combate, mando = !S.online || esHost();
   if (cb && cb.fase === "plan" && cb.planFin) {
     const el = document.querySelector(".cuenta-plan");
-    if (el) el.textContent = `${Math.max(0, Math.ceil((cb.planFin - Date.now()) / 1000))} s`;
-    if (mando && !resolviendo && Date.now() > cb.planFin + 300) resolverRonda();
+    const quedan = Math.max(0, Math.ceil((cb.planFin - Date.now()) / 1000));
+    if (el) { el.textContent = `${quedan} s`; el.classList.toggle("urgente", quedan <= 5); }
+    if (mando && !resolviendo && !(S.online && !hostConectado()) && Date.now() > cb.planFin + 300) resolverRonda();
   }
-  /* Si el anfitrión recargó a mitad de una resolución, la ronda vuelve a empezar. */
-  if (cb && cb.fase === "resolver" && !resolviendo && mando && !ocupado && vista === "juego") { cb.planes = {}; nuevaRonda(); }
+  /* Si el anfitrión recargó a mitad de una resolución, la ronda sigue desde el último que terminó. */
+  if (cb && cb.fase === "resolver" && !resolviendo && mando && !ocupado && !tiradaEnCurso && vista === "juego" && !S.derrota && !S.final) resolverRonda(true);
   if (!S.votacion) return;
   const c = document.querySelector(".cuenta-voto");
   if (c) c.textContent = `${Math.max(0, Math.ceil((S.votacion.fin - Date.now()) / 1000))} s`;
@@ -7344,7 +7388,7 @@ function siguienteVivo(desde) {
   for (let k = 0; k < n; k++) { const i = (((desde + k) % n) + n) % n; if (S.players[i].alma > 0) return i; }
   return 0;
 }
-function masHerido() { return S.players.slice().sort((a, b) => a.alma / maxAlma(a) - b.alma / maxAlma(b))[0]; }
+function masHerido() { const v = S.players.filter(p => p.alma > 0); return (v.length ? v : S.players).slice().sort((a, b) => a.alma / maxAlma(a) - b.alma / maxAlma(b))[0]; }
 function curar(p, n) { const antes = p.alma; p.alma = Math.min(maxAlma(p), p.alma + Math.max(0, n)); return p.alma - antes; }
 /* ---------- Sonido, vibración y celebraciones ---------- */
 const SONIDO = { on: leer("dym-sonido", "1") === "1", ctx: null };
@@ -7415,7 +7459,9 @@ function minijuego(tipo, o, cb) {
     el.dataset.q = q; el.classList.add("hecho");
     sonar(["fallo", "bien", "perfecto"][q]);
     if (q === 2) vibrar([15, 25, 15]);
-    setTimeout(() => { el.hidden = true; el.onpointerdown = null; certeroActivo = false; cb(q); }, 420);
+    el.onpointerdown = null;
+    setTimeout(() => { if (hecho) { el.hidden = true; certeroActivo = false; } }, 420);
+    cb(q);
   };
   el.className = `precision m-${tipo}${defensa ? " defensa" : ""}`; delete el.dataset.q;
   const zona = {
@@ -7621,7 +7667,7 @@ function aprender(slot) {
 }
 function aplicarFx(f = {}, actor) {
   const out = [];
-  const vida = (p, n) => { p.alma = Math.max(1, Math.min(maxAlma(p), p.alma + n)); };
+  const vida = (p, n) => { if (p.alma <= 0) return; p.alma = Math.max(1, Math.min(maxAlma(p), p.alma + n)); };
   if (f.alma && actor) { vida(actor, f.alma); out.push(`${fmt(f.alma)} PG ${actor.nombre}`); }
   if (f.almaTodos) { S.players.forEach(p => vida(p, f.almaTodos)); out.push(`${fmt(f.almaTodos)} PG al grupo`); }
   if (f.maxTodos) { S.players.forEach(p => { p.almaBase = Math.max(4, p.almaBase + f.maxTodos); p.alma = Math.min(p.alma, maxAlma(p)); }); out.push(`${fmt(f.maxTodos)} PG máx.`); }
@@ -7847,7 +7893,14 @@ function crearEscena(tipo) {
     if (pool.length) {
       const ev = consecuencias.length && Math.random() < 0.5 ? azarDe(consecuencias) : azarDe(pool);
       S.vistosEv.push(ev.id);
-      return Object.assign({ fondo: azarDe(A.fondos) }, JSON.parse(JSON.stringify(ev)));
+      const esc0 = Object.assign({ fondo: azarDe(A.fondos) }, JSON.parse(JSON.stringify(ev)));
+      /* Las respuestas de los acertijos se barajan cada vez: no vale memorizar la posición. */
+      if (esc0.tipo === "enigma" && esc0.respuestas) {
+        const buena = esc0.respuestas[esc0.correcta];
+        for (let k = esc0.respuestas.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [esc0.respuestas[k], esc0.respuestas[j]] = [esc0.respuestas[j], esc0.respuestas[k]]; }
+        esc0.correcta = esc0.respuestas.indexOf(buena);
+      }
+      return esc0;
     }
     tipo = "combate";
   }
@@ -7903,13 +7956,15 @@ function abrirCofre() {
 }
 /* Darle a un héroe un objeto del botín (se vende lo que llevaba). */
 function equipar(k, i) {
+  /* k puede ser el id del objeto (así dos jugadores repartiendo a la vez no se pisan). */
+  if (isNaN(+k)) { const pos = S.botin.indexOf(k); if (pos < 0) return rechazar("Otro jugador ya se ha llevado ese objeto."); k = pos; }
   const id = S.botin[k], p = S.players[i];
   if (!id || !p || ocupado) return;
   const o = OBJETOS[id], viejo = p.equipo[o.tipo];
   p.equipo[o.tipo] = id; S.botin.splice(k, 1);
   let t = `${p.nombre} se equipa ${o.nombre}`;
   if (viejo) { const v = Math.floor(OBJETOS[viejo].precio / 2); p.oro += v; t += ` y vende ${OBJETOS[viejo].nombre} (+${v} po)`; }
-  p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
+  if (p.alma > 0) p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
   fx({ tipo: "magia", objetivo: "h" + i, rampa: RP.bronce });
   log(t + ".", "ok"); avisar(t + ".");
   guardar(); render();
@@ -7929,6 +7984,7 @@ function venderSobrante() {
 
 /* ---------- Flujo de partida ---------- */
 function nuevaPartida(defs, codigo, dificultad = "normal") {
+  soltarCombateLocal();
   S = {
     v: 5, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
     players: defs.slice(0, MAX_HEROES).map(nuevoHeroe),
@@ -7962,6 +8018,7 @@ function siguienteActo() {
     guardar(); return render();
   }
   S.acto++;
+  S.descanso = null;
   S.mapa = generarMapa();
   if (!S.vistos.lugares.includes(S.acto)) S.vistos.lugares.push(S.acto);
   /* Los caídos no se levantan solos: hay que descansar (o pasar por una hoguera). */
@@ -8043,6 +8100,9 @@ function procesarSiguiente() {
 function elegirOpcion(i) {
   if (ocupado) return;
   const sc = S.esc, op = sc.opciones[i], p = S.players[S.turno];
+  if (!op) return;
+  const pago = op.ok && op.ok.fx && op.ok.fx.oro < 0 ? -op.ok.fx.oro : 0;
+  if (pago && S.players.some(x => x.alma > 0 && x.oro < pago)) return rechazar("No tenéis oro suficiente para eso.");
   if (!op.stat) return resolver(op.ok, op.ok, true, null, false);
   const bono = usarOlivo();
   const tiradas = vivos().map(k => {
@@ -8137,7 +8197,7 @@ function comprar(id) {
     const viejo = p.equipo[o.tipo];
     if (viejo) { const vuelta = Math.floor(OBJETOS[viejo].precio / 2); p.oro += vuelta; t += ` y vende ${OBJETOS[viejo].nombre} (${vuelta} po)`; }
     p.equipo[o.tipo] = id;
-    p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
+    if (p.alma > 0) p.alma = Math.min(p.alma + (o.alma || 0), maxAlma(p));
     fx({ tipo: "magia", objetivo: "h" + S.turno, rampa: RP.bronce });
   }
   log(t + ".", "ok");
@@ -8177,6 +8237,21 @@ const ESTADOS = {
   regen: { nombre: "Regeneración", verbo: "regenera", color: "#3ddc97", desc: "Recupera 3 PG por turno." }
 };
 const TIMIDOS = ["paralisis", "congelado"];
+const FIN_DE_TURNO = ["ciego", "debil", "maldito"];
+function finTurnoEstados(obj) {
+  const e = obj && obj.est;
+  if (!e) return;
+  FIN_DE_TURNO.forEach(k => { if (e[k] && e[k] < 90) { e[k]--; if (e[k] <= 0) delete e[k]; } });
+}
+/* Lo que pasa cuando un héroe llega a 0 PG: Aguante del semiorco, amuleto del fénix o caída. */
+function caidaHeroe(i) {
+  const p = S.players[i], c = S.combate;
+  if (!p || p.alma > 0) return "";
+  if (p.raza === "semiorco" && !(p.fl || {}).aguante) { p.fl = p.fl || {}; p.fl.aguante = true; p.alma = 1; return `. ${p.nombre} aguanta con 1 PG`; }
+  if (objEspecial(p, "fenix") && !(p.fl || {}).fenix) { p.fl = p.fl || {}; p.fl.fenix = true; p.alma = 1; fx({ tipo: "cura", objetivo: "h" + i }); return `. ¡El amuleto del fénix arde y ${p.nombre} sigue en pie!`; }
+  if (c) c.caidos++;
+  return `. ¡${p.nombre} cae!`;
+}
 /* Ataque especial de cada monstruo: cada N rondas sustituye a su primer ataque. */
 const ESPECIALES = {
   rata: { nombre: "Mordisco infecto", cada: 2, estado: ["veneno", 2, 0.8] },
@@ -8205,6 +8280,11 @@ const textoEstado = ([k, t, prob]) => `${ESTADOS[k].verbo}${prob < 1 ? ` (${Math
 function ponerEstado(obj, k, turnos, esHeroe, id) {
   if (!obj || !ESTADOS[k]) return false;
   if (esHeroe && TIMIDOS.includes(k) && obj.raza === "elfo") { log(`${obj.nombre} se libra: linaje feérico.`, "ok"); return false; }
+  /* Los jefes no se dejan paralizar ni congelar dos rondas seguidas. */
+  if (!esHeroe && obj.jefe && TIMIDOS.includes(k) && S.combate) {
+    if ((obj.inmuneHasta ?? -9) >= S.combate.ronda) { fx({ tipo: "numero", objetivo: id, texto: "INMUNE", color: RP.hueso[3], fila: 2 }); log(`${obj.nombre} se sacude el efecto: ¡inmune por ahora!`, "ko"); return false; }
+    obj.inmuneHasta = S.combate.ronda + 2;
+  }
   obj.est = obj.est || {};
   obj.est[k] = Math.max(obj.est[k] || 0, turnos);
   if (!esHeroe && Object.keys(obj.est).length >= 3) fx({ tipo: "logro", id: "estados" });
@@ -8228,8 +8308,10 @@ function tickEstados(obj, esHeroe, id) {
     if (cu) { fx({ tipo: "numero", objetivo: id, texto: "+" + cu, color: ESTADOS.regen.color }); partes.push(`regenera ${cu}`); }
   }
   if (partes.length) log(`${obj.nombre}: ${partes.join(", ")}.`, esHeroe ? "ko" : "ok");
-  const pierde = !!(e.paralisis || e.congelado);
-  for (const k of Object.keys(e)) { e[k]--; if (e[k] <= 0) delete e[k]; }
+  if (esHeroe && obj.alma <= 0) caidaHeroe(S.players.indexOf(obj));
+  const pierde = !!(e.paralisis || e.congelado) && (esHeroe ? obj.alma > 0 : obj.hp > 0);
+  /* Daño en el tiempo y bloqueos se gastan al empezar; ceguera, debilidad y maldición, al acabar su turno. */
+  for (const k of Object.keys(e)) { if (FIN_DE_TURNO.includes(k)) continue; e[k]--; if (e[k] <= 0) delete e[k]; }
   if (pierde) log(`${obj.nombre} no puede moverse y pierde el turno.`, esHeroe ? "ko" : "ok");
   return pierde;
 }
@@ -8333,7 +8415,7 @@ function crearRival(clave, o = {}) {
   const e = ENEMIGOS[clave], n = S.players.length, D_ = dif();
   /* Crecen con el nivel medio del grupo por encima de lo esperado en cada acto. */
   const niv = Math.max(0, S.players.reduce((a, p) => a + p.nivel, 0) / n - 1 - 1.4 * Math.max(0, S.acto));
-  const hp = Math.max(4, Math.round(e.alma * (0.45 + 0.28 * n) * (1 + 0.18 * niv) * D_.hp * (o.factor || 1) * (o.elite ? 1.5 : 1)));
+  const hp = Math.max(4, Math.round(e.alma * (0.15 + 0.6 * n) * (1 + 0.18 * niv) * D_.hp * (o.factor || 1) * (o.elite ? 1.5 : 1) * (o.jefe && n >= 3 ? 1.4 : 1)));
   const base = Math.floor(niv / 3) + (o.elite ? 1 : 0) + D_.atk;
   return {
     clave, nombre: o.esbirro ? NOMBRE_ESBIRRO[clave] || e.nombre : e.nombre, hp, hpMax: hp,
@@ -8406,6 +8488,7 @@ function iniciarCombate(sc) {
   });
   if (S.memoria && S.memoria.aliado && Math.random() < 0.4) { fx({ tipo: "tajo", objetivo: "e0" }); log(`¡Thrain irrumpe con su hacha! → ${danarRival(0, tirar(2, 8), "fisica", false)}`, "ok"); }
   c.fase = "plan"; c.planes = {};
+  c.equipo = Math.max(c.equipo || 0, S.equipoGuardado || 0, sc.esJefe ? 50 : 0);
   if (todosCaidos()) return victoria();
   nuevaRonda();
 }
@@ -8434,7 +8517,9 @@ function heroeVista() {
 function nuevaRonda() {
   const c = S.combate;
   if (!c) return;
-  c.fase = "plan"; c.planes = {}; c.pos = 0; c.enemigoActua = false; c.actua = -1;
+  if (todosCaidos()) return victoria();
+  if (!vivos().length) return derrota();
+  c.fase = "plan"; c.planes = {}; c.pos = 0; c.hecho = -1; c.actuando = false; c.enemigoActua = false; c.actua = -1; S.bloqueo = null;
   S.players.forEach((p, i) => { if (p.alma > 0 && p.est && (p.est.paralisis || p.est.congelado)) c.planes[i] = { tipo: "nada" }; });
   c.planFin = S.online && S.players.length > 1 ? Date.now() + PLAN_MS : null;
   c.objetivo = objetivoValido(c.objetivo);
@@ -8450,15 +8535,24 @@ function planPorDefecto(i) {
   if (slot >= 0) return { tipo: "hab", arg: `${slot}:1:${objetivoValido(c.objetivo)}` };
   const cura = p.habs.findIndex(id => H(id).efecto === "cura" && (p.pm || 0) >= costeHab(p, H(id)));
   if (cura >= 0 && S.players.some(x => x.alma > 0 && x.alma < maxAlma(x) * 0.5)) return { tipo: "hab", arg: `${cura}:1:${objetivoValido(c.objetivo)}` };
-  return { tipo: "accion", arg: "forcejeo" };
+  return { tipo: "forcejeo" };
+}
+/* Si el anfitrión descarta una jugada, avisa a quien la mandó (en línea, a través del estado). */
+function rechazar(texto) {
+  if (S.online && remoto && remoto !== miId) { S.rechazo = { uid: remoto, texto, n: Date.now() }; guardar(); render(); }
+  else avisar(texto);
 }
 function planificar(i, tipo, arg) {
   const c = S.combate, p = S.players[i];
   if (!c || c.fase !== "plan" || i < 0 || !p || p.alma <= 0 || c.planes[i]) return;
   if (tipo === "hab") { const h = H(p.habs[+String(arg).split(":")[0]]); if (!h || (p.pm || 0) < costeHab(p, h)) return; }
-  if (tipo === "equipo" && ((c.equipo || 0) < 100 || Object.values(c.planes).some(x => x.tipo === "equipo"))) return;
-  if (tipo === "objeto" && !S.zurron[String(arg).split(":")[0]]) return;
-  if (tipo === "accion" && arg === "anillo" && (!S.anillo || c.anilloUsado)) return;
+  if (tipo === "equipo" && ((c.equipo || 0) < 100 || Object.values(c.planes).some(x => x.tipo === "equipo"))) return rechazar("Otro héroe ya ha elegido el ataque en equipo.");
+  if (tipo === "objeto") {
+    const o = String(arg).split(":")[0], reservados = Object.values(c.planes).filter(x => x.tipo === "objeto" && String(x.arg).split(":")[0] === o).length;
+    if ((S.zurron[o] || 0) <= reservados) return rechazar(`Ya no quedan ${OBJETOS[o] ? OBJETOS[o].nombre.toLowerCase() : "objetos"} libres esta ronda.`);
+  }
+  if (tipo === "anillo" && (!S.anillo || c.anilloUsado || Object.values(c.planes).some(x => x.tipo === "anillo"))) return rechazar("El anillo ya está en uso esta ronda.");
+  if (!["hab", "equipo", "objeto", "concentrar", "forcejeo", "anillo"].includes(tipo)) return;
   c.planes[i] = { tipo, arg };
   const sig = S.online ? S.players.findIndex((x, k) => x.alma > 0 && !c.planes[k]) : heroePlan(miId);
   if (sig >= 0) S.turno = sig;
@@ -8470,47 +8564,73 @@ function planificar(i, tipo, arg) {
 function comprobarPlanes() {
   const c = S && S.combate;
   if (!c || c.fase !== "plan" || resolviendo || (S.online && !esHost())) return;
-  const conectados = S.online ? new Set([miId, ...red.peers.map(p => p.presence && p.presence.id).filter(Boolean)]) : null;
+  /* Un jugador que se acaba de desconectar tiene 10 s de margen para volver antes de que se resuelva sin él. */
+  const conectados = S.online ? new Set([miId, ...red.peers.map(p => p.presence && p.presence.id).filter(Boolean), ...Object.keys(red.vistoEn).filter(u => Date.now() - red.vistoEn[u] < 10000)]) : null;
+  if (S.online) { clearTimeout(comprobarPlanes.t); comprobarPlanes.t = setTimeout(comprobarPlanes, 10500); }
   const pendientes = S.players.filter((p, i) => p.alma > 0 && !c.planes[i] && (!conectados || conectados.has(p.uid)));
   if (!pendientes.length) resolverRonda();
 }
-async function resolverRonda() {
-  const S0 = S, c = S.combate;
-  if (!c || c.fase !== "plan" || resolviendo) return;
+/* Limpia las banderas locales de una resolución a medias (al salir, cargar o cambiar de partida). */
+function soltarCombateLocal() {
+  resolviendo = false; ocupado = false; tiradaEnCurso = false; terminarAccion = null;
+  if (ventana) { clearTimeout(ventana.t); ventana = null; }
+  certeroActivo = false;
+  const pr = $("#precision"); if (pr) pr.hidden = true;
+  document.body.classList.remove("ocupado");
+}
+async function resolverRonda(reanudar = false) {
+  const S0 = S, c = S && S.combate;
+  if (!c || resolviendo || (reanudar ? c.fase !== "resolver" : c.fase !== "plan")) return;
   const sigue = () => S === S0 && S.combate === c;
   const bloquear = () => { ocupado = true; document.body.classList.add("ocupado"); };
   const soltar = () => { resolviendo = false; ocupado = false; document.body.classList.remove("ocupado"); };
-  resolviendo = true; c.fase = "resolver"; c.planFin = null;
-  S.players.forEach((p, i) => { if (p.alma > 0 && !c.planes[i]) c.planes[i] = Object.assign({ auto: true }, planPorDefecto(i)); });
+  const salir = () => { if (S0 === S || !S) soltar(); };
+  resolviendo = true; c.fase = "resolver"; c.planFin = null; S.bloqueo = null; c.enemigoActua = false;
+  S.players.forEach((p, i) => {
+    if (p.alma > 0 && !c.planes[i]) {
+      c.planes[i] = Object.assign({ auto: true }, planPorDefecto(i));
+      if (S.online && S.players.length > 1) { log(`${p.nombre} no eligió a tiempo y actúa solo.`, "esc"); fx({ tipo: "anuncio", texto: "Tiempo agotado", sub: `${p.nombre} actúa solo`, tono: "ko" }); }
+    }
+  });
   bloquear();
-  fx({ tipo: "anuncio", texto: `Ronda ${c.ronda}`, sub: "¡Se resuelve!", tono: "turno" });
+  if (!reanudar) { c.hecho = -1; c.actuando = false; fx({ tipo: "anuncio", texto: `Ronda ${c.ronda}`, sub: "¡Se resuelve!", tono: "turno" }); }
   guardar(); render();
-  await esperar(650);
-  for (c.pos = 0; c.pos < c.orden.length; c.pos++) {
-    if (!sigue()) return;
+  await esperar(reanudar ? 300 : 1200);
+  for (c.pos = (c.hecho === undefined ? -1 : c.hecho) + 1; c.pos < c.orden.length; c.pos++) {
+    if (!sigue()) return salir();
     if (todosCaidos() || !vivos().length) break;
     bloquear();
     const a = c.orden[c.pos];
-    if (a.t === "m") { mascotaActua(); guardar(); render(); await esperar(750); continue; }
-    if (a.t === "e") { if (c.rivales[a.r].hp <= 0) continue; await turnoEnemigo(a.r, true); continue; }
+    c.actuando = true;
+    const terminar = async ms => { c.hecho = c.pos; guardar(); render(); await esperar(ms); };
+    if (a.t === "m") { mascotaActua(); await terminar(750); continue; }
+    if (a.t === "e") { if (c.rivales[a.r].hp <= 0) { c.hecho = c.pos; continue; } await turnoEnemigo(a.r, true); if (!sigue()) return salir(); finTurnoEstados(c.rivales[a.r]); await terminar(250); continue; }
     const p = S.players[a.i];
-    if (p.alma <= 0) continue;
+    if (p.alma <= 0) { c.hecho = c.pos; continue; }
     S.turno = a.i; c.actua = -1;
-    if (tickEstados(p, true, "h" + a.i) || p.alma <= 0) { if (p.alma <= 0) log(`¡${p.nombre} cae!`, "ko"); guardar(); render(); await esperar(650); continue; }
+    const tir = $("#tirada"); if (tir) tir.hidden = true;
+    if (tickEstados(p, true, "h" + a.i) || p.alma <= 0) { if (p.alma <= 0) log(`¡${p.nombre} cae!`, "ko"); await terminar(650); continue; }
     const plan = c.planes[a.i] || planPorDefecto(a.i);
-    if (plan.tipo === "nada") continue;
+    if (plan.tipo === "nada") { c.hecho = c.pos; continue; }
     render();
+    const t0 = Date.now();
     await new Promise(res => {
       let hecho = false;
       terminarAccion = () => { hecho = true; terminarAccion = null; res(); };
-      accion(plan.tipo, plan.arg);
-      if (!hecho && !tiradaEnCurso && terminarAccion) { terminarAccion = null; res(); }
+      try { accion(plan.tipo, plan.arg); } catch (e) { console.error(e); }
+      if (!hecho && !tiradaEnCurso && terminarAccion) {
+        /* La acción no se pudo hacer (p. ej. ya no queda el objeto): ataca con lo que tenga. */
+        const alt = planPorDefecto(a.i);
+        if (plan.tipo !== alt.tipo || plan.arg !== alt.arg) { log(`${p.nombre} no puede hacer lo que había pensado e improvisa.`, "esc"); accion(alt.tipo, alt.arg); }
+        if (!hecho && !tiradaEnCurso && terminarAccion) { terminarAccion = null; res(); }
+      }
     });
-    if (!sigue()) return;
-    guardar(); render();
-    await esperar(700);
+    if (!sigue()) return salir();
+    finTurnoEstados(p);
+    await terminar(Math.max(700, 1900 - (Date.now() - t0)));
   }
-  if (!sigue()) return;
+  if (!sigue()) return salir();
+  c.actuando = false;
   c.enemigoActua = false; c.actua = -1;
   soltar();
   if (todosCaidos()) return victoria();
@@ -8589,9 +8709,7 @@ function danarHeroe(i, dmg, directo, rk = -1) {
   fx({ tipo: "golpe", objetivo: "h" + i });
   fx({ tipo: "numero", objetivo: "h" + i, texto: "-" + dmg, color: RP.sangre[4] });
   let t = `${dmg} de daño`;
-  if (p.alma === 0 && p.raza === "semiorco" && !p.fl.aguante) { p.fl.aguante = true; p.alma = 1; t += `. ${p.nombre} aguanta con 1 PG`; }
-  else if (p.alma === 0 && objEspecial(p, "fenix") && !p.fl.fenix) { p.fl.fenix = true; p.alma = 1; fx({ tipo: "cura", objetivo: "h" + i }); t += `. ¡El amuleto del fénix arde y ${p.nombre} sigue en pie!`; }
-  else if (p.alma === 0) { t += `. ¡${p.nombre} cae!`; if (c) c.caidos++; }
+  if (p.alma === 0) t += caidaHeroe(i);
   if (directo && p.raza === "tiefling" && c && rk >= 0 && c.rivales[rk].hp > 0) {
     const r = c.rivales[rk];
     r.hp = Math.max(0, r.hp - 2);
@@ -8613,6 +8731,8 @@ function accion(tipo, arg) {
   /* Las jugadas llevan la ronda al final (#n) para descartar las que lleguen tarde. */
   let ronda = null;
   if (typeof arg === "string" && arg.includes("#")) { const k = arg.lastIndexOf("#"); ronda = +arg.slice(k + 1); arg = arg.slice(0, k); }
+  /* «accion» lleva dentro el tipo real: concentrar, forcejeo o anillo. */
+  if (tipo === "accion") { tipo = arg; arg = undefined; }
   if (c.fase === "plan" && !resolviendo) {
     if (ronda !== null && ronda !== c.ronda) return;
     return planificar(heroePlan(remoto || miId), tipo, arg);
@@ -8830,7 +8950,9 @@ function ventanaBloqueo(ti, tipo) {
 }
 function bloquear(v) {
   if (!S || !S.bloqueo || S.bloqueo.q !== undefined) return;
-  S.bloqueo.q = Math.max(0, Math.min(2, +v || 0));
+  const [q, n] = String(v).split(":");
+  if (n && +n !== S.bloqueo.n) return;
+  S.bloqueo.q = Math.max(0, Math.min(2, +q || 0));
   if (ventana) ventana.cerrar();
 }
 async function turnoEnemigo(ri, enRonda = false) {
@@ -8906,6 +9028,7 @@ async function turnoEnemigo(ri, enRonda = false) {
             fx({ tipo: "numero", objetivo: "h" + ti, texto: { bloqueo: "BLOQUEO", esquiva: "ESQUIVA", disipar: "DISIPADO" }[tipoDef], color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" });
             if (q === 2) { c.equipo = Math.min(100, (c.equipo || 0) + 15); if (objEspecial(t, "eco") && r.hp > 0) log(`Anillo del eco: ${t.nombre} contraataca → ${danarRival(ri, tirar(1, 8, 2), "fisica", false, 1, undefined, ti)}`, "ok"); }
           }
+          if (r.hp <= 0) { log(`${r.nombre} cae antes de rematar su golpe.`, "ok"); fx({ tipo: "muerte", objetivo: o }); render(); break; }
           const nota = q === 2 ? ` · ¡${tipoDef === "esquiva" ? "esquiva limpia" : tipoDef === "disipar" ? "disipado" : "parada perfecta"}!` : q === 1 ? ` · ${tipoDef === "esquiva" ? "esquiva a medias" : "¡bloqueado!"}` : "";
           let txt = `${especial ? sp.nombre : r.nombre} → ${t.nombre}: ${rr} ${fmt(atk)} vs CA ${def}${nota} → ${dmg > 0 ? danarHeroe(ti, dmg, true, ri) : "sin daño"}`;
           if (dmg > 0 && objEspecial(t, "espinas") && r.hp > 0) { r.hp = Math.max(0, r.hp - 2); fx({ tipo: "numero", objetivo: o, texto: "-2", color: RP.hoja[4], fila: 1 }); txt += ". Espinas: 2"; if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o }); }
@@ -8946,7 +9069,7 @@ async function turnoEnemigo(ri, enRonda = false) {
     }
   }
   c.enemigoActua = false; c.actua = -1;
-  if (enRonda) { guardar(); render(); return; }
+  if (enRonda) return;
   ocupado = false; document.body.classList.remove("ocupado");
   if (todosCaidos()) return victoria();
   if (!vivos().length) return derrota();
@@ -8954,6 +9077,7 @@ async function turnoEnemigo(ri, enRonda = false) {
 }
 function victoria() {
   const sc = S.esc, c = S.combate, principal = c.rivales[0];
+  S.equipoGuardado = Math.floor((c.equipo || 0) / 2);
   fx({ tipo: "victoria" });
   fx({ tipo: "salto", actor: "h*" });
   const extra = [];
@@ -8993,7 +9117,10 @@ function victoria() {
   guardar(); render();
 }
 function derrota() {
+  if (S.derrota) return;
   S.derrota = true;
+  if (S.combate) { S.combate.fase = "fin"; S.combate.enemigoActua = false; }
+  S.bloqueo = null;
   fx({ tipo: "derrota" });
   fx({ tipo: "runas", n: Math.max(1, Math.ceil((S.acto + 1) * dif().runas)) });
   log("Todo el grupo ha caído.", "ko");
@@ -9065,11 +9192,11 @@ function pintarRetratos(raiz = document) {
 /* ---------- Pantallas ---------- */
 function renderBloqueo() {
   const b = S && S.combate && S.bloqueo, p = b && S.players[b.i];
-  const mio = !!b && b.q === undefined && !!p && (!S.online || p.uid === miId);
+  const mio = !!b && b.q === undefined && !!p && (!S.online || p.uid === miId) && S.combate.fase === "resolver" && Date.now() - b.n < (b.dur || 1500) + 4000;
   if (!mio || renderBloqueo.n === b.n) return;
   renderBloqueo.n = b.n;
   vibrar(25);
-  const enviar = q => (S.online && !esHost() ? enviarBloqueo(q) : ejecutar("bloquear", q));
+  const enviar = q => (S.online && !esHost() ? enviarBloqueo(`${q}:${b.n}`) : ejecutar("bloquear", `${q}:${b.n}`));
   minijuego(b.tipo || "bloqueo", { dur: b.dur, dir: b.dir, semilla: b.semilla, sub: `¡Atacan a ${p.nombre}!` }, enviar);
 }
 function render() {
@@ -9129,7 +9256,7 @@ function renderSeleccion() {
   const h = heroeEditado();
   $("#sel-codigo").innerHTML = sel.online ? `Código <b>${esc(red.mesa || "")}</b>` : "En este móvil";
   const jugadores = sel.online ? jugadoresSala() : sel.heroes.map((x, i) => ({ id: "l" + i, heroe: x, listo: false }));
-  if (!escSel) escSel = ESCENARIO.crear($("#lienzo-sel"), { observar: $("#p-seleccion"), limites: () => [$("#caja-sel").clientWidth - 12, Math.max(80, window.innerHeight * 0.17)] });
+  if (!escSel) escSel = ESCENARIO.crear($("#lienzo-sel"), { observar: $("#p-seleccion"), limites: () => [$("#caja-sel").clientWidth - 12, Math.max(64, window.innerHeight * (window.innerHeight < 760 ? 0.11 : 0.17))] });
   escSel.ajustar();
   escSel.mostrar({ fondo: "taberna", heroes: jugadores.map(j => ({ look: Object.assign({ raza: j.heroe.raza, clase: j.heroe.clase }, j.heroe.look) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: sel.online ? 0 : sel.actual });
   const nombre = $("#sel-nombre");
@@ -9180,6 +9307,7 @@ function cambiarSeleccion(campo, paso) {
   }
   if (sel.online) publicarPresencia();
   renderSeleccion();
+  if (modal && modal.tipo === "aspecto") renderModal();
 }
 
 /* ---------- Pantalla de juego ---------- */
@@ -9237,13 +9365,13 @@ function renderGrupo() {
   if (!S) return;
   $("#grupo").innerHTML = S.players.map((p, i) => {
     const cb = S.combate, planeado = cb && cb.fase === "plan" && cb.planes && cb.planes[i] && cb.planes[i].tipo !== "nada";
-    const activo = (cb ? i === heroeVista() : i === S.turno) && !S.final && !S.derrota && !(cb && cb.enemigoActua);
+    const activo = (cb ? i === heroeVista() : i === S.turno) && !S.final && !S.derrota && !(cb && cb.enemigoActua) && !(cb && cb.fase === "resolver" && !cb.actuando);
     const max = maxAlma(p), pct = Math.round((100 * p.alma) / max);
     const conectado = !S.online || p.uid === miId || red.peers.some(x => x.presence && x.presence.id === p.uid);
     const g = GESTOS[i] && GESTOS[i].hasta > performance.now() ? " " + GESTOS[i].clase : "";
     return `<button type="button" class="heroe${g}${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookConGesto(i)))}'></canvas>
-      <span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}${planeado ? ' <i class="planeado" title="Acción elegida">✓</i>' : ""}</strong>
+      ${planeado ? '<i class="planeado" title="Acción elegida">✓</i>' : ""}<span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
       <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
       <span class="barra-pm" title="Maná ${p.pm || 0}/${pmMax(p)}"><i style="width:${Math.round((100 * (p.pm || 0)) / pmMax(p))}%"></i></span>
       <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span>
@@ -9261,7 +9389,7 @@ function tarjetaBotin(id, k) {
     <small>${RANURAS[o.tipo]} · ${o.desc}</small>
     <div class="para"><span class="etiqueta">Dar a</span>${S.players.map((p, i) => {
       const v = p.equipo[o.tipo], mejor = !v || OBJETOS[v].precio < o.precio;
-      return `<button type="button" class="chip-heroe${mejor ? " mejor" : ""}" data-juego="equipar" data-v="${k}:${i}" ${puede ? "" : "disabled"} title="${v ? `Lleva ${esc(OBJETOS[v].nombre)}` : "Sin objeto"}">${esc(p.nombre)}${mejor ? " ▲" : ""}</button>`;
+      return `<button type="button" class="chip-heroe${mejor ? " mejor" : ""}" data-juego="equipar" data-v="${id}:${i}" ${puede ? "" : "disabled"} title="${v ? `Lleva ${esc(OBJETOS[v].nombre)}` : "Sin objeto"}">${esc(p.nombre)}${mejor ? " ▲" : ""}</button>`;
     }).join("")}</div></div>`;
 }
 const parrafo = t => `<p class="texto">${t}</p>`;
@@ -9400,7 +9528,8 @@ function renderEscena() {
     const cabH = sc.historia && sc.pnj ? `<div class="tendero"><canvas data-tam="40" data-rival="${tipoRival(sc.pnj)}:${sc.pnj}"></canvas><h2>${sc.titulo}</h2></div>` : cab;
     el.innerHTML = `${sc.historia ? `<p class="sello historia">Historia</p>` : sc.viaje ? `<p class="sello viaje">Por el camino</p>` : ""}${cabH}${parrafo(sc.texto)}${quienV("Decide")}<div class="menu">${sc.opciones.map((op, i) => {
       const chip = op.stat ? `${ABREV[op.stat]}${fmt(stat(p, op.stat) + (op.stat === "raz" && p.raza === "gnomo" ? 2 : 0))} · CD ${op.cd}` : "";
-      return boton(`data-juego="op" data-v="${i}"${votosDe("op", i).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("op", i, chip), "", offV);
+      const pago = op.ok && op.ok.fx && op.ok.fx.oro < 0 ? -op.ok.fx.oro : 0, sinOro = pago && S.players.some(x => x.alma > 0 && x.oro < pago);
+      return boton(`data-juego="op" data-v="${i}"${votosDe("op", i).mio ? ' data-votado="1"' : ""}`, op.txt, conVotos("op", i, sinOro ? `faltan po (${pago} c/u)` : chip), "", offV || sinOro);
     }).join("")}</div>`;
     pintarRetratos(el);
     return;
@@ -9452,10 +9581,11 @@ function renderCombate(el, sc, p0, mio0) {
   const c = S.combate;
   if (!c) { el.innerHTML = `<h2>${sc.titulo}</h2>`; return; }
   const plan = c.fase === "plan", pi = heroeVista(), p = S.players[pi];
-  const mio = plan && heroePlan(miId) === pi && !esperandoHost;
+  const sinHost = S.online && !hostConectado();
+  const mio = plan && heroePlan(miId) === pi && !esperandoHost && !sinHost;
   const t = miObjetivo(), r = c.rivales[t], e = ENEMIGOS[r.clave];
   const consumibles = ["pocion", "superior", "fuego", "sueno"].filter(k => S.zurron[k] > 0);
-  const chips = [c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", `CA ${e.ca}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
+  const chips = [c.elite && !r.esbirro ? "Élite" : "", r.jefe && r.fase === 2 ? "Fase 2" : "", r.jefe && (r.inmuneHasta ?? -9) >= c.ronda ? "Inmune a paralizar" : "", `CA ${e.ca}`, r.debil ? `Débil: ${TIPOS_DANO[r.debil]}` : "", r.resiste ? `Resiste ${TIPOS_DANO[r.resiste]}` : "",
     r.marca ? "¡Listo para combo!" : "", c.escudo ? "Escudo" : ""].filter(Boolean)
     .concat(Object.keys(r.est).filter(k => ESTADOS[k]).map(k => `<i class="est" style="--c:${ESTADOS[k].color}">${ESTADOS[k].nombre}${r.est[k] < 90 ? ` ${r.est[k]}` : ""}</i>`));
   const varios = c.rivales.length > 1;
@@ -9464,10 +9594,12 @@ function renderCombate(el, sc, p0, mio0) {
   const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : a.t === "m" ? " mascota" : ""}${(a.t === "h" && S.players[a.i].alma <= 0) || (a.t === "e" && c.rivales[a.r].hp <= 0) ? " caido" : ""}">${esc(a.t === "e" ? c.rivales[a.r].nombre.split(",")[0] : a.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : S.players[a.i].nombre)}</li>`).join("");
   /* Estado de la ronda: quién ha elegido ya, cuenta atrás y botón del anfitrión para no esperar. */
   const vivosH = S.players.map((x, i) => i).filter(i => S.players[i].alma > 0);
-  const fichas = vivosH.map(i => { const x = S.players[i], pl = c.planes && c.planes[i]; return `<span class="${pl ? "ok" : ""}${S.online && x.uid === miId ? " mio" : ""}">${esc(x.nombre)} ${pl ? (pl.tipo === "nada" ? "✕" : "✓") : "…"}</span>`; }).join("");
+  const fichas = vivosH.map(i => { const x = S.players[i], pl = c.planes && c.planes[i]; return `<span class="${pl ? (pl.tipo === "nada" ? "nada" : "ok") : ""}${(S.online && x.uid === miId) || (mio && i === pi) ? " mio" : ""}"${pl && pl.tipo === "nada" ? ' title="No puede moverse esta ronda"' : ""}>${esc(x.nombre)} ${pl ? (pl.tipo === "nada" ? "✕" : "✓") : "…"}</span>`; }).join("");
   const faltan = vivosH.filter(i => !(c.planes && c.planes[i])).length;
-  const cabPlan = plan ? `<div class="planes">${fichas}${c.planFin ? `<b class="cuenta-plan">${Math.max(0, Math.ceil((c.planFin - Date.now()) / 1000))} s</b>` : ""}</div>` : "";
-  const linea = esperandoHost ? `<p class="quien espera">Enviando tu jugada…</p>` : mio ? `<p class="quien">${S.players.length > 1 ? `Acción de <b>${esc(p.nombre)}</b>` : "Elige tu acción"}${S.olivoActivo && S.zurron.bendicion > 0 ? " · bendición +2" : ""}</p>`
+  /* Quién ha elegido ya se ve con la ✓ de cada ficha del grupo; aquí solo la cuenta atrás (en línea). */
+  void fichas;
+  const cabPlan = plan && c.planFin && !sinHost ? `<p class="planes"><b class="cuenta-plan">${Math.max(0, Math.ceil((c.planFin - Date.now()) / 1000))} s</b><span>para elegir · ${faltan ? `faltan ${faltan}` : "todos listos"}</span></p>` : "";
+  const linea = sinHost ? `<p class="quien espera sin-host">El anfitrión se ha desconectado. Esperando a que vuelva…</p>` : esperandoHost ? `<p class="quien espera">Enviando tu jugada…</p>` : mio ? (S.olivoActivo && S.zurron.bendicion > 0 ? `<p class="quien">Bendición preparada: +2</p>` : "")
     : plan ? `<p class="quien espera">${faltan ? `Esperando a ${faltan === 1 ? "un jugador" : faltan + " jugadores"}…` : "Todos listos. Resolviendo…"}</p>` : "";
   const botonYa = plan && S.online && esHost() && faltan && vivosH.some(i => c.planes[i]) ? `<button type="button" class="boton sec mini resolver-ya" data-ui="resolver-ya">Resolver ya · los que faltan actúan solos</button>` : "";
   let menu;
@@ -9477,21 +9609,22 @@ function renderCombate(el, sc, p0, mio0) {
   }
   else if (!plan) {
     const quien = S.players[S.turno], pl = quien && c.planes && c.planes[S.turno];
-    const que = pl && pl.tipo === "hab" ? H(quien.habs[+String(pl.arg).split(":")[0]]).nombre : pl && pl.tipo === "equipo" ? "ataque en equipo" : pl ? pl.arg : "";
-    menu = `<p class="quien espera">Ronda ${c.ronda} · <b>${esc(quien ? quien.nombre : "")}</b>${que ? `: ${esc(que)}` : ""}…</p>`;
+    const que = !pl ? "" : pl.tipo === "hab" ? H(quien.habs[+String(pl.arg).split(":")[0]]).nombre : pl.tipo === "equipo" ? "ataque en equipo"
+      : pl.tipo === "objeto" ? (OBJETOS[String(pl.arg).split(":")[0]] || {}).nombre || "objeto" : { forcejeo: "Forcejeo", concentrar: "Concentrarse", anillo: "Anillo", nada: "no puede moverse" }[pl.tipo] || "";
+    menu = c.actuando ? `<p class="quien espera">Ronda ${c.ronda} · <b>${esc(quien ? quien.nombre : "")}</b>${que ? `: ${esc(que)}${pl && pl.auto ? " (automático)" : ""}` : ""}…</p>`
+      : `<p class="quien espera">Ronda ${c.ronda} · se resuelve por orden de iniciativa…</p>`;
   }
-  else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${S.zurron[k]}`, "", false)).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
-  else menu = `${linea}${cabPlan}${botonYa}<div class="menu dos acciones">${p.habs.map((id, k) => {
+  else if (submenu === "objetos" && mio) menu = `<div class="menu dos">${consumibles.map(k => { const libres = S.zurron[k] - Object.values(c.planes || {}).filter(x => x.tipo === "objeto" && String(x.arg).split(":")[0] === k).length; return boton(`data-juego="objeto" data-v="${k}"`, OBJETOS[k].nombre, `×${libres}`, "", libres <= 0); }).join("")}${boton('data-ui="volver-menu"', "Volver", "", "", false)}</div>`;
+  else menu = `${linea}${cabPlan}${botonYa}${(() => {
+      const A = ataqueEquipo(p);
+      if (!A || (c.equipo || 0) < 100 || Object.values(c.planes || {}).some(x => x.tipo === "equipo")) return "";
+      return `<button type="button" class="equipo-btn" data-juego="equipo" data-v="1" ${mio ? "" : "disabled"}><b>⚡ ${A.nombre}</b><small>Con ${esc(A.con.nombre)} · ${A.area ? "a todos · " : ""}${A.aplica ? ESTADOS[A.aplica[0]].verbo : A.cura ? "cura al grupo" : ""}${A.sello.nota ? ` · ${A.sello.nota}` : ""}</small></button>`;
+    })()}<div class="menu dos acciones">${p.habs.map((id, k) => {
       const h = H(id), coste = costeHab(p, h);
       const ef = h.efecto !== "dano" ? "" : r.debil === h.tipo || (h.noMuerto && r.nomuerto) ? "alto" : r.resiste === h.tipo ? "bajo" : "";
       const sub = resumenHab(id, p) + (h.area && varios ? ` <b class="ef area">a todos</b>` : "") + (ef === "alto" ? ` <b class="ef alto">¡Eficaz!</b>` : ef === "bajo" ? ` <b class="ef bajo">Poco eficaz</b>` : "");
       return boton(`data-juego="hab" data-v="${k}" data-tipo="${h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo"}"${ef ? ` data-ef="${ef}"` : ""}`, h.nombre, coste ? `${coste} PM` : "∞", sub, !mio || (p.pm || 0) < coste);
     }).join("")}</div>
-    ${(() => {
-      const A = ataqueEquipo(p);
-      if (!A || (c.equipo || 0) < 100 || Object.values(c.planes || {}).some(x => x.tipo === "equipo")) return "";
-      return `<button type="button" class="equipo-btn" data-juego="equipo" data-v="1" ${mio ? "" : "disabled"}><b>⚡ ${A.nombre}</b><small>Con ${esc(A.con.nombre)} · ${A.area ? "a todos · " : ""}${A.aplica ? ESTADOS[A.aplica[0]].verbo : A.cura ? "cura al grupo" : ""}${A.sello.nota ? ` · ${A.sello.nota}` : ""}</small></button>`;
-    })()}
     ${p.habs.every(id => (p.pm || 0) < costeHab(p, H(id))) ? `<div class="menu">${boton('data-juego="accion" data-v="forcejeo" data-tipo="fisica"', "Forcejeo", "∞", `Sin maná: un golpe débil (1d4${fmt(stat(p, "ani"))})`, !mio)}</div>` : ""}
     <div class="fila-extra">${ataqueEquipo(p) && (c.equipo || 0) < 100 ? `<p class="energia" title="Se carga golpeando, con críticos, combos y defensas perfectas"><span>⚡ Equipo</span><i><b style="width:${c.equipo || 0}%"></b></i></p>` : ""}${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}${boton('data-juego="accion" data-v="concentrar"', "Concentrarse", `${p.pm || 0}/${pmMax(p)}`, "+3 PM", !mio || (p.pm || 0) >= pmMax(p))}${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
   el.innerHTML = `<div class="rivales${varios ? " varios" : ""}">${lista}</div>
@@ -9513,6 +9646,13 @@ function renderModal() {
   if (modal.tipo === "cronica" && S) html = `<h2>Crónica</h2><ol class="cronica-larga">${S.log.slice().reverse().map(l => `<li class="${l.cls}">${esc(l.t)}</li>`).join("")}</ol>`;
   if (modal.tipo === "ayuda") html = htmlAyuda();
   if (modal.tipo === "altar") html = htmlAltar();
+  if (modal.tipo === "aspecto") {
+    const h = heroeEditado(), look = Object.assign({ raza: h.raza, clase: h.clase }, h.look);
+    html = `<h2>Aspecto de ${esc(h.nombre)}</h2>
+      <div class="aspecto-vista"><canvas class="retrato-grande" data-tam="108" data-look='${esc(JSON.stringify(look))}'></canvas></div>
+      <div class="sel-aspecto">${[["piel", "Piel"], ["pelo", "Pelo"], ["peinado", "Peinado"], ["tela", "Ropa"]].map(([c, t]) => `<button type="button" data-ui="sel-sig" data-c="${c}">${t} ›</button>`).join("")}</div>
+      <button type="button" class="boton" data-ui="cerrar">Listo</button>`;
+  }
   if (modal.tipo === "tuto") html = `<h2>Cómo se juega</h2><ol class="tuto">
       <li><canvas data-icono="combate" data-tam="34"></canvas><div><b>Elige el camino</b><span>En el mapa, toca un círculo que brille. Arriba del todo espera el jefe.</span></div></li>
       <li><canvas data-icono="evento" data-tam="34"></canvas><div><b>Ataca y defiende</b><span>Cada ronda, todos elegís la acción a la vez y luego se resuelve. Toca un enemigo para apuntarle, elige una habilidad y supera su minijuego. Cuando te ataquen, defiéndete a tiempo.</span></div></li>
@@ -9604,11 +9744,11 @@ function ejecutar(k, v) {
     case "op": return elegirOpcion(+v);
     case "resp": return responder(+v);
     case "final": return elegirFinal(v);
-    case "accion": return accion(v);
+    case "accion": return accion("accion", v);
     case "hab": return accion("hab", v);
     case "equipo": return accion("equipo", v);
     case "abrir": return abrirCofre();
-    case "equipar": { const [k, i] = String(v).split(":"); return equipar(+k, +i); }
+    case "equipar": { const [k, i] = String(v).split(":"); return equipar(k, +i); }
     case "aprender": return aprender(+v);
     case "bendicion": return elegirBendicion(v);
     case "bloquear": return bloquear(v);
@@ -9661,7 +9801,7 @@ document.addEventListener("click", ev => {
     case "ir-unirse": vista = "unirse"; return render();
     case "volver-inicio": vista = "inicio"; return render();
     case "local": sel.heroes = [heroeAlAzar(0)]; return empezarSeleccionLocal();
-    case "cargar": S = cargar(); vista = "juego"; return render();
+    case "cargar": soltarCombateLocal(); S = cargar(); vista = "juego"; return render();
     case "sel-ant": return cambiarSeleccion(ds.c, -1);
     case "sel-sig": return cambiarSeleccion(ds.c, 1);
     case "sel-azar": { const h = heroeEditado(); const n = heroeAlAzar(Math.floor(Math.random() * 9)); Object.assign(h, { raza: n.raza, clase: n.clase, look: n.look }); if (sel.online) publicarPresencia(); return renderSeleccion(); }
@@ -9684,6 +9824,7 @@ document.addEventListener("click", ev => {
     case "objetivo": objetivoLocal = +ds.k; if (S && S.combate && !S.online) S.combate.objetivo = +ds.k; renderEscena(); return sincronizarEscenario();
     case "resolver-ya": if (S && S.combate && S.combate.fase === "plan" && (!S.online || esHost())) resolverRonda(); return;
     case "altar": return abrirModal({ tipo: "altar" });
+    case "aspecto": return abrirModal({ tipo: "aspecto" });
     case "mejora": return comprarMejora(ds.k);
     case "dif": sel.dif = ds.k; escribir("dym-dif", ds.k); if (sel.online) publicarPresencia(); return renderSeleccion();
     case "musica": MUSICA.on = !MUSICA.on; escribir("dym-musica", MUSICA.on ? "1" : "0"); musica(pistaActual()); return renderModal();
@@ -9691,7 +9832,7 @@ document.addEventListener("click", ev => {
     case "cerrar": return cerrarModal();
     case "sonido": SONIDO.on = !SONIDO.on; escribir("dym-sonido", SONIDO.on ? "1" : "0"); if (SONIDO.on) sonar("cura"); return renderModal();
     case "salir": cerrarModal(); return salirPartida();
-    case "abandonar": cerrarModal(); S = null; vista = "inicio"; return render();
+    case "abandonar": cerrarModal(); soltarCombateLocal(); S = null; vista = "inicio"; return render();
     case "otra": if (S && S.online) return volverASeleccion(); escribir(CLAVE, null); S = null; return empezarSeleccionLocal();
   }
 });
@@ -9712,7 +9853,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (/^#prueba/.test(location.hash)) window.__dym = { estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo() };
+if (/^#prueba/.test(location.hash)) window.__dym = { estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo(), interno: () => ({ resolviendo, ocupado, tiradaEnCurso, terminar: !!terminarAccion, ventana: !!ventana, certeroActivo, vista, esperandoHost }) };
 render();
 conectar();
 })();

@@ -9,7 +9,7 @@ const DATOS = (() => {
   const CAPITULOS = ["El Camino del Bosque", "La Mazmorra", "El Castillo", "El Volcán", "El Abismo"];
   const ROMANOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   /* PX acumulados necesarios para cada nivel (nivel 1 = índice 0). */
-  const NIVELES = [0, 8, 18, 30, 44, 60, 78, 98, 120, 145];
+  const NIVELES = [0, 8, 20, 38, 60, 86, 116, 150, 190, 235];
   const NOMBRES = ["Aldric", "Lyra", "Borin", "Elowen", "Garrick", "Isolde", "Kael", "Mirela", "Rowan", "Sylva", "Thalor", "Vesna", "Wulfric", "Yara", "Corwin", "Ilsa"];
 
   const RAZAS = {
