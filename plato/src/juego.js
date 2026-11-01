@@ -154,7 +154,7 @@ function tonoEn(f, dur, tipo, vol, t, salida) {
 const hz = n => 440 * Math.pow(2, (n - 69) / 12);
 function musicaTick() {
   const a = SONIDO.ctx;
-  if (!a || a.state !== "running" || !MUSICA.pista || !MUSICA.salida) return;
+  if (!a || a.state !== "running" || MUSICA.pista === null || !MUSICA.salida) return;
   const P = PISTAS[MUSICA.pista], paso = 60 / P.bpm / 2, mel = melodia(P);
   if (MUSICA.t < a.currentTime) MUSICA.t = a.currentTime + 0.05;
   while (MUSICA.t < a.currentTime + 0.25) {
@@ -1379,7 +1379,7 @@ function terminarCompras() {
 function usarFuera(id, i) {
   if (ocupado || S.combate || !puedoActuar() || !S.zurron[id]) return;
   const p = S.players[i];
-  if (!p || p.alma >= maxAlma(p)) return;
+  if (!p || p.alma >= maxAlma(p) || (p.alma <= 0 && id !== "superior")) return;
   S.zurron[id]--;
   const real = curar(p, id === "pocion" ? 8 : maxAlma(p));
   log(`${p.nombre} bebe ${OBJETOS[id].nombre.toLowerCase()}: +${real} PG.`, "ok");
@@ -2631,7 +2631,7 @@ function renderEscena() {
   const mio = turnoMio() && !esperandoHost, off = !mio;
   if (S.final) {
     const f = FINALES[S.final];
-    el.innerHTML = `<p class="sello ok">Fin de la aventura${S.acto >= 4 ? " · Abismo vencido" : ""}</p><h2>${f.titulo}</h2>${parrafo(f.texto[0])}
+    el.innerHTML = `<p class="sello ok">Fin de la aventura${S.acto >= 4 ? " · Abismo vencido" : ""}</p><h2>${f.titulo}</h2>${f.texto.map(parrafo).join("")}
       <ul class="epilogo">${(() => {
         /* Quien comparte destino comparte frase. */
         const grupos = {};
@@ -2853,7 +2853,7 @@ function htmlMochila() {
   return `<h2>Mochila</h2>${M ? `<h3>Mascota</h3><ul class="lista-habs"><li><p><b>${M.nombre}</b><span>${M.ataque}</span></p><small>${M.desc} Actúa sola una vez por ronda y hace ataques en equipo contigo si vas solo.</small></li></ul>` : ""}${S.bendiciones.length ? `<h3>Bendiciones del grupo</h3><ul class="lista-habs">${S.bendiciones.map(k => `<li><p><b>${BENDICIONES[k].nombre}</b></p><small>${BENDICIONES[k].desc}</small></li>`).join("")}</ul><h3>Consumibles</h3>` : ""}<ul class="mochila">${CONSUMIBLES.map(k => {
     const n = S.zurron[k];
     let acc = "";
-    if (libre && n > 0 && (k === "pocion" || k === "superior")) acc = S.players.map((p, i) => p.alma < maxAlma(p) ? `<button type="button" class="boton sec mini" data-juego="usar" data-v="${k}:${i}">${esc(p.nombre)}</button>` : "").join("");
+    if (libre && n > 0 && (k === "pocion" || k === "superior")) acc = S.players.map((p, i) => p.alma < maxAlma(p) && (p.alma > 0 || k === "superior") ? `<button type="button" class="boton sec mini" data-juego="usar" data-v="${k}:${i}">${esc(p.nombre)}</button>` : "").join("");
     if (k === "bendicion" && n > 0 && turnoMio()) acc = `<button type="button" class="boton ${S.olivoActivo ? "" : "sec "}mini" data-juego="olivo">${S.olivoActivo ? "Preparada" : "Usar en la próxima tirada"}</button>`;
     return `<li><div><b>${OBJETOS[k].nombre} ×${n}</b><span>${OBJETOS[k].desc}</span></div><div class="acciones-mochila">${acc}</div></li>`;
   }).join("")}</ul>${S.anillo ? "<p>Anillo de invisibilidad: una vez por combate, el enemigo pierde su turno.</p>" : ""}`;
