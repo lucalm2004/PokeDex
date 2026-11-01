@@ -1382,12 +1382,366 @@
     });
   }
 
+
+  /* ======================================================================
+     El puente viejo del trol sobre el barranco
+     ====================================================================== */
+  const CIELO_FRIO = ["#262b40", "#343d56", "#465270", "#5e6c86", "#7c889c", "#a0a8b4", "#c4c8c8", "#e2e2da"];
+  const PRETIL = [GRIS[1], GRIS[2], P[2], P[3], HU[1], HU[2]];
+  const ROCA_P = [GRIS[0], GRIS[1], GRIS[2], GRIS[3], CIELO_FRIO[3], CIELO_FRIO[4], CIELO_FRIO[5]];
+  const FUGA_P = [128, 56];
+  const CASCADA = t => [Math.round(198 - t * 16 + Math.sin(t * 9) * 0.8), Math.round(20 + t * 50)];
+  const nieblaP = (x, y) => Math.max(0, 1 - Math.abs(y - 72) / 14) * Math.max(0, 1 - Math.abs(x - FUGA_P[0]) / 110);
+  function puente(g) {
+    const [vx, vy] = FUGA_P;
+    rellenar(g, 0, 0, W, 70, CIELO_FRIO, (x, y) => Math.pow(y / 60, 1.1) * 5.4 + Math.max(0, 1 - Math.hypot(x - vx, y - 40) / 90) * 0.8, 0.6);
+    // nubes bajas, grises, deshilachadas
+    for (const [cx, cy, rx, ry, sem] of [[40, 10, 40, 5, 1], [170, 6, 50, 5, 2], [110, 22, 30, 3, 3], [230, 26, 30, 3, 4]]) {
+      for (let y = Math.floor(cy - ry * 2); y <= cy + ry * 2; y++) for (let x = Math.floor(cx - rx * 1.4); x <= cx + rx * 1.4; x++) {
+        const d = Math.hypot((x - cx) / rx, (y - cy) / ry) + (fbm(x / 10, y / 4, sem) - 0.5) * 1.2;
+        if (d < 1 && umbral(x, y) < (1 - d) * 2) g.set(x, y, CIELO_FRIO[lim(Math.round(4 + (y < cy ? 1.5 : 0) - d * 1.5), 1, 7)], CIELO_FRIO);
+      }
+    }
+    // cordilleras lejanas con nieve
+    for (let x = 0; x < W; x++) {
+      const t1 = Math.round(40 - Math.abs(Math.sin(x * 0.028 + 0.3)) * 14 - Math.abs(Math.sin(x * 0.071 + 2)) * 4);
+      for (let y = t1; y < 70; y++) {
+        const nieve = y < t1 + 2 + Math.sin(x * 0.5) * 1.5 + (32 - t1) * 0.3 && t1 < 32;
+        g.set(x, y, nieve ? CIELO_FRIO[(x + y) % 3 ? 7 : 6] : CIELO_FRIO[lim(tono(x, y, 4.6 - (y - t1) * 0.05 + (x < 128 ? -0.3 : 0.2), 0.4), 2, 6)], CIELO_FRIO);
+      }
+      const t2 = Math.round(50 - Math.abs(Math.sin(x * 0.045 + 1.1)) * 8 + Math.sin(x * 0.17) * 1.5);
+      for (let y = t2; y < 70; y++) g.set(x, y, CIELO_FRIO[lim(tono(x, y, 3.4 - (y - t2) * 0.04 + (y === t2 ? 1 : 0), 0.4), 1, 5)], CIELO_FRIO);
+    }
+    // paredes del barranco: la izquierda en sombra, la derecha a la luz
+    const borde = (y, lado) => (lado < 0 ? vx - 3 - (y - vy) * 1.15 : vx + 3 + (y - vy) * 1.15) + Math.sin(y * 0.9) * 1.5 + Math.sin(y * 0.37 + lado) * 3;
+    const izq = capa().poly([[0, 28], [vx - 3, vy - 4], [vx - 3, vy + 1], [0, vy + 40]]), der = capa().poly([[W, 22], [vx + 3, vy - 5], [vx + 3, vy + 1], [W, vy + 40]]);
+    for (let y = vy; y < 100; y++) for (let x = 0; x < W; x++) { if (x < borde(y, -1)) izq.on(x, y); if (x > borde(y, 1)) der.on(x, y); }
+    const est = teselas(150, 51, 0, 0, W, 100, 3.2, 26);
+    const lejos = (x, y) => 1 - Math.min(1, Math.hypot(x - vx, (y - vy) * 1.6) / 130);
+    const estrato = (x, y) => Math.sin(y * 0.35 + x * (x < vx ? -0.09 : 0.09)) * 0.35;
+    roca(g, est, ROCA_P, (x, y) => 1.1 + estrato(x, y) + lejos(x, y) ** 1.4 * 3.2, () => [-0.6, -0.8, 1], { masc: izq, vari: 0.6, relieve: 1.5, bisel: 1.8, oscuro: 1.2, s: 0.3 });
+    roca(g, est, ROCA_P, (x, y) => 2.4 + estrato(x, y) + lejos(x, y) ** 1.4 * 2.4, () => [-0.6, -0.8, 1], { masc: der, vari: 0.6, relieve: 1.6, bisel: 1.8, oscuro: 1.4, s: 0.3 });
+    // canto del barranco: la pared de la derecha recibe la luz en su borde, la de la izquierda se hunde en sombra
+    contraluz(g, der, (x, y) => ROCA_P[lim(Math.round(4 + lejos(x, y) * 2), 0, 6)], -1, 0);
+    contraluz(g, izq, (x, y) => ROCA_P[lim(Math.round(lejos(x, y) * 3), 0, 6)], 1, 0);
+    // repisas con musgo y matojos
+    for (let y = 1; y < 100; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, k = est.id[i];
+      if (k < 0 || est.borde[i] > 1.3 || (!izq.tiene(x, y) && !der.tiene(x, y)) || lejos(x, y) > 0.62) continue;
+      if (est.pts[k][1] > y && hash(k, 2) > 0.5 && est.id[(y - 1) * W + x] !== k) g.set(x, y, MUSGO[izq.tiene(x, y) ? 2 : 3 + (hash(x, y) > 0.7 ? 1 : 0)], MUSGO);
+    }
+    // bruma de la distancia sobre las paredes, junto al fondo
+    // pinares en lo alto de ambas paredes, cada vez más pequeños hacia el fondo
+    for (const lado of [-1, 1]) for (let k = 0; k < 16; k++) {
+      const f = k / 15, x = lado < 0 ? f * (vx - 8) : W - f * (W - vx - 8), y = lado < 0 ? 28 + f * (vy - 32) : 22 + f * (vy - 27);
+      const alto = 34 * (1 - f) ** 1.2 + 4;
+      const c = pino(g, Math.round(x + lado * -3 + hash(k, lado + 5) * 4), Math.round(y + 3), alto, alto * 0.48, MUSGO, { relieve: 2, max: lado < 0 ? 2 : 3, luz: [-0.8, -0.4, 0.5] });
+      if (lado > 0) contraluz(g, c, MUSGO[4], -1, 0);
+      if (f > 0.4) cada(c, (px, py) => { if (umbral(px, py) < (f - 0.35) * 1.8) g.set(px, py, CIELO_FRIO[lim(MUSGO.indexOf(g.get(px, py)) + 1, 1, 4)], CIELO_FRIO); });
+    }
+    // el río al fondo del barranco, entre la niebla
+    for (let y = vy + 1; y < 100; y++) {
+      const w = 0.8 + (y - vy) * 0.3, c = vx + Math.sin(y * 0.16) * (y - vy) * 0.3;
+      for (let x = Math.round(c - w); x <= Math.round(c + w); x++) {
+        if (izq.tiene(x, y) || der.tiene(x, y)) continue;
+        const v = 1.4 + (Math.abs(x - c) > w - 1.2 ? -0.9 : 0) + (ruido(x * 0.6, y * 0.9, 68) > 0.7 ? 2 : 0) + lejos(x, y) * 1.2;
+        g.set(x, y, MA[lim(tono(x, y, v, 0.5), 0, 4)], MA);
+      }
+    }
+    for (let y = vy; y < 100; y++) for (let x = 0; x < W; x++) if (!g.get(x, y)) g.set(x, y, ROCA_P[lim(tono(x, y, 2 + lejos(x, y) * 2.6, 0.4), 0, 6)], ROCA_P);
+    for (const [x, y, r] of [[124, 74, 2], [136, 80, 2.5], [118, 86, 3]]) { capa().ell(x, y, r + 1, r * 0.7).pintar(g, GRIS, { relieve: 1, max: 3 }); g.set(x - 2, y + 1, HU[3], HU).set(x + 3, y + 1, HU[3], HU); }
+    // la cascada de la pared derecha
+    for (let s = 0; s <= 100; s++) {
+      const [x, y] = CASCADA(s / 100);
+      g.set(x - 1, y, GRIS[4], GRIS).set(x, y, HU[3], HU).set(x + 1, y, AZ[4], AZ).set(x + 2, y, HU[2], HU);
+    }
+    velo(g, 166, 62, 34, 14, (x, y) => (1 - Math.hypot((x - 182) / 16, (y - 70) / 6)) * 1.2, HU[2], HU);
+    // la niebla que llena el barranco
+    iluminar(g, 0, 50, W, 40, (x, y) => nieblaP(x, y) * 1.7, 1);
+    velo(g, 0, 60, W, 24, (x, y) => (nieblaP(x, y) - 0.7) * 2.5, CIELO_FRIO[6], CIELO_FRIO);
+    // el pretil de piedra, mellado y con musgo
+    const hueco = capa().poly([[38, 82], [64, 82], [61, 90], [55, 93], [44, 92], [40, 88]]);
+    const antes = g.copia();
+    sillares(g, 0, 82, W, [6, 6, 6], PRETIL, (x, y) => (y < 88 ? 3.6 : 2.7) - Math.max(0, y - 94) * 0.15, { sem: 7, ancho: 16, bisel: 0.7, junta: 1.5, vari: 0.7 });
+    cada(hueco, (x, y) => g.set(x, y, antes.get(x, y), antes.rampa(x, y)));
+    contraluz(g, hueco, PRETIL[1], 0, 1);
+    for (let x = 0; x < W; x++) {
+      if (!hueco.tiene(x, 82)) { g.set(x, 82, PRETIL[5], PRETIL); if (hash(x, 61, 2) > 0.55) g.set(x, 82 + (hash(x, 3) > 0.6 ? 1 : 0), MUSGO[3 + (hash(x, 4) > 0.6 ? 1 : 0)], MUSGO); }
+      if (hash(x, 95, 3) > 0.8) g.set(x, 99, MUSGO[2], MUSGO);
+      g.set(x, 100, GRIS[0], GRIS);
+    }
+    // arañazos de garras en el pretil
+    for (const x0 of [86, 90, 94]) capa().linea(x0, 86, x0 + 5, 97, 1).pintar(g, PRETIL, { plano: 0 });
+    // tablero del puente: losas viejas con musgo en las juntas
+    losas(g, 101, [4, 5, 6, 7, 9, 13], 26, 128, -70, PRETIL, (x, y) => 2.1 + (y - 101) * 0.004 + (fbm(x / 14, y / 6, 66) - 0.5) * 0.5, 17, (x, y) => (hash(x, y, 5) > 0.65 ? MUSGO[2] : GRIS[0]));
+    for (let i = 0; i < 6; i++) {
+      const x = 20 + Math.floor(hash(i, 1, 67) * 220), y = 106 + Math.floor(hash(i, 2, 67) * 34);
+      capa().linea(x, y, x + 3 + hash(i, 3) * 6, y + 1 + hash(i, 4) * 3, 1).pintar(g, PRETIL, { plano: 0 });
+    }
+    // el cartel del peaje en su poste, con una calavera clavada y la hucha del trol
+    capa().rect(219, 70, 3, 31).pintar(g, M, { relieve: 1, separar: 1 });
+    conBorde(g, M[0], tmp => {
+      capa().rect(202, 62, 37, 12).pintar(tmp, M, { relieve: 2, max: 3, sesgo: 0.1 });
+      for (let i = 0; i < 37; i++) if (hash(i, 62) > 0.7) tmp.set(202 + i, 73, M[1], M);
+      escribir(tmp, "PEAJE", 211, 65, M[0]);
+      tmp.set(204, 64, HI[3], HI).set(236, 64, HI[3], HI);
+    });
+    calavera(g, 217, 76);
+    conBorde(g, NE[0], tmp => {
+      capa().rect(228, 90, 11, 10).pintar(tmp, M, { relieve: 1.5, max: 3 });
+      for (let i = 0; i < 11; i++) tmp.set(228 + i, 93, HI[2], HI);
+      tmp.set(232, 90, NE[0], NE).set(233, 90, NE[0], NE).set(234, 90, NE[0], NE).set(230, 89, B[4], B).set(236, 89, B[3], B);
+    });
+    // huesos roídos
+    calavera(g, 186, 104, 1);
+    capa().linea(193, 109, 207, 106, 2).pintar(g, HU, { relieve: 1, max: 4 });
+    for (const [a, b] of [[193, 108], [193, 110], [207, 105], [207, 107]]) capa().ell(a, b, 1.3, 1.3).pintar(g, HU, { relieve: 1, max: 4 });
+    capa().linea(30, 128, 40, 131, 2).pintar(g, HU, { relieve: 1, max: 3 });
+    for (const [a, b] of [[29, 127], [41, 132]]) capa().ell(a, b, 1.2, 1.2).pintar(g, HU, { relieve: 1, max: 3 });
+  }
+  function puenteAnim(ctx, t) {
+    jirones(ctx, t, 7, 30, 60, 150, 20, [CIELO_FRIO[5], HU[2]], 2.5, 6);
+    // agua que cae por la cascada
+    for (let i = 0; i < 6; i++) {
+      const p = ((t / 1400) + i / 6) % 1, [x, y] = CASCADA(p);
+      ctx.fillStyle = HU[4]; ctx.fillRect(x, y, 1, 2);
+    }
+    // destellos del río
+    for (let i = 0; i < 5; i++) {
+      const v = Math.sin(t / 260 + i * 1.9);
+      if (v < 0.4) continue;
+      const y = FUGA_P[1] + 12 + i * 5, c = FUGA_P[0] + Math.sin(y * 0.12) * (y - FUGA_P[1]) * 0.25;
+      ctx.fillStyle = HU[4]; ctx.fillRect(Math.round(c - 3 + Math.sin(t / 700 + i) * 3), y, 2, 1);
+    }
+    // cuervos que planean sobre el barranco
+    for (let i = 0; i < 2; i++) {
+      const a = t / (5200 + i * 1700) + i * 3, x = Math.round(FUGA_P[0] + Math.cos(a) * (40 + i * 16)), y = Math.round(36 + i * 10 + Math.sin(a) * 8);
+      const ala = Math.sin(t / 180 + i) > 0.5 ? -1 : 0;
+      ctx.fillStyle = SO[1];
+      ctx.fillRect(x - 2, y + ala, 2, 1); ctx.fillRect(x, y, 1, 1); ctx.fillRect(x + 1, y + ala, 2, 1);
+    }
+  }
+
+
+  /* ======================================================================
+     La encrucijada: el camino se abre en tres y el grupo elige
+     ====================================================================== */
+  const CIELO_TARDE = ["#34416c", "#465a88", "#5e76a0", "#7f96b8", "#a6b8cc", "#cfd4cc", "#f0e4c4", "#fff4d8"];
+  const PRADO_LEJOS = ["#28343c", "#384a4c", "#506258", "#6c7c62", "#8e9878"];
+  const HORIZONTE_E = 38;
+  /* Los cuatro tramos del camino, como curvas de Bézier: el que llega desde abajo a la izquierda y los tres que se van. */
+  const CRUCE = [116, 104];
+  const TRAMOS_E = [
+    [[-6, 150], [58, 132], CRUCE],
+    [CRUCE, [72, 98], [60, 82]], [[60, 82], [50, 62], [34, 44]],
+    [CRUCE, [128, 94], [128, 80]], [[128, 80], [129, 60], [133, 41]],
+    [CRUCE, [172, 98], [196, 82]], [[196, 82], [212, 62], [224, 46]]
+  ];
+  const anchoE = y => Math.max(0.6, 0.6 + (y - HORIZONTE_E) * 0.15);
+  let mapaCamino = null;
+  /* Distancia (en anchos de camino) de cada píxel al camino más cercano: < 1 es camino. */
+  function caminosE() {
+    if (mapaCamino) return mapaCamino;
+    const pts = [];
+    for (const [a, c, b] of TRAMOS_E) for (let s = 0; s <= 60; s++) {
+      const t = s / 60, u = 1 - t;
+      pts.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]);
+    }
+    mapaCamino = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) {
+      const cerca = pts.filter(([, py]) => Math.abs(py - y) <= 30).map(([px, py]) => [px, py, anchoE(py)]);
+      for (let x = 0; x < W; x++) {
+        let best = 99;
+        for (const [px, py, an] of cerca) {
+          const d = Math.hypot(x - px, (y - py) * 1.25) / an;
+          if (d < best) best = d;
+        }
+        mapaCamino[y * W + x] = best;
+      }
+    }
+    return mapaCamino;
+  }
+  const sombraNube = (x, y) => fbm(x / 34 + 3, y / 14, 91) > 0.6;
+  const MOLINO = [236, 34];
+  function encrucijada(g) {
+    const dc = caminosE();
+    // cielo de media tarde, con nubes de algodón
+    rellenar(g, 0, 0, W, HORIZONTE_E + 2, CIELO_TARDE, (x, y) => (y / HORIZONTE_E) * 4.2 + Math.max(0, 1 - Math.hypot(x - 20, y) / 120) * 1.2, 0.6);
+    for (const [cx, cy, r, sem] of [[54, 10, 16, 1], [150, 6, 20, 2], [226, 14, 14, 3], [104, 22, 10, 4]]) {
+      const c = capa();
+      for (let k = 0; k < 6; k++) c.ell(cx - r + k * r * 0.4, cy + Math.sin(k * 2.1 + sem) * 2 - (k > 1 && k < 4 ? r * 0.25 : 0), r * (0.35 + hash(k, sem) * 0.2), r * 0.32);
+      c.quitarRect(0, cy + r * 0.3, W, 30);
+      c.pintar(g, [CIELO_TARDE[3], CIELO_TARDE[4], CIELO_TARDE[5], CIELO_TARDE[6], CIELO_TARDE[7]], { relieve: 3, min: 1 });
+    }
+    // montañas al fondo, por donde se pierde el camino del centro
+    for (let x = 0; x < W; x++) {
+      const top = Math.round(36 - Math.max(0, 1 - Math.abs(x - 136) / 70) * 24 - Math.abs(Math.sin(x * 0.11)) * 4 + Math.sin(x * 0.31) * 1.2);
+      for (let y = top; y < HORIZONTE_E + 6; y++) {
+        const nieve = y < top + 2 + (30 - top) * 0.3 && top < 28;
+        const v = 1.6 + (x < 136 - (y - top) * 0.7 + Math.sin(y * 0.8) ? 1 : 0) + (y - top) * 0.03 + (y === top ? 1 : 0);
+        g.set(x, y, nieve ? CIELO_TARDE[x < 136 - (y - top) * 0.7 ? 7 : 5] : CIELO_TARDE[lim(tono(x, y, v, 0.4), 0, 3)], CIELO_TARDE);
+      }
+    }
+    // la torre lejana en lo alto de un risco
+    conBorde(g, CIELO_TARDE[0], tmp => {
+      capa().rect(133, 9, 4, 10).rect(132, 8, 6, 2).poly([[129, 20], [133, 16], [138, 16], [141, 20]]).pintar(tmp, CIELO_TARDE, { relieve: 1, min: 1, max: 3 });
+      tmp.set(132, 7, CIELO_TARDE[2], CIELO_TARDE).set(134, 7, CIELO_TARDE[2], CIELO_TARDE).set(136, 7, CIELO_TARDE[2], CIELO_TARDE).set(134, 12, OC[3], OC);
+    });
+    // el suelo: prado con sombras de nubes, campos de labor a la derecha
+    for (let y = HORIZONTE_E; y < H; y++) for (let x = 0; x < W; x++) {
+      const t = (y - HORIZONTE_E) / (H - HORIZONTE_E);
+      let v = 2.5 + (fbm(x / (8 + t * 20), y / (3 + t * 10), 92) - 0.5) * 1.3 + Math.max(0, 1 - Math.hypot(x - 20, y - 40) / 260) * 0.6;
+      if (sombraNube(x, y)) v -= 1.1;
+      let ram = PRADO;
+      const campo = campoEn(x, y);
+      if (campo) { ram = campo[0]; v = campo[1] - (sombraNube(x, y) ? 1 : 0); }
+      else if (t > 0.12 && hash(x, y, 93) > 0.94 - t * 0.04) v += hash(x, y, 94) > 0.5 ? 1 : -1;
+      g.set(x, y, ram[lim(tono(x, y, v, 0.38), 0, 4)], ram);
+    }
+    // el camino de tierra, con rodadas y hierba en el lomo
+    for (let y = HORIZONTE_E; y < H; y++) for (let x = 0; x < W; x++) {
+      const d = dc[y * W + x] + (ruido(x * 0.4, y * 0.5, 95) - 0.5) * 0.25;
+      if (d > 1) { if (d < 1.25 && umbral(x, y) < 0.5) desplazar(g, x, y, -1); continue; }
+      const rodada = Math.abs(d - 0.5) < 0.09 + (y - HORIZONTE_E) * 0.0008;
+      let v = 2.8 + (ruido(x * 0.35, y * 0.5, 96) - 0.5) * 0.9 - (rodada ? 1 : 0) - (d > 0.85 ? 0.7 : 0) + (d < 0.3 ? 0.2 : 0);
+      if (sombraNube(x, y)) v -= 1;
+      if (d < 0.12 && y > 96 && ruido(x * 0.5, y * 0.3, 97) > 0.68) { g.set(x, y, PRADO[lim(tono(x, y, 2.4, 0.5), 1, 4)], PRADO); continue; }
+      g.set(x, y, TIERRA[lim(tono(x, y, v, 0.4), 0, 4)], TIERRA);
+    }
+    // piedrecitas en el camino
+    for (let i = 0; i < 40; i++) {
+      const x = Math.floor(hash(i, 1, 98) * W), y = 60 + Math.floor(hash(i, 2, 98) * 84);
+      if (dc[y * W + x] > 0.9) continue;
+      g.set(x, y, TIERRA[4], TIERRA).set(x + 1, y + 1, TIERRA[1], TIERRA);
+    }
+    // el bosque oscuro donde se mete el camino de la izquierda
+    for (let k = 0; k < 26; k++) {
+      const x = Math.floor(hash(k, 1, 99) * 90) - 6, by = HORIZONTE_E + 4 + Math.floor(hash(k, 2, 99) * 14), alto = 12 + (by - HORIZONTE_E) * 1.1 + hash(k, 3, 99) * 6;
+      if (Math.abs(x - (34 + (by - 44) * -0.9)) < 3 && by > 44) continue;
+      const c = pino(g, x, by, alto, alto * 0.5, MUSGO, { relieve: 2, max: 3, luz: [-0.8, -0.5, 0.5] });
+      contraluz(g, c, MUSGO[4], -1, -1);
+    }
+    capa().ell(34, 46, 3, 2).pintar(g, MUSGO, { plano: 0 });
+    // colinas a la derecha con un molino
+    molino(g, MOLINO[0], MOLINO[1] + 10);
+    // árboles sueltos, matorrales y piedras, más grandes cuanto más cerca
+    for (const [x, y, r] of [[92, 62, 5], [166, 58, 4], [180, 66, 5], [20, 76, 8], [246, 86, 10], [100, 76, 4], [82, 50, 3], [206, 104, 6]]) arbolito(g, x, y, r);
+    for (const [x, y, r] of [[150, 76, 3], [14, 104, 5], [246, 124, 7], [236, 140, 8], [176, 128, 4], [86, 88, 3]]) matorral(g, x, y, r);
+    for (const [x, y, r] of [[106, 116, 3], [232, 102, 3.5], [40, 96, 2.5], [170, 86, 2]]) {
+      capa().ell(x, y, r + 1, r * 0.7).pintar(g, P, { relieve: 2, max: 4, separar: 1 });
+      for (let i = -r; i <= r; i++) desplazar(g, Math.round(x + i), Math.round(y + r * 0.7 + 1), -2);
+    }
+    // flores silvestres en el prado
+    for (let i = 0; i < 70; i++) {
+      const x = Math.floor(hash(i, 1, 100) * W), y = 56 + Math.floor(hash(i, 2, 100) ** 0.7 * 88);
+      if (dc[y * W + x] < 1.2 || campoEn(x, y)) continue;
+      g.set(x, y, [HU[4], OC[4], VI[3], GR[3], AZ[4]][i % 5], null);
+      if (y > 100) g.set(x, y + 1, PRADO[1], PRADO);
+    }
+    // bruma de la distancia: lo lejano se vuelve azulado
+    for (let y = HORIZONTE_E; y < 72; y++) for (let x = 0; x < W; x++) {
+      if (umbral(x, y) >= (64 - y) / 26) continue;
+      const k = PRADO.indexOf(g.get(x, y));
+      if (k >= 0) g.set(x, y, PRADO_LEJOS[k], PRADO_LEJOS);
+    }
+    letrero3(g, 158, 106);
+    // rayos de sol que caen desde la esquina de arriba a la izquierda
+    iluminar(g, 0, 0, W, H, (x, y) => {
+      const a = Math.atan2(y + 30, x + 20), r = Math.sin(a * 22) * Math.sin(a * 7 + 1);
+      return r > 0.45 && y > HORIZONTE_E ? (r - 0.45) * 1.4 * lim(1 - Math.hypot(x, y) / 300) : 0;
+    }, 1);
+  }
+  /* Campos de labor (trigo, barbecho y huerta) en la ladera de la derecha. */
+  function campoEn(x, y) {
+    if (y < 44 || y > 76) return null;
+    const lado = x - (y - 44) * 0.5;
+    if (lado < 150 || x > 256) return null;
+    const i = Math.floor((x - 150 + (y - 44) * 1.4) / 24), j = Math.floor((y - 44) / 8);
+    const k = hash(i, j, 101), dentro = (x - 150 + (y - 44) * 1.4) % 24 > 1 && (y - 44) % 8 > 0;
+    if (!dentro) return [PRADO, 1.4];
+    if (k < 0.35) return [OC, 2.4 + ((x + y * 2) % 3 === 0 ? -1 : 0)];
+    if (k < 0.6) return [TIERRA, 2 + ((y % 2) ? -0.8 : 0)];
+    return [PRADO, 3 + ((x + y) % 4 === 0 ? -1 : 0)];
+  }
+  /* Molino de viento en lo alto de una colina (las aspas giran en la animación). */
+  function molino(g, x, base) {
+    for (let xx = 160; xx < W; xx++) {
+      const top = Math.round(base - 2 - Math.max(0, 1 - Math.abs(xx - x) / 40) * 6 + Math.sin(xx * 0.1) * 1);
+      for (let y = top; y < base + 6; y++) g.set(xx, y, PRADO_LEJOS[lim(tono(xx, y, 3 - (y - top) * 0.1 + (y === top ? 1 : 0), 0.4), 1, 4)], PRADO_LEJOS);
+    }
+    conBorde(g, PRADO_LEJOS[0], tmp => {
+      capa().poly([[x - 4, base - 2], [x - 2, base - 12], [x + 2, base - 12], [x + 4, base - 2]]).pintar(tmp, HU, { relieve: 1.5, max: 3, min: 1 });
+      capa().poly([[x - 3, base - 12], [x, base - 16], [x + 3, base - 12]]).pintar(tmp, TE, { relieve: 1, max: 3 });
+      tmp.set(x, base - 4, M[1], M).set(x, base - 3, M[1], M);
+    });
+  }
+  /* Árbol redondo con su sombra en el suelo (vista un poco desde arriba). */
+  function arbolito(g, x, y, r) {
+    for (let j = -2; j <= 2; j++) for (let i = -r - 2; i <= r + 3; i++) if (Math.hypot(i / (r + 2), j / 2.2) < 1) desplazar(g, x + i + 2, y + j + 1, -2);
+    capa().rect(x - Math.max(0, r * 0.15), y - r * 0.9, Math.max(1, r * 0.3), r * 0.9).pintar(g, M, { relieve: 1, max: 3 });
+    const c = copa(g, [[x, y - r * 1.4, r, r * 0.9], [x - r * 0.5, y - r * 1.1, r * 0.6, r * 0.55], [x + r * 0.55, y - r * 1.2, r * 0.6, r * 0.6]], HO, x * 7 + y, { relieve: Math.max(2, r * 0.6), max: 4 });
+    contraluz(g, c, MUSGO[1], 1, 1);
+  }
+  function matorral(g, x, y, r) {
+    for (let i = -r - 1; i <= r + 2; i++) desplazar(g, x + i + 1, y + 1, -2);
+    const c = copa(g, [[x, y - r * 0.5, r, r * 0.6], [x - r * 0.4, y - r * 0.3, r * 0.6, r * 0.45]], HO, x * 3 + y, { relieve: Math.max(1.5, r * 0.5), max: 3 });
+    contraluz(g, c, MUSGO[1], 1, 1);
+    for (let i = 0; i < r; i++) g.set(Math.round(x - r * 0.6 + hash(i, x) * r * 1.2), Math.round(y - r * 0.6 + hash(i, y) * r * 0.5), i % 2 ? GR[3] : HU[4], null);
+  }
+  /* El poste de la encrucijada con tres brazos en forma de flecha: izquierda, adelante y derecha. */
+  function letrero3(g, x, base) {
+    for (let i = -6; i <= 7; i++) for (let j = -1; j <= 1; j++) if (Math.hypot(i / 7, j / 1.5) < 1) desplazar(g, x + i + 3, base + j, -2);
+    conBorde(g, M[0], tmp => {
+      capa().rect(x - 1, base - 37, 4, 37).pintar(tmp, M, { relieve: 1.5, max: 3, luz: [-0.85, -0.3, 0.6] });
+      tmp.set(x - 1, base - 38, M[3], M).set(x, base - 38, M[3], M).set(x + 1, base - 38, M[2], M);
+      // adelante: el brazo de arriba, sesgado hacia el fondo
+      capa().poly([[x + 3, base - 37], [x - 9, base - 43], [x - 14, base - 42], [x - 9, base - 37], [x + 3, base - 32]]).pintar(tmp, M, { relieve: 1.5, max: 4, sesgo: 0.15 });
+      // a la izquierda
+      capa().poly([[x - 17, base - 26.5], [x - 13, base - 30], [x, base - 30], [x, base - 23], [x - 13, base - 23]]).pintar(tmp, M, { relieve: 1.5, max: 4, sesgo: 0.05 });
+      // a la derecha
+      capa().poly([[x + 2, base - 19], [x + 16, base - 19], [x + 20, base - 15.5], [x + 16, base - 12], [x + 2, base - 12]]).pintar(tmp, M, { relieve: 1.5, max: 3, sesgo: -0.1 });
+      // muescas talladas en cada brazo
+      for (let i = 0; i < 4; i++) tmp.set(x - 6 + i * 2, base - 39 + Math.round(i * -0.9), M[0], M);
+      for (const [a, b, n] of [[x - 11, base - 27, 4], [x + 5, base - 16, 4]]) for (let i = 0; i < n; i++) tmp.set(a + i * 2, b, M[0], M).set(a + i * 2, b + 1, M[1], M);
+      for (const [a, b] of [[x - 1, base - 27], [x + 2, base - 35], [x + 2, base - 16]]) tmp.set(a, b, HI[3], HI);
+    });
+  }
+  function encrucijadaAnim(ctx, t) {
+    // las aspas del molino
+    const [mx, my] = MOLINO, a0 = t / 1400;
+    ctx.fillStyle = HU[3];
+    for (let k = 0; k < 4; k++) {
+      const a = a0 + (k * Math.PI) / 2;
+      for (let s = 2; s <= 9; s += 2) ctx.fillRect(Math.round(mx + Math.cos(a) * s), Math.round(my + Math.sin(a) * s), 1, 1);
+    }
+    ctx.fillStyle = M[1]; ctx.fillRect(mx, my, 1, 1);
+    // pájaros que cruzan muy alto
+    for (let i = 0; i < 3; i++) {
+      const p = ((t / 1000) * 0.02 + i * 0.37) % 1, x = Math.round(W + 10 - p * (W + 30) + i * 6), y = Math.round(16 + i * 5 + Math.sin(p * 8 + i) * 3);
+      const ala = Math.sin(t / 150 + i * 2) > 0 ? -1 : 0;
+      ctx.fillStyle = CIELO_TARDE[0];
+      ctx.fillRect(x - 2, y + ala, 2, 1); ctx.fillRect(x, y + 1, 1, 1); ctx.fillRect(x + 1, y + ala, 2, 1);
+    }
+    // mariposas sobre el prado
+    for (let i = 0; i < 4; i++) {
+      const f = t / 1000 * (0.5 + i * 0.1) + i * 2;
+      const x = Math.round([40, 180, 220, 96][i] + Math.sin(f) * 10), y = Math.round([86, 96, 118, 70][i] + Math.sin(f * 2.3) * 4);
+      ctx.fillStyle = [HU[4], OC[4], VI[3], AZ[4]][i];
+      ctx.fillRect(x, y, 1, 1);
+      if (Math.sin(t / 90 + i) > 0) { ctx.fillRect(x - 1, y - 1, 1, 1); ctx.fillRect(x + 1, y - 1, 1, 1); }
+    }
+    // hojas y semillas que arrastra el viento
+    hojas(ctx, t, 5, -20, 50, 200, 140, [HU[3], PRADO[4], OC[3]], 12, 0.05);
+  }
+
   /* El resto de escenarios se añade más abajo. */
   window.FONDOS_HD = window.FONDOS_HD || {};
   Object.assign(window.FONDOS_HD, {
     taberna: { base: taberna, anim: tabernaAnim },
     aldea: { base: aldea, anim: aldeaAnim },
     camino: { base: camino, anim: caminoAnim },
-    bosque: { base: bosque, anim: bosqueAnim }
+    bosque: { base: bosque, anim: bosqueAnim },
+    puente: { base: puente, anim: puenteAnim },
+    encrucijada: { base: encrucijada, anim: encrucijadaAnim }
   });
 })();

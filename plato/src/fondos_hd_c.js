@@ -271,11 +271,11 @@
     for (let x = 0; x < W; x++) {
       const t1 = Math.round(80 - fbm(x / 34, 1, 31) * 26 - Math.max(0, Math.sin(x * 0.05 + 0.6)) * 8);
       const t2 = Math.round(90 - fbm(x / 22, 2, 37) * 14 - Math.max(0, Math.sin(x * 0.09)) * 3);
-      for (let y = t1; y < 100; y++) {
+      for (let y = t1; y < 104; y++) {
         const neblina = (y - t1) / 30;
         g.set(x, y, y === t1 ? CIELO_PICO[7] : y === t1 + 1 ? CIELO_PICO[5] : umbral(x, y) < 0.35 - neblina * 0.5 ? CIELO_PICO[4] : CIELO_PICO[3]);
       }
-      for (let y = t2; y < 100; y++) g.set(x, y, y === t2 ? BRASA[3] : y === t2 + 1 ? CENIZA[2] : umbral(x, y) < (y - t2) / 40 ? BRASA[1] : CENIZA[1]);
+      for (let y = t2; y < 104; y++) g.set(x, y, y === t2 ? BRASA[3] : y === t2 + 1 ? CENIZA[2] : umbral(x, y) < (y - t2) / 40 ? BRASA[1] : CENIZA[1]);
     }
     // la columna de humo que sale del cráter y se tumba hacia la izquierda
     const humo = capa();
@@ -461,7 +461,7 @@
   function picoAnim(ctx, t) {
     if (!RIOS_PICO.length) pico(new Rejilla(W, H));
     // pavesas que suben desde el suelo
-    pavesas(ctx, t, 18, -10, W, H, H + 10, [F[4], F[3], F[2], BRASA[3]], 3);
+    pavesas(ctx, t, 16, -10, W, H, H + 10, [F[4], F[3], F[2], BRASA[3]], 3);
     // la lava corre ladera abajo
     RIOS_PICO.forEach((c, r) => {
       for (let i = 0; i < 5; i++) {
@@ -1013,6 +1013,12 @@
     hueso(g, 92, 100, 102, 102);
     conBorde(g, ROCA_NIDO[0], tmp => { escudo(tmp, 64, 98, R.tela.oliva); });
     for (let k = 0; k < 6; k++) trazo(g, 56 + k * 3, 92, 60 + k * 2, 106, SEDA[1]);
+    // repisas de roca bajo las setas de la pared
+    for (const [sx, sy, , k] of SETAS_N) if (sy < 95) conBorde(g, ROCA_NIDO[0], tmp => {
+      const c = capa().ell(sx + 1, sy + 2, 15 * k, 2.6).poly([[sx - 12 * k, sy + 2], [sx + 2, sy + 9], [sx + 14 * k, sy + 2]]);
+      c.pintar(tmp, ROCA_NIDO, { relieve: 2, max: 5, luz: [-0.4, -0.9, 0.5] });
+      contraluz(tmp, c, ROCA_NIDO[5], 0, -1);
+    });
     // las setas
     for (const [sx, sy, ram, k] of SETAS_N) grupoSetas(g, sx, sy, ram, k);
     for (let i = 0; i < 18; i++) ESPORAS_N.push(SETAS_N[i % SETAS_N.length]);
@@ -1120,8 +1126,8 @@
      ====================================================================== */
   const ANOCHECER = [SO[1], AZ[1], VI[2], PV[2], PV[3], TE[3], F[3], F[4]];
   const RUINA = ["#17121f", "#272030", "#3b3144", "#574958", "#7d6870", "#ad8f86", "#dcb898"];
-  const SOL_R = [128, 74];
-  const ARCO = [128, 96, 26, 36];   // centro del vano, pie, medio ancho del vano, grosor+vano exterior
+  const SOL_R = [128, 66];
+  const ARCO = [128, 104, 30, 0];   // centro del vano, pie, medio ancho del vano, grosor+vano exterior
   const RAMAS_R = [];
   const luzR = (x, y) => Math.max(0, 1 - Math.hypot((x - SOL_R[0]) / 100, (y - SOL_R[1]) / 70));
   /* Enlosado en perspectiva: filas cada vez más altas hacia delante, juntas que convergen hacia (vx, yh). */
@@ -1151,35 +1157,40 @@
     RAMAS_R.length = 0;
     const [sx, sy] = SOL_R;
     // cielo del ocaso: de azul noche arriba a naranja junto al sol
-    rellenar(g, 0, 0, W, 100, ANOCHECER, (x, y) => Math.pow(y / 90, 1.3) * 6 + Math.max(0, 1 - Math.hypot(x - sx, (y - sy) * 1.5) / 90) * 2, 0.55);
+    rellenar(g, 0, 0, W, 104, ANOCHECER, (x, y) => Math.pow(y / 84, 1.3) * 6 + Math.max(0, 1 - Math.hypot(x - sx, (y - sy) * 1.5) / 90) * 2, 0.45);
     for (let i = 0; i < 46; i++) {
       const x = Math.floor(hash(i, 1, 61) * W), y = Math.floor(hash(i, 2, 61) * 30);
       if (ANOCHECER.indexOf(g.get(x, y)) <= 1) g.set(x, y, hash(i, 3, 61) > 0.75 ? HU[4] : HU[2]);
     }
     // nubes alargadas con la panza encendida
-    const nube = (x, y) => fbm(x / 40, y / 6, 111, 4) * (Math.max(0, 1 - Math.abs(y - 30) / 9) + Math.max(0, 1 - Math.abs(y - 52) / 6) * 0.9 + Math.max(0, 1 - Math.abs(y - 14) / 6) * 0.7);
+    const nube = (x, y) => fbm(x / 36, y / 7, 111, 4) * (Math.max(0, 1 - Math.abs(y - 28 - Math.sin(x * 0.02) * 4) / 12) * 1.1 + Math.max(0, 1 - Math.abs(y - 48 - Math.sin(x * 0.03 + 1) * 3) / 8) + Math.max(0, 1 - Math.abs(y - 10) / 8) * 0.8);
     for (let y = 0; y < 72; y++) for (let x = 0; x < W; x++) {
       const v = nube(x, y);
-      if (v < 0.42) continue;
-      const abajo = nube(x, y + 2), arriba = nube(x, y - 2), cerca = luzR(x, y);
-      let c = ANOCHECER[cerca > 0.5 ? 4 : 3];
-      if (abajo < 0.42) c = cerca > 0.45 ? F[4] : cerca > 0.2 ? F[3] : TE[3];
-      else if (arriba < 0.42) c = ANOCHECER[2];
+      if (v < 0.4) continue;
+      const abajo = nube(x, y + 2), abajo2 = nube(x, y + 4), arriba = nube(x, y - 2), cerca = luzR(x, y);
+      let c = v > 0.5 ? PV[2] : PV[1];
+      if (abajo < 0.4) c = cerca > 0.45 ? F[4] : cerca > 0.2 ? F[3] : TE[3];
+      else if (abajo2 < 0.4) c = cerca > 0.3 ? TE[3] : GR[3];
+      else if (arriba < 0.4) c = VI[2];
+      else if (fbm(x / 8, y / 3, 112) > 0.6) c = PV[3];
       g.set(x, y, c);
     }
     // el sol, grande y bajo, con su halo
-    velo(g, sx - 40, sy - 30, 80, 50, (x, y) => (1 - Math.hypot(x - sx, y - sy) / 26) * 0.7, F[4]);
-    capa().ell(sx, sy, 11.5, 11.5).pintar(g, [F[4]], { plano: 0 });
-    capa().ell(sx, sy, 8, 8).pintar(g, [HU[4]], { plano: 0 });
+    for (let y = sy - 34; y <= sy + 34; y++) for (let x = sx - 44; x <= sx + 44; x++) {
+      const d = Math.hypot(x - sx, (y - sy) * 1.2), k = tono(x, y, (1 - (d - 12) / 22) * 3, 0.8);
+      if (k >= 1 && d > 11) g.set(x, y, [TE[3], F[3], F[4]][lim(k - 1, 0, 2)]);
+    }
+    capa().ell(sx, sy, 12.5, 12.5).pintar(g, [F[4]], { plano: 0 });
+    capa().ell(sx, sy, 9, 9).pintar(g, [HU[4]], { plano: 0 });
     // montañas lejanas y bosque élfico en silueta
     for (let x = 0; x < W; x++) {
-      const t0 = Math.round(66 - fbm(x / 44, 1, 113) * 26 - Math.max(0, Math.sin(x * 0.03 - 1)) * 8);
-      const t1 = Math.round(78 - Math.sin(x * 0.03 + 1) * 4 - fbm(x / 10, 2, 115) * 4);
+      const t0 = Math.round(76 - fbm(x / 44, 1, 113) * 24 - Math.max(0, Math.sin(x * 0.03 - 1)) * 6 + Math.max(0, 1 - Math.abs(x - sx) / 40) * 8);
+      const t1 = Math.round(84 - Math.sin(x * 0.03 + 1) * 4 - fbm(x / 10, 2, 115) * 4);
       const k = Math.floor(x / 7), lx = x - k * 7, pino = hash(k, 116) > 0.35 ? (1 - Math.abs(lx - 3) / 3.5) * (6 + hash(k, 117) * 10) : 0;
-      const t2 = Math.round(88 - Math.sin(x * 0.05 + 3) * 2 - pino);
-      for (let y = t0; y < 100; y++) g.set(x, y, y === t0 && Math.abs(x - sx) < 70 ? F[3] : y < t0 + 2 && Math.abs(x - sx) < 70 ? TE[3] : PV[3]);
-      for (let y = t1; y < 100; y++) g.set(x, y, y === t1 ? PV[3] : PV[2]);
-      for (let y = t2; y < 100; y++) g.set(x, y, y === t2 ? VI[2] : SO[2]);
+      const t2 = Math.round(94 - Math.sin(x * 0.05 + 3) * 2 - pino);
+      for (let y = t0; y < 104; y++) g.set(x, y, y === t0 && Math.abs(x - sx) < 70 ? F[3] : y < t0 + 2 && Math.abs(x - sx) < 70 ? TE[3] : PV[3]);
+      for (let y = t1; y < 104; y++) g.set(x, y, y === t1 ? PV[3] : PV[2]);
+      for (let y = t2; y < 104; y++) g.set(x, y, y === t2 ? VI[2] : SO[2]);
     }
     // una torre élfica rota a lo lejos
     for (let y = 44; y < 80; y++) for (let x = 200; x < 207; x++) if (y > 44 + Math.abs(x - 203) * 1.2 + (x > 204 ? 4 : 0)) g.set(x, y, y < 46 ? PV[4] : PV[2]);
@@ -1239,7 +1250,7 @@
   }
   /* El gran arco apuntado sobre dos pilares, con la rosca derecha derrumbada. */
   function arcoR(g) {
-    const [cx, pie, ri, gro] = ARCO, re = ri + 10, cR = cx + 12, cL = cx - 12, alto = 36;
+    const [cx, pie, ri] = ARCO, re = ri + 10, cR = cx + 12, cL = cx - 12, alto = 44;
     const arco = capa();
     for (let y = 0; y < pie; y++) for (let x = cx - re - 2; x <= cx + re + 2; x++) {
       const ext = y >= alto ? Math.abs(x - cx) <= re : Math.hypot(x - (x < cx ? cR : cL), y - alto) < re + 12 && Math.abs(x - cx) <= re;
@@ -1247,8 +1258,8 @@
       if (ext && !int) arco.on(x, y);
     }
     // derrumbe: falta la parte de arriba a la derecha
-    for (let x = cx - 2; x <= cx + re + 2; x++) for (let y = 0; y < 30 + (x - cx) * 0.5 + hash(x >> 1, 3) * 5; y++) arco.off(x, y);
-    const filas = Array(17).fill(6);
+    for (let x = cx - 3; x <= cx + re + 2; x++) for (let y = 0; y < 34 + (x - cx) * 0.4 + hash(x >> 1, 3) * 6; y++) arco.off(x, y);
+    const filas = Array(18).fill(6);
     sillaresR(g, cx - re - 2, 0, cx + re + 3, filas, RUINA, x => (x < cx ? 2.6 : 2.2) + luzR(x, 60) * 0.6, arco);
     cada(arco, (x, y) => {
       if (!arco.tiene(x, y - 1)) g.set(x, y, RUINA[5], RUINA);

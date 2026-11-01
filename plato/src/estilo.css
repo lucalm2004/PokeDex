@@ -773,3 +773,71 @@ h1, h2, h3 { text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Minijuegos nuevos ---------- */
+.mj-ayuda { margin: -4px 0 0; font-size: 12px; color: var(--muted); }
+.carga { position: relative; height: 38px; border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.carga .c-bien { position: absolute; top: 0; bottom: 0; left: var(--z0); right: calc(100% - var(--z1)); background: rgba(61, 220, 151, .2); }
+.carga .c-perf { position: absolute; top: 0; bottom: 0; left: var(--p0); right: calc(100% - var(--p1)); background: linear-gradient(180deg, var(--gold), #ffa94d); box-shadow: 0 0 14px var(--gold); opacity: .85; }
+.carga .c-lleno { position: absolute; left: 0; top: 7px; bottom: 7px; width: 0; border-radius: 0 8px 8px 0; background: linear-gradient(90deg, #ff6b81, #ffd76a); box-shadow: 0 0 12px rgba(255, 159, 90, .8); }
+.carga .c-lleno.rebosa { background: var(--ko); animation: golpecito .3s; }
+.frenesi { display: grid; place-items: center; align-content: center; gap: 10px; height: 130px; background: radial-gradient(circle, rgba(255, 107, 129, .18), transparent 70%), var(--bg); }
+.frenesi.zafa { background: radial-gradient(circle, rgba(139, 123, 255, .2), transparent 70%), var(--bg); }
+.f-n { font-size: 44px; font-weight: 800; line-height: 1; color: var(--gold); text-shadow: 0 0 18px rgba(255, 201, 92, .6); }
+.f-n.pop { animation: pop .12s ease-out; }
+@keyframes pop { from { transform: scale(1.35); } }
+.f-barra { width: 70%; height: 8px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.f-barra b { display: block; width: 0; height: 100%; background: linear-gradient(90deg, var(--ko), var(--gold)); transition: width .08s; }
+.secuencia { display: flex; justify-content: center; gap: 8px; }
+.secuencia i { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 12px; font-style: normal; font-size: 26px; font-weight: 800; background: var(--bg); box-shadow: inset 0 0 0 2px var(--line-2); color: var(--text); }
+.secuencia i.ok { background: rgba(61, 220, 151, .2); box-shadow: inset 0 0 0 2px var(--ok); color: var(--ok); }
+.secuencia i.mal { background: rgba(255, 107, 129, .2); box-shadow: inset 0 0 0 2px var(--ko); color: var(--ko); }
+.flechas4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.flechas4 .lado { height: 58px; font-size: 26px; }
+.trazo { height: 170px; }
+.t-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.t-svg .guia { fill: none; stroke: var(--line-2); stroke-width: 2; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.t-svg .hecha { fill: none; stroke: #b9a8ff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px #8b7bff); }
+.punto { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; display: grid; place-items: center; border-radius: 50%; font-style: normal; background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--line-2); }
+.punto b { font-size: 14px; color: var(--muted); }
+.punto.primero, .punto.sig { box-shadow: inset 0 0 0 2px var(--accent), 0 0 16px rgba(139, 123, 255, .6); animation: latido .9s ease-in-out infinite; }
+.punto.ok { background: radial-gradient(circle at 50% 40%, #d4caff, #6a4fe8); box-shadow: 0 0 18px #8b7bff; animation: none; }
+.punto.ok b { color: #fff; }
+.pista { height: 92px; }
+.pista .golpe-linea { position: absolute; left: 14%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; box-shadow: inset 0 0 0 4px var(--sagrada), 0 0 18px rgba(255, 215, 106, .5); }
+.pista::before { content: ""; position: absolute; left: 6%; right: 4%; top: 50%; height: 2px; background: var(--line-2); }
+.pista.toque .golpe-linea { animation: golpecito .2s; }
+.nota { position: absolute; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff2c4, var(--gold)); box-shadow: 0 0 12px rgba(255, 201, 92, .8); }
+.nota.mal { background: var(--ko); }
+.debil { height: 170px; display: grid; place-items: center; background: radial-gradient(circle, rgba(255, 107, 129, .12), transparent 65%), var(--bg); }
+.mj-rival { opacity: .9; filter: drop-shadow(0 6px 10px #000); }
+.grieta { position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px; border: 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 14%, #ffd76a 15% 34%, rgba(255, 107, 129, .9) 35% 52%, transparent 54%); box-shadow: 0 0 0 2px rgba(255, 255, 255, .6), 0 0 22px rgba(255, 107, 129, .9); animation: aparece2 .12s ease-out; }
+.grieta.ok { background: radial-gradient(circle, #b8ffd9, #1fa36b 60%, transparent 62%); box-shadow: 0 0 22px var(--ok); }
+@keyframes aparece2 { from { transform: scale(.4); opacity: 0; } }
+.flujo { height: 170px; }
+.luz { position: absolute; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: radial-gradient(circle, #eafff2 0 18%, rgba(61, 220, 151, .75) 19% 45%, rgba(61, 220, 151, 0) 70%); }
+.luz.tocada { box-shadow: 0 0 0 3px var(--ok), 0 0 26px var(--ok); }
+.dedo { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; border: 2px solid #fff; pointer-events: none; }
+.parada { height: 150px; display: grid; place-items: center; }
+.flecha-dir.grande { position: static; transform: none; font-size: 80px; color: var(--ko); text-shadow: 0 0 22px rgba(255, 107, 129, .8); }
+.parada .mj-ayuda { position: absolute; bottom: 8px; left: 0; right: 0; margin: 0; }
+.contra { height: 170px; }
+.contra .runa { width: 58px; height: 58px; margin: -29px 0 0 -29px; filter: saturate(.5) brightness(.7); animation: none; }
+.contra .runa b { font-size: 24px; }
+.contra .r0 { left: 50%; top: 22%; } .contra .r1 { left: 78%; top: 50%; } .contra .r2 { left: 50%; top: 78%; } .contra .r3 { left: 22%; top: 50%; }
+.contra .runa.r1 { background: radial-gradient(circle at 50% 40%, #ffd3a1, #d6702a); } .contra .runa.r2 { background: radial-gradient(circle at 50% 40%, #a9f0ff, #2a8fd6); } .contra .runa.r3 { background: radial-gradient(circle at 50% 40%, #c4ffcf, #2aa857); }
+.contra .runa.brilla, .contra .runa.ok { filter: none; transform: scale(1.12); box-shadow: 0 0 0 3px #fff, 0 0 26px #fff; }
+.contra .runa.mal { filter: none; background: var(--ko); }
+.turno-mio .contra .runa { filter: none; }
+.turno-mio .c-fase { color: var(--gold); font-weight: 700; }
+
+/* ---------- Sucesos del campo y rachas ---------- */
+.suceso-btn { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; text-align: left; border: 0; padding: 7px 12px 7px 8px; border-radius: 12px; color: var(--text); background: linear-gradient(135deg, rgba(94, 200, 255, .18), rgba(139, 123, 255, .18)); box-shadow: inset 0 0 0 2px #5ec8ff, 0 0 22px -8px #5ec8ff; animation: latido 1.6s ease-in-out infinite; }
+.suceso-btn canvas { padding: 4px; border-radius: 9px; background: rgba(0, 0, 0, .25); }
+.suceso-btn span { display: grid; gap: 1px; min-width: 0; }
+.suceso-btn b { font-size: 13px; }
+.suceso-btn small { font-size: 11px; color: var(--muted); }
+.suceso-btn:disabled { opacity: .55; animation: none; }
+.heroe .racha { position: absolute; bottom: 3px; right: 6px; font-style: normal; font-size: 11px; font-weight: 800; line-height: 1; color: #1a1020; padding: 2px 5px; border-radius: 999px; background: linear-gradient(135deg, var(--gold), #ff8a3d); box-shadow: 0 0 10px rgba(255, 159, 90, .7); }
+.fila-extra .opcion { font-size: 13px; padding-right: 8px; }
+.fila-extra .opcion > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

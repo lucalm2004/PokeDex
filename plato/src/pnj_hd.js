@@ -324,7 +324,7 @@
     pon(g, R.tela.granate, 3, [x + 5, t.cabY - 1], [x + 6, t.cabY - 1]); pon(g, R.tela.granate, 2, [x + 6, t.cabY], [x + 7, t.cabY + 1]);
     oreja(g, t, P);
     pon(g, O, 4, [x + 4, y + 4]);
-    cara(g, t, P, { iris: R.esmeralda ? R.esmeralda[3] : R.hoja[3], ceja: Pe });
+    cara(g, t, P, { iris: R.hoja[3], ceja: Pe });
     pon(g, P, 2, [x - 6, y + 3]);
     pon(g, P, 1, [x - 5, y + 5], [x - 4, y + 6], [x - 3, y + 5]);
     /* Brazo de delante con la balanza. */
@@ -512,15 +512,17 @@
     pon(g, E, 1, [x - 5, y - 1], [x - 1, y - 1], [x, y - 1]);
     /* Barba larga y bigote. */
     const barba = capa().poly([[x - 7, y + 3], [x + 3, y + 2], [x + 3, t.torTop + 3], [x + 1, t.torTop + 9], [x - 2, t.torTop + 13], [x - 4, t.torTop + 8], [x - 8, t.torTop + 2]]);
-    barba.pintar(g, E, { relieve: 2.5, min: 3, separar: 2 });
+    barba.pintar(g, E, { relieve: 2.5, min: 3, separar: 1 });
+    cada((i, j) => { if (barba.tiene(i, j) && barba.tiene(i - 1, j) && barba.tiene(i + 1, j) && j < t.torTop + 8 && (i + j) % 5 === 0) pon(g, E, 4, [i, j]); });
     for (let j = y + 7; j < t.torTop + 12; j++) ponSi(g, E, E, 2, [x - 3 + (j % 3 === 0 ? 1 : 0), j]);
     capa().poly([[x - 8, y + 3], [x - 1, y + 3], [x + 1, y + 5.4], [x - 4, y + 4.6], [x - 9, y + 5.4]]).pintar(g, E, { relieve: 1.2, min: 3, separar: 2 });
     pon(g, E, 0, [x - 5, y + 6], [x - 4, y + 6]);
     /* Corona de puntas con gemas. */
     const cor = capa().rect(x - 5, t.cabY - 7, 12, 3);
-    for (const i of [x - 5, x - 1.5, x + 2, x + 5.5]) cor.poly([[i - 0.8, t.cabY - 6], [i + 0.6, t.cabY - 10.5], [i + 2, t.cabY - 6]]);
+    for (const i of [x - 5, x, x + 5]) cor.poly([[i - 1.5, t.cabY - 6], [i + 0.5, t.cabY - 10.6], [i + 2.5, t.cabY - 6]]);
     cor.pintar(g, E, { relieve: 1.5, min: 3, separar: true });
     for (let i = x - 5; i <= x + 6; i++) ponSi(g, E, E, 2, [i, t.cabY - 5]);
+    for (const i of [x - 5, x, x + 5]) mota(g, A, 4, i, t.cabY - 11);
     pon(g, A, 4, [x - 3, t.cabY - 6], [x + 4, t.cabY - 6]); pon(g, A, 2, [x - 3, t.cabY - 5], [x + 4, t.cabY - 5]);
     pon(g, A, 3, [x, t.cabY - 6]);
     /* Brazo de delante extendido, con la manga ancha y la mano que llama. */
@@ -552,9 +554,9 @@
     piernas(g, t, R.tela.negro, CUERO, {});
     torso(t).pintar(g, T, { relieve: 4 });
     /* Delantal de cuero con pespunte claro, tachuelas y un bolsillo con tenazas. */
-    const del = capa().poly([[t.torL + 1, t.torTop + 3], [t.torR - 2, t.torTop + 3], [t.torR, t.pierTop + 4], [t.torL - 2, t.pierTop + 4]]);
+    const del = capa().poly([[t.torL + 1, t.torTop + 3], [t.torR - 2, t.torTop + 3], [t.torR, t.pierTop + 2], [t.torL - 2, t.pierTop + 2]]);
     del.pintar(g, CUERO, { relieve: 3, separar: true });
-    cada((i, j) => { if (del.tiene(i, j) && j > t.torTop + 3 && (!del.tiene(i - 1, j) || !del.tiene(i + 1, j) || !del.tiene(i, j + 1)) && (i + j) % 2 === 0) pon(g, CUERO, 4, [i, j]); });
+    cada((i, j) => { if (del.tiene(i, j) && j > t.torTop + 4 && j < t.pierTop + 1 && (!del.tiene(i - 1, j) || !del.tiene(i + 1, j)) && j % 2 === 0) pon(g, CUERO, 4, [i, j]); });
     for (let j = t.torTop + 5; j <= t.pierTop + 2; j += 3) pon(g, R.bronce, 4, [t.torR - 3, j]);
     capa().rect(t.cx + 1, t.torBot, 4, 4).pintar(g, CUERO, { relieve: 1, max: 2, separar: true });
     pon(g, Hi, 3, [t.cx + 2, t.torBot - 1], [t.cx + 3, t.torBot - 2]); pon(g, Hi, 4, [t.cx + 3, t.torBot - 3]);
@@ -574,7 +576,7 @@
     /* Barbaza con dos trenzas y bigote. */
     const barba = capa().poly([[x - 7, y + 3], [x + 4, y + 1], [x + 4, y + 5], [x + 2, t.torTop + 6], [x - 1, t.torTop + 9], [x - 4, t.torTop + 6], [x - 8, y + 5]]);
     barba.pintar(g, Pe, { relieve: 3, separar: 2 });
-    cada((i, j) => { if (barba.tiene(i, j) && j > y + 4 && (i * 2 + j) % 4 === 0) pon(g, Pe, 1, [i, j]); });
+    cada((i, j) => { if (barba.tiene(i, j) && j > y + 5 && i % 3 === 1 && (i + j) % 4 !== 0) pon(g, Pe, 2, [i, j]); });
     const trenzas = capa().rect(x - 4, t.torTop + 5, 2, 7).rect(x, t.torTop + 6, 2, 6);
     trenzas.pintar(g, Pe, { relieve: 1, separar: 2 });
     for (let j = t.torTop + 6; j < t.torTop + 12; j += 2) pon(g, Pe, 1, [x - 4, j], [x, j + 1]);
@@ -670,9 +672,9 @@
   /* Lobezno gris: cabezón y orejudo, de tres cuartos, con antifaz y pechera claros y la cola tupida en alto. */
   function lobezno() {
     const g = new Rejilla(W, H), G = R.piel.gris, P = R.piel.clara;
-    const cola = capa().curva(18, 38.5, 11.5, 38, 12, 30.5, 5, 3);
+    const cola = capa().curva(19, 38.5, 10, 38, 12.5, 30, 5.4, 3.4).ell(12.8, 30.4, 1.8, 2.2);
     cola.pintar(g, G, { relieve: 2, max: 3 });
-    pon(g, G, 4, [11, 30], [12, 30], [11, 31]); pon(g, G, 1, [14, 37], [13, 36]);
+    pon(g, G, 4, [12, 29], [13, 29], [12, 30]); pon(g, G, 1, [14, 37], [13, 36], [15, 38]);
     capa().rect(19, 42, 3, 5).rect(28, 42, 3, 5).pintar(g, G, { relieve: 1, max: 2 });
     const cuerpo = capa().ell(22.5, 39.6, 7, 4.6);
     cuerpo.pintar(g, G, { relieve: 4, separar: true });
@@ -688,8 +690,8 @@
     /* Pechera y antifaz claros. */
     capa().ell(29, 39.4, 3, 3.2).recortar(cuerpo.copia().unir(cab)).pintar(g, G, { relieve: 1.5, min: 3 });
     capa().ell(34.6, 36, 3.4, 2).ell(28, 35.6, 1.8, 1.2).recortar(cab).pintar(g, G, { plano: 4 });
-    ojo(g, 28, 32, R.bronce[2]); ojo(g, 32, 32, R.bronce[2]);
-    pon(g, G, 1, [27, 31], [28, 31], [32, 31], [33, 31]);
+    ojo(g, 28, 32, R.bronce[3], { iris2: R.bronce[2] }); ojo(g, 32, 32, R.bronce[3], { iris2: R.bronce[2] });
+    pon(g, G, 4, [28, 31], [32, 31]);
     pon(g, NEGRO, 0, [37, 34], [38, 34], [36, 34], [37, 35], [38, 35]);
     pon(g, NEGRO, 3, [37, 34]);
     pon(g, G, 1, [34, 37], [35, 37], [36, 37]);
@@ -729,7 +731,7 @@
      con un colmillo y la cola en punta de flecha. */
   function diablillo() {
     const g = new Rejilla(W, H), Rj = R.piel.roja, S = R.sangre;
-    alaMembrana(g, [22, 35], [16.5, 27], [[13.5, 23.5], [10, 27.5], [11, 33]], [18, 37], S, { relieve: 1.5, max: 2, separar: true }, Rj);
+    alaMembrana(g, [22, 35], [17.5, 29], [[15, 25.5], [11.5, 29], [12.5, 33.5]], [19, 37], S, { relieve: 1.5, max: 2, separar: true }, Rj);
     capa().curva(22.5, 44, 15.5, 46.6, 13, 42, 2.2, 1.4).pintar(g, Rj, { relieve: 1, max: 3 });
     capa().poly([[9.6, 42], [12, 38], [15, 41.4], [12, 41.6]]).pintar(g, Rj, { relieve: 1, min: 2, max: 3 });
     capa().rect(22, 42, 3, 5).rect(26, 42, 3, 5).pintar(g, Rj, { relieve: 1, max: 2 });
@@ -739,7 +741,8 @@
     capa().rect(21, 45, 4, 2).rect(26, 45, 4, 2).pintar(g, NEGRO, { relieve: 1, min: 1, max: 3 });
     const cab = capa().ell(26.8, 31.4, 6.2, 5.6).poly([[21, 30], [17.4, 27.4], [21.6, 33]]);
     cab.pintar(g, Rj, { relieve: 4, separar: true });
-    capa().curva(22.6, 27, 21.4, 24.4, 23.4, 22.8, 2.4, 1).curva(28.4, 26.4, 29.4, 23.6, 31.8, 23.2, 2.4, 1).pintar(g, HUESO, { relieve: 1, min: 2, separar: true });
+    capa().poly([[21, 27.4], [25.6, 25.8], [23.4, 23.4], [20.4, 20.6]]).poly([[28.4, 25.8], [33, 27.4], [33.6, 20.6], [30.6, 23.4]]).pintar(g, HUESO, { relieve: 1.4, min: 2, separar: true });
+    pon(g, HUESO, 4, [21, 22], [21, 23], [22, 24]); pon(g, HUESO, 2, [33, 22], [32, 24]);
     for (const ex of [25, 29]) { capa().rect(ex, 29, 3, 3).pintar(g, R.bronce, { plano: 4 }); pon(g, R.bronce, 3, [ex, 31], [ex + 1, 31], [ex + 2, 31]); }
     pon(g, NEGRO, 0, [26, 29], [26, 30], [27, 29], [27, 30], [30, 29], [30, 30], [31, 29], [31, 30]);
     pon(g, HUESO, 4, [26, 29], [30, 29]);
@@ -772,7 +775,8 @@
     for (const ex of [25, 30]) {
       capa().rect(ex, 28, 3, 3).pintar(g, A, { plano: 4 });
       pon(g, A, 3, [ex, 30], [ex + 2, 30]); pon(g, A, 2, [ex + 1, 30]);
-      pon(g, NEGRO, 0, [ex + 1, 28], [ex + 1, 29], [ex + 1, 30]);
+      pon(g, NEGRO, 0, [ex + 2, 28], [ex + 2, 29], [ex + 2, 30]);
+      pon(g, A, 2, [ex + 1, 30]);
       pon(g, HUESO, 4, [ex, 28]);
     }
     pon(g, R.piel.roja, 4, [31, 32], [32, 32]); pon(g, R.piel.roja, 3, [31, 33]);
@@ -804,7 +808,8 @@
     pon(g, HUESO, 4, [15, 46], [17, 46], [23, 46], [25, 46]);
     const cab = capa().ell(30.4, 31.6, 5.2, 4.6).poly([[32.4, 29.2], [38.4, 31], [38.4, 34.8], [32.4, 36.4]]);
     cab.pintar(g, Rj, { relieve: 4, separar: true });
-    capa().curva(27.6, 28, 25.6, 26.4, 24.2, 23.8, 2.6, 1.2).curva(30.8, 27.2, 30.2, 24.6, 28.8, 22.6, 2.6, 1.2).pintar(g, HUESO, { relieve: 1, min: 2, separar: true });
+    capa().poly([[25, 29.6], [29.4, 27.4], [22.6, 22.4]]).poly([[29.4, 27.8], [33.4, 28.6], [29.6, 21.4]]).pintar(g, HUESO, { relieve: 1.4, min: 2, separar: true });
+    pon(g, HUESO, 4, [24, 24], [29, 23], [30, 24]);
     capa().rect(30, 30, 3, 3).pintar(g, R.bronce, { plano: 4 });
     pon(g, NEGRO, 0, [31, 30], [31, 31], [32, 30], [32, 31]); pon(g, HUESO, 4, [31, 30]);
     pon(g, R.bronce, 3, [30, 32], [31, 32], [32, 32]);
@@ -816,7 +821,7 @@
     pon(g, Rj, 4, [26, 28], [27, 28], [34, 30]);
     alaMembrana(g, [22, 35], [20, 26.5], [[16, 25], [14.6, 29]], [19.4, 34], S, { relieve: 1.5, max: 2, separar: true }, Rj);
     g.contorno();
-    for (const [i, j, k] of [[39, 29, 3], [40, 28, 4], [40, 27, 3], [41, 26, 2], [42, 25, 3], [41, 24, 2]]) mota(g, R.piedra, k, i, j);
+    detras(g, capa().ell(40.6, 29.4, 1, 1).ell(42.4, 26.4, 1.5, 1.4).ell(41.2, 23, 1.1, 1).ell(43, 21.6, 0.6, 0.6), CENIZA, { relieve: 1.4, min: 3 });
     return g;
   }
 

@@ -162,9 +162,9 @@
       mk(piel, 2, [a, y], [b + 1, y]);
       m(ceja, cejaR, [a - 1, y - 2], [a, y - 3], [a + 1, y - 3], [b, y - 3], [b + 1, y - 3], [b + 2, y - 2]);
       if (orco) m(piel[0], piel, [a, y - 2], [a + 1, y - 2], [b, y - 2], [b + 1, y - 2]);
-      m(OJOS, null, [x + 3, by - 1], [x + 4, by - 1], [x + 5, by - 1], [x + 6, by - 1], [x + 3, by], [x + 6, by], [x + 4, by + 1], [x + 5, by + 1]);
-      mk(R.hueso, 4, [x + 4, by - 1], [x + 5, by - 1]);
-      mk(R.sangre, 3, [x + 4, by], [x + 5, by]);
+      m(OJOS, null, [x + 3, by], [x + 4, by - 1], [x + 5, by - 1], [x + 6, by], [x + 4, by + 1], [x + 5, by + 1]);
+      mk(R.hueso, 4, [x + 4, by]); mk(R.hueso, 3, [x + 5, by]);
+      mk(piel, 1, [x + 3, by - 1], [x + 6, by - 1]);
       mk(SUDOR, 4, [x - 1, y - 3]); mk(SUDOR, 3, [x - 1, y - 2]); mk(SUDOR, 2, [x - 2, y - 1], [x - 1, y - 1]);
     } else if (gesto === "alegre") {
       /* Ojos en arco (^ ^), mejillas sonrosadas y sonrisa abierta. */
@@ -173,11 +173,12 @@
       if (orco) m(piel[0], piel, [a - 1, y - 2], [a, y - 2], [a + 1, y - 2], [b, y - 2], [b + 1, y - 2]);
       else m(ceja, cejaR, [a - 1, y - 3], [a, y - 4], [a + 1, y - 4], [b, y - 4], [b + 1, y - 3]);
       if (!sombra) mk(MEJILLA, 4, [a, y + 2], [a + 1, y + 2]);
-      m(OJOS, null, [x + 3, by - 1], [x + 4, by - 1], [x + 5, by - 1], [x + 6, by - 1], [x + 7, by - 1], [x + 4, by + 1], [x + 5, by + 1]);
-      m(OJOS, null, [x + 3, by], [x + 6, by]);
+      /* Sonrisa en «D»: comisuras hacia arriba, dientes arriba y la lengua debajo. */
       const lengua = piel === R.piel.roja ? R.fuego : R.sangre;
-      mk(R.hueso, 4, [x + 4, by - 1], [x + 5, by - 1], [x + 6, by - 1]);
+      m(OJOS, null, [x + 2, by - 2], [x + 3, by - 1], [x + 6, by - 1], [x + 4, by + 1], [x + 3, by]);
+      mk(R.hueso, 4, [x + 4, by - 1], [x + 5, by - 1]);
       mk(lengua, 3, [x + 4, by], [x + 5, by]);
+      m(OJOS, null, [x + 6, by]);
     } else if (gesto === "furia") {
       /* Cejas en V sobre ojos entornados y los dientes apretados. */
       const fr = sombra ? piel[0] : orco ? OJOS : cejaR === piel ? piel[0] : cejaR[0];
@@ -192,8 +193,9 @@
       ojoNormal(a); ojoNormal(b);
       if (orco) m(piel[0], piel, [a - 1, y - 2], [a, y - 2], [a + 1, y - 2], [a + 2, y - 2], [b, y - 2], [b + 1, y - 2], [b + 2, y - 2]);
       else m(ceja, cejaR, [a - 1, y - 3], [a, y - 3], [a + 1, y - 3], [b, y - 3], [b + 1, y - 3]);
-      mk(piel, 1, [x + 4, by], [x + 5, by]);
-      mk(piel, 3, [x + 4, by + 1]);
+      mk(piel, 0, [x + 4, by], [x + 5, by]);
+      mk(piel, 1, [x + 3, by - 1], [x + 6, by]);
+      mk(piel, 4, [x + 4, by + 1]);
       if (!sombra && !tief && !orco) mk(MEJILLA, 4, [a, y + 2]);
     }
     nariz();
@@ -217,17 +219,17 @@
     const x = t.cabX, y = t.cabY;
     capa().rect(x - 4, y + 2, 7, t.torTop - y + 1).pintar(g, piel, { relieve: 2, max: 2 });
     /* Placas claras de la garganta. */
-    for (let j = y + 5; j <= t.torTop; j += 2) pon(g, R.hueso, 2, [x + 1, j], [x + 2, j]);
+    for (let j = y + 5; j <= t.torTop; j += 2) pon(g, piel, 3, [x + 1, j], [x + 2, j]);
     const c = capa().ell(x - 1, y, 5.8, 6);
     c.poly([[x + 1, y - 4.5], [x + 6, y - 3.5], [x + 10, y - 1], [x + 10.5, y + 1.5], [x + 9, y + 4], [x + 5, y + 5.5], [x - 1, y + 6]]);
     c.pintar(g, piel, { relieve: 3.5 });
     /* Mandíbula inferior más clara. */
-    for (let i = x + 1; i <= x + 9; i++) for (let j = y + 3; j <= y + 6; j++) if (g.rampa(i, j) === piel && tono(g, i, j) >= 2) pon(g, R.hueso, 2 + (j === y + 3 ? 1 : 0), [i, j]);
+    for (let i = x + 2; i <= x + 9; i++) for (let j = y + 3; j <= y + 6; j++) if (g.rampa(i, j) === piel && tono(g, i, j) >= 2) pon(g, piel, j === y + 3 ? 4 : 3, [i, j]);
     /* Escamas. */
-    cada(g, piel, x - 7, y - 6, x + 8, y + 2, (i, j, k) => { if (k === 2 && (i + j * 2) % 4 === 0) pon(g, piel, 3, [i, j]); if (k === 3 && (i * 3 + j) % 5 === 0) pon(g, piel, 2, [i, j]); });
+    cada(g, piel, x - 7, y - 6, x + 8, y + 1, (i, j, k) => { if (k === 2 && (i * 3 + j * 5) % 9 === 0) pon(g, piel, 3, [i, j]); else if (k === 3 && (i * 3 + j * 5) % 9 === 4) pon(g, piel, 4, [i, j]); });
     /* Cresta de pinchos por la nuca y cuernos hacia atrás. */
     const cr = capa();
-    for (let k = 0; k < 3; k++) cr.poly([[x - 5 - k * 1.5, y - 4 + k * 3], [x - 9 - k * 1.5, y - 4 + k * 3.2], [x - 6 - k * 1.5, y - 1.5 + k * 3]]);
+    for (let k = 0; k < 2; k++) cr.poly([[x - 5 - k * 1.5, y - 4 + k * 3], [x - 9 - k * 1.5, y - 4 + k * 3.2], [x - 6 - k * 1.5, y - 1.5 + k * 3]]);
     cr.pintar(g, piel, { relieve: 1, max: 2, separar: true });
     const cu = capa().curva(x - 2, y - 4, x - 6, y - 8, x - 11, y - 8, 3, 1).curva(x - 4, y - 1, x - 8, y - 3, x - 12, y - 2, 2.6, 1);
     cu.pintar(g, R.hueso, { relieve: 1.5, separar: true });
@@ -259,11 +261,11 @@
       for (let i = x + 3; i <= x + 9; i++) m(i % 2 ? R.hueso[4] : OJOS, i % 2 ? R.hueso : null, [i, y + 2], [i, y + 3]);
       m(R.fuego[4], R.fuego, [x + 11, y - 2]); m(R.fuego[2], R.fuego, [x + 11, y - 1]);
     } else {
-      m(R.bronce[4], R.bronce, [ex, ey], [ex + 1, ey]);
-      m(R.bronce[2], R.bronce, [ex, ey + 1]);
-      m(OJOS, null, [ex + 1, ey + 1], [ex + 1, ey - 1], [ex, ey - 1], [ex + 2, ey], [ex + 2, ey + 1]);
-      m(OJOS, null, [ex + 1, ey]);
-      m(R.bronce[4], R.bronce, [ex, ey]);
+      /* Ojo de reptil: párpado oscuro, iris dorado y pupila en rendija. */
+      m(OJOS, null, [ex - 1, ey - 1], [ex, ey - 1], [ex + 1, ey - 1], [ex + 2, ey - 1]);
+      m(R.bronce[4], R.bronce, [ex, ey]); m(R.bronce[3], R.bronce, [ex + 2, ey]);
+      m(R.bronce[2], R.bronce, [ex, ey + 1], [ex + 2, ey + 1]);
+      m(OJOS, null, [ex + 1, ey], [ex + 1, ey + 1]);
     }
   }
 
@@ -710,13 +712,14 @@
         const sv = capa().rect(cx - 3, torTop + 1, 8, torBot - torTop).poly([[cx - 4, torBot - 1], [cx + 6, torBot - 1], [cx + 7, pierTop + 6], [cx - 5, pierTop + 6]]);
         sv.pintar(g, tela, { relieve: 3, separar: true });
         ribete(g, sv, R.bronce, 3);
-        cada(g, tela, cx - 6, torTop, cx + 8, pierTop + 7, (x, y) => { if (sv.tiene(x, y) && (!sv.tiene(x - 1, y) || !sv.tiene(x + 1, y)) && y > torTop + 1) g.set(x, y, R.bronce[2], R.bronce); });
         pliegue(g, tela, cx - 1, pierTop, cx - 2, pierTop + 5);
         pliegue(g, tela, cx + 4, pierTop, cx + 5, pierTop + 5);
+        /* Sol sagrado: disco con brillo y ocho rayos. */
         const sx = cx + 1, sy = torTop + 5;
-        capa().ell(sx, sy, 1.6, 1.6).pintar(g, R.bronce, { relieve: 1.2, min: 2 });
+        capa().ell(sx, sy, 1.7, 1.7).pintar(g, R.bronce, { relieve: 1.4, min: 2 });
         pon(g, R.bronce, 4, [sx - 1, sy - 1]);
-        pon(g, R.bronce, 3, [sx, sy - 3], [sx, sy + 3], [sx - 3, sy], [sx + 3, sy]);
+        pon(g, R.bronce, 3, [sx, sy - 3], [sx, sy + 3], [sx - 3, sy], [sx + 3, sy], [sx, sy - 4], [sx - 4, sy]);
+        pon(g, R.bronce, 2, [sx, sy + 4], [sx + 4, sy]);
         pon(g, R.bronce, 2, [sx - 2, sy - 2], [sx + 2, sy - 2], [sx - 2, sy + 2], [sx + 2, sy + 2]);
         cinturon(g, t, CUERO, R.bronce);
         capa().ell(torL + 1, torTop + 1, 2.6, 2.2).pintar(g, R.hierro, { relieve: 2, max: 3, separar: true });
@@ -943,16 +946,16 @@
       case "bardo": {
         /* Laúd: caja de madera con boca, mástil hacia arriba y clavijero. */
         const lx = mx + 1, ly = my + 3;
-        const mast = capa().linea(lx + 2, ly - 2, lx + 8, ly - 9, 2);
+        const mast = capa().linea(lx + 2, ly - 2, lx + 7, ly - 9, 2);
         mast.pintar(g, R.madera, { plano: 1 });
-        surco(g, R.madera, 3, lx + 2, ly - 3, lx + 7, ly - 9, R.madera);
-        capa().rect(lx + 8, ly - 12, 3, 3).pintar(g, R.madera, { relieve: 1, max: 2 });
-        pon(g, R.hueso, 4, [lx + 7, ly - 12], [lx + 11, ly - 11], [lx + 9, ly - 13]);
+        surco(g, R.madera, 3, lx + 2, ly - 3, lx + 6, ly - 9, R.madera);
+        capa().rect(lx + 7, ly - 12, 3, 3).pintar(g, R.madera, { relieve: 1, max: 2 });
+        pon(g, R.hueso, 4, [lx + 6, ly - 12], [lx + 10, ly - 11], [lx + 8, ly - 13]);
         const caja = capa().ell(lx, ly, 4, 3.4).ell(lx + 2, ly - 1.5, 2.4, 2);
         caja.pintar(g, R.madera, { relieve: 2.5, separar: true });
         capa().ell(lx + 0.5, ly - 0.5, 1, 1).pintar(g, R.madera, { plano: 0 });
         pon(g, R.madera, 1, [lx - 1, ly + 2], [lx, ly + 2]);
-        surco(g, R.hueso, 3, lx - 1, ly + 1, lx + 7, ly - 8, null);
+        surco(g, R.hueso, 3, lx - 1, ly + 1, lx + 6, ly - 8, null);
         break;
       }
     }

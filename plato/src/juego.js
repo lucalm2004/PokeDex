@@ -458,7 +458,7 @@ function permitido(k, uid) {
   if (k === "aprender") return !!S.aprender[0] && S.players[S.aprender[0].i].uid === uid;
   if (k === "bloquear") return !!S.bloqueo && S.players[S.bloqueo.i].uid === uid;
   if (k === "votar") return S.players.some(p => p.uid === uid);
-  if (S.combate && S.combate.fase === "plan" && ["hab", "equipo", "objeto", "accion"].includes(k)) return heroePlan(uid) >= 0;
+  if (S.combate && S.combate.fase === "plan" && ["hab", "equipo", "objeto", "accion", "suceso"].includes(k)) return heroePlan(uid) >= 0;
   const p = S.players[S.turno];
   return !!p && p.uid === uid;
 }
@@ -598,13 +598,30 @@ function temblar() {
 let certeroActivo = false;
 const TITULOS_MINI = {
   barra: "¡Para la marca en el centro!", diana: "¡Toca el blanco!", runas: "¡Toca las runas en orden!", pulso: "¡Toca cuando el anillo encaje!",
-  bloqueo: "¡BLOQUEA cuando el anillo encaje!", esquiva: "¡Esquiva hacia la flecha!", disipar: "¡Toca las runas para disipar!"
+  carga: "¡Mantén pulsado y suelta en la zona!", frenesi: "¡Toca sin parar!", combo: "¡Repite la secuencia!", trazo: "¡Traza la runa sin levantar el dedo!",
+  ritmo: "¡Toca al compás!", debil: "¡Toca los puntos débiles!", flujo: "¡Sigue la luz con el dedo!",
+  bloqueo: "¡BLOQUEA cuando el anillo encaje!", esquiva: "¡Esquiva hacia la flecha!", disipar: "¡Toca las runas para disipar!",
+  parada: "¡Desliza hacia el tajo!", contra: "¡Memoriza y repite las runas!", zafarse: "¡Te atrapa! ¡Toca rápido!"
 };
-const RESULTADOS_MINI = { ataque: ["Fuera de ritmo", "¡Bien! +2", "¡PERFECTO! +5"], bloqueo: ["Sin bloquear", "¡Bloqueo!", "¡PARADA PERFECTA!"], esquiva: ["¡Te alcanza!", "Esquiva a medias", "¡ESQUIVA LIMPIA!"], disipar: ["El hechizo pasa", "Lo debilitas", "¡DISIPADO!"] };
+const RESULTADOS_MINI = {
+  ataque: ["Fuera de ritmo", "¡Bien! +2", "¡PERFECTO! +5"], cura: ["Te tiembla el pulso", "¡Bien!", "¡PERFECTO! ×1,4"],
+  bloqueo: ["Sin bloquear", "¡Bloqueo!", "¡PARADA PERFECTA!"], esquiva: ["¡Te alcanza!", "Esquiva a medias", "¡ESQUIVA LIMPIA!"], disipar: ["El hechizo pasa", "Lo debilitas", "¡DISIPADO!"],
+  parada: ["¡Te alcanza!", "¡Parado!", "¡PARADA Y RÉPLICA!"], contra: ["El hechizo pasa", "Lo debilitas", "¡CONTRAHECHIZO!"], zafarse: ["Te atrapa", "Te zafas a medias", "¡LIBRE!"]
+};
+const DEFENSAS = ["bloqueo", "esquiva", "disipar", "parada", "contra", "zafarse"];
+/* Familia de cada defensa: cuánto daño quita y qué premia una perfecta. */
+const FAMILIA_DEF = { bloqueo: "bloqueo", parada: "bloqueo", esquiva: "esquiva", zafarse: "esquiva", disipar: "disipar", contra: "disipar" };
+/* Cada clase tiene tres minijuegos; cada habilidad usa siempre el mismo, así se aprende y no se repite. */
+const POOL_MINI = {
+  guerrero: ["barra", "carga", "combo"], barbaro: ["frenesi", "carga", "barra"], picaro: ["combo", "debil", "diana"], explorador: ["diana", "debil", "ritmo"],
+  mago: ["runas", "trazo", "debil"], brujo: ["trazo", "runas", "combo"], clerigo: ["pulso", "ritmo", "trazo"], bardo: ["ritmo", "combo", "pulso"]
+};
 function tipoMinijuego(p, h) {
-  if (h.tipo === "fisica") return p.clase === "explorador" ? "diana" : "barra";
-  if (h.tipo === "sagrada") return "pulso";
-  return "runas";
+  if (h.efecto === "cura") return "flujo";
+  const pool = POOL_MINI[p.clase] || ["barra", "diana", "runas"];
+  let x = 7;
+  for (const ch of h.nombre || "") x = (x * 31 + ch.charCodeAt(0)) % 9973;
+  return pool[x % pool.length];
 }
 /* Semillas deterministas para que el anfitrión y el dueño del héroe vean lo mismo. */
 function rngDe(semilla) { let x = (semilla % 233280) + 1; return () => (x = (x * 9301 + 49297) % 233280) / 233280; }
@@ -612,18 +629,20 @@ function minijuego(tipo, o, cb) {
   if (window.__dym && window.__dym.auto) { setTimeout(() => cb(window.__dym.auto()), 15); return; }
   const el = $("#precision");
   certeroActivo = true;
-  const defensa = ["bloqueo", "esquiva", "disipar"].includes(tipo);
+  const defensa = DEFENSAS.includes(tipo);
+  const timers = [], luego = (f, ms) => timers.push(setTimeout(f, ms));
   const generoso = tiene("pulso") ? 1.8 : 1;
   const dur = o.dur || 3000, t0 = performance.now(), azar = rngDe(o.semilla || Date.now());
   let hecho = false, raf = 0;
   const fin = q => {
     if (hecho) return;
     hecho = true; cancelAnimationFrame(raf); clearTimeout(limite);
-    el.querySelector(".prec-res").textContent = RESULTADOS_MINI[defensa ? tipo : "ataque"][q];
+    el.querySelector(".prec-res").textContent = RESULTADOS_MINI[defensa ? tipo : tipo === "flujo" ? "cura" : "ataque"][q];
     el.dataset.q = q; el.classList.add("hecho");
     sonar(["fallo", "bien", "perfecto"][q]);
     if (q === 2) vibrar([15, 25, 15]);
-    el.onpointerdown = null;
+    el.onpointerdown = el.onpointerup = el.onpointermove = el.onpointercancel = null;
+    timers.forEach(clearTimeout);
     setTimeout(() => { if (hecho) { el.hidden = true; certeroActivo = false; } }, 420);
     cb(q);
   };
@@ -635,12 +654,24 @@ function minijuego(tipo, o, cb) {
     pulso: `<div class="prec-zona centro"><i class="anillo-obj"></i><i class="anillo"></i></div>`,
     bloqueo: `<div class="prec-zona centro"><i class="anillo-obj escudo"><b>¡BLOQUEA!</b></i><i class="anillo"></i></div>`,
     esquiva: `<div class="prec-zona esquiva"><b class="flecha-dir">${o.dir === "izq" ? "⟵" : "⟶"}</b><button type="button" class="lado" data-lado="izq">⟵</button><button type="button" class="lado" data-lado="der">⟶</button></div>`,
-    disipar: `<div class="prec-zona"></div>`
+    disipar: `<div class="prec-zona"></div>`,
+    carga: `<div class="carga"><i class="c-bien"></i><i class="c-perf"></i><i class="c-lleno"></i></div><p class="mj-ayuda">Mantén el dedo… y suelta</p>`,
+    frenesi: `<div class="prec-zona frenesi"><b class="f-n">0</b><i class="f-barra"><b></b></i></div>`,
+    zafarse: `<div class="prec-zona frenesi zafa"><b class="f-n">0</b><i class="f-barra"><b></b></i></div>`,
+    combo: `<div class="secuencia"></div><div class="flechas4">${["izq", "arr", "aba", "der"].map(d => `<button type="button" class="lado" data-d="${d}">${FLECHAS[d]}</button>`).join("")}</div>`,
+    trazo: `<div class="prec-zona trazo"><svg class="t-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg></div>`,
+    ritmo: `<div class="prec-zona pista"><i class="golpe-linea"></i></div>`,
+    debil: `<div class="prec-zona debil">${o.rival ? `<canvas class="mj-rival" data-rival="${o.rival}" data-tam="140"></canvas>` : ""}</div>`,
+    flujo: `<div class="prec-zona flujo"><i class="luz"></i><i class="dedo" hidden></i></div><p class="mj-ayuda">Mantén el dedo sobre la luz</p>`,
+    parada: `<div class="prec-zona parada"><b class="flecha-dir grande" hidden></b><p class="mj-ayuda">Desliza el dedo</p></div>`,
+    contra: `<div class="prec-zona contra">${[0, 1, 2, 3].map(k => `<button type="button" class="runa r${k}" data-k="${k}"><b>${["ᚠ", "ᚱ", "ᛟ", "ᛉ"][k]}</b></button>`).join("")}</div><p class="mj-ayuda c-fase">Memoriza…</p>`
   }[tipo];
   el.innerHTML = `<div class="prec-caja"><p class="prec-tit">${TITULOS_MINI[tipo]}</p>${o.sub ? `<p class="prec-sub">${esc(o.sub)}</p>` : ""}${zona}<i class="prec-tiempo" style="animation-duration:${dur}ms"></i><p class="prec-res" aria-live="polite"></p></div>`;
   el.hidden = false;
+  if (tipo === "debil") pintarRetratos(el);
   const ahora = () => performance.now() - t0;
   let limite = setTimeout(() => fin(0), dur);
+  const zonaEl = el.querySelector(".prec-zona");
   if (tipo === "barra") {
     const pf = 0.06 * generoso, bien = pf + 0.13, marca = el.querySelector(".prec-marca");
     el.style.setProperty("--perf", `${pf * 200}%`); el.style.setProperty("--bien", `${bien * 200}%`);
@@ -706,12 +737,181 @@ function minijuego(tipo, o, cb) {
       fin(b.dataset.lado !== o.dir ? 0 : ahora() < dur * 0.5 ? 2 : 1);
     };
   }
+  /* Carga: se llena mientras pulsas; pasarse de la zona lo desborda. */
+  if (tipo === "carga") {
+    const lleno = el.querySelector(".c-lleno"), T = 1150;
+    const z0 = 0.66, z1 = 0.9, p0 = 0.76 - 0.03 * (generoso - 1), p1 = 0.84 + 0.03 * (generoso - 1);
+    el.style.setProperty("--z0", z0 * 100 + "%"); el.style.setProperty("--z1", z1 * 100 + "%"); el.style.setProperty("--p0", p0 * 100 + "%"); el.style.setProperty("--p1", p1 * 100 + "%");
+    let desde = -1, f = 0;
+    const animar = () => {
+      if (desde >= 0) { f = (ahora() - desde) / T; lleno.style.width = Math.min(1, f) * 100 + "%"; if (f >= 1.02) { lleno.classList.add("rebosa"); return fin(0); } }
+      raf = requestAnimationFrame(animar);
+    };
+    animar();
+    el.onpointerdown = e => { e.preventDefault(); if (desde < 0) desde = ahora(); };
+    el.onpointerup = el.onpointercancel = e => { if (desde < 0) return; e.preventDefault(); fin(f >= p0 && f <= p1 ? 2 : f >= z0 && f <= z1 ? 1 : 0); };
+  }
+  /* Frenesí y zafarse: cuantos más toques, mejor. */
+  if (tipo === "frenesi" || tipo === "zafarse") {
+    const meta = (tipo === "frenesi" ? 15 : 11) / generoso, bien = (tipo === "frenesi" ? 9 : 6) / generoso, T = tipo === "frenesi" ? 2300 : Math.min(dur, 2100);
+    const num = el.querySelector(".f-n"), barra = el.querySelector(".f-barra b");
+    let n = 0;
+    clearTimeout(limite); limite = setTimeout(() => fin(n >= meta ? 2 : n >= bien ? 1 : 0), T);
+    el.querySelector(".prec-tiempo").style.animationDuration = T + "ms";
+    el.onpointerdown = e => {
+      e.preventDefault(); n++;
+      num.textContent = n; barra.style.width = Math.min(100, (100 * n) / meta) + "%";
+      num.classList.remove("pop"); void num.offsetWidth; num.classList.add("pop");
+      if (n % 2) sonar("dado");
+      if (n >= meta) fin(2);
+    };
+  }
+  /* Combo: repite cuatro flechas en orden, sin fallar. */
+  if (tipo === "combo") {
+    const dirs = ["izq", "arr", "aba", "der"], sec = [0, 1, 2, 3].map(() => dirs[Math.floor(azar() * 4)]);
+    const caja = el.querySelector(".secuencia");
+    caja.innerHTML = sec.map(d => `<i>${FLECHAS[d]}</i>`).join("");
+    let k = 0;
+    el.onpointerdown = e => {
+      const b = e.target.closest("[data-d]");
+      if (!b) return;
+      e.preventDefault();
+      if (b.dataset.d !== sec[k]) { caja.children[k].classList.add("mal"); return fin(0); }
+      caja.children[k].classList.add("ok"); sonar("dado"); k++;
+      if (k >= sec.length) fin(ahora() < 2100 * generoso ? 2 : 1);
+    };
+  }
+  /* Trazo: une los puntos en orden sin levantar el dedo. */
+  if (tipo === "trazo") {
+    const formas = [[[20, 75], [50, 22], [80, 75], [20, 45]], [[18, 25], [82, 25], [18, 75], [82, 75]], [[50, 18], [82, 50], [50, 82], [18, 50]], [[15, 70], [38, 30], [62, 70], [85, 30]], [[25, 22], [75, 40], [25, 60], [75, 80]]];
+    const pts = formas[Math.floor(azar() * formas.length)];
+    const svg = el.querySelector(".t-svg");
+    svg.innerHTML = `<polyline class="guia" points="${pts.map(p => p.join(",")).join(" ")}"/><polyline class="hecha" points=""/>`;
+    zonaEl.insertAdjacentHTML("beforeend", pts.map(([x, y], k) => `<i class="punto${k ? "" : " primero"}" style="left:${x}%;top:${y}%"><b>${k + 1}</b></i>`).join(""));
+    const marcas = [...zonaEl.querySelectorAll(".punto")], hecha = svg.querySelector(".hecha");
+    let k = 0, activo = false, inicio = 0;
+    const cerca = (e, i) => { const r = zonaEl.getBoundingClientRect(); return Math.hypot(e.clientX - (r.left + (pts[i][0] / 100) * r.width), e.clientY - (r.top + (pts[i][1] / 100) * r.height)) <= 30 * generoso; };
+    const marcar = () => { marcas[k].classList.add("ok"); k++; hecha.setAttribute("points", pts.slice(0, k).map(p => p.join(",")).join(" ")); sonar("dado"); if (k < marcas.length) marcas[k].classList.add("sig"); };
+    el.onpointerdown = e => { e.preventDefault(); if (!activo && cerca(e, 0)) { activo = true; inicio = ahora(); k = 0; marcar(); } };
+    el.onpointermove = e => { if (!activo) return; e.preventDefault(); if (k < pts.length && cerca(e, k)) { marcar(); if (k >= pts.length) fin(ahora() - inicio < 1500 * generoso ? 2 : 1); } };
+    el.onpointerup = el.onpointercancel = () => { if (activo && k < pts.length) fin(k >= 3 ? 1 : 0); };
+  }
+  /* Ritmo: cuatro notas llegan a la línea; tócalas al compás. */
+  if (tipo === "ritmo") {
+    const VIAJE = 1100, golpes = [0, 1, 2, 3].map(k => 950 + k * (430 + Math.floor(azar() * 3) * 90));
+    zonaEl.insertAdjacentHTML("beforeend", golpes.map((_, k) => `<i class="nota" data-k="${k}"></i>`).join(""));
+    const notas = [...zonaEl.querySelectorAll(".nota")], juicio = golpes.map(() => null);
+    const cerrar = () => { const perf = juicio.filter(j => j === 2).length, buenos = juicio.filter(j => j >= 1).length; fin(buenos === 4 && perf >= 3 ? 2 : buenos >= 3 ? 1 : 0); };
+    clearTimeout(limite); limite = setTimeout(cerrar, golpes[3] + 350);
+    el.querySelector(".prec-tiempo").style.animationDuration = golpes[3] + 350 + "ms";
+    const animar = () => {
+      const t = ahora();
+      notas.forEach((n, k) => {
+        const x = 1 - (t - (golpes[k] - VIAJE)) / VIAJE;
+        n.style.left = 14 + x * 80 + "%";
+        n.style.opacity = x > 1.05 || juicio[k] !== null ? 0 : 1;
+        if (juicio[k] === null && t - golpes[k] > 200) { juicio[k] = 0; n.classList.add("mal"); }
+      });
+      raf = requestAnimationFrame(animar);
+    };
+    animar();
+    el.onpointerdown = e => {
+      e.preventDefault();
+      const t = ahora();
+      let mejor = -1;
+      golpes.forEach((g, k) => { if (juicio[k] === null && Math.abs(t - g) < 300 && (mejor < 0 || Math.abs(t - g) < Math.abs(t - golpes[mejor]))) mejor = k; });
+      if (mejor < 0) return;
+      const dd = Math.abs(t - golpes[mejor]);
+      juicio[mejor] = dd <= 85 * generoso ? 2 : dd <= 170 * generoso ? 1 : 0;
+      zonaEl.classList.remove("toque"); void zonaEl.offsetWidth; zonaEl.classList.add("toque");
+      sonar(juicio[mejor] ? "dado" : "fallo");
+      if (juicio.every(j => j !== null)) cerrar();
+    };
+  }
+  /* Punto débil: tres grietas brillan un instante sobre el enemigo. */
+  if (tipo === "debil") {
+    const sitios = [[30, 30], [62, 26], [44, 52], [70, 58], [28, 70], [56, 76], [40, 36], [66, 42]].sort(() => azar() - 0.5).slice(0, 3);
+    zonaEl.insertAdjacentHTML("beforeend", sitios.map(([x, y]) => `<button type="button" class="grieta" style="left:${x}%;top:${y}%" hidden></button>`).join(""));
+    const gs = [...zonaEl.querySelectorAll(".grieta")], vis = 620 * generoso, paso = 820;
+    let tocadas = 0;
+    gs.forEach((g, k) => {
+      luego(() => { g.hidden = false; }, 250 + k * paso);
+      luego(() => { if (!g.classList.contains("ok")) g.hidden = true; if (k === 2) fin(tocadas === 3 ? 2 : tocadas === 2 ? 1 : 0); }, 250 + k * paso + vis);
+    });
+    clearTimeout(limite); limite = setTimeout(() => fin(tocadas === 3 ? 2 : tocadas === 2 ? 1 : 0), 250 + 2 * paso + vis + 50);
+    el.querySelector(".prec-tiempo").style.animationDuration = 250 + 2 * paso + vis + "ms";
+    el.onpointerdown = e => {
+      const g = e.target.closest(".grieta");
+      if (!g || g.hidden || g.classList.contains("ok")) return;
+      e.preventDefault(); g.classList.add("ok"); tocadas++; sonar("bien");
+      if (tocadas === 3) fin(2);
+    };
+  }
+  /* Flujo (curas): mantén el dedo sobre la luz mientras se mueve. */
+  if (tipo === "flujo") {
+    const luz = el.querySelector(".luz"), dedo = el.querySelector(".dedo"), T = 2200, fase = azar() * 6;
+    let pulsado = false, px = 0, py = 0, dentro = 0, total = 0;
+    clearTimeout(limite);
+    el.querySelector(".prec-tiempo").style.animationDuration = T + "ms";
+    const pos = t => [0.5 + 0.34 * Math.sin(t / 520 + fase), 0.5 + 0.3 * Math.sin(t / 380 + fase * 1.7)];
+    const animar = () => {
+      const t = ahora(), [x, y] = pos(t), r = zonaEl.getBoundingClientRect();
+      luz.style.left = x * 100 + "%"; luz.style.top = y * 100 + "%";
+      if (t > 250) {
+        total++;
+        const ok = pulsado && Math.hypot(px - (r.left + x * r.width), py - (r.top + y * r.height)) <= 34 * generoso;
+        if (ok) dentro++;
+        luz.classList.toggle("tocada", ok);
+      }
+      if (t >= T) return fin(total && dentro / total >= 0.78 ? 2 : total && dentro / total >= 0.45 ? 1 : 0);
+      raf = requestAnimationFrame(animar);
+    };
+    animar();
+    const mover = e => { px = e.clientX; py = e.clientY; const r = zonaEl.getBoundingClientRect(); dedo.hidden = false; dedo.style.left = px - r.left + "px"; dedo.style.top = py - r.top + "px"; };
+    el.onpointerdown = e => { e.preventDefault(); pulsado = true; mover(e); };
+    el.onpointermove = e => { if (pulsado) { e.preventDefault(); mover(e); } };
+    el.onpointerup = el.onpointercancel = () => { pulsado = false; dedo.hidden = true; };
+  }
+  /* Parada: aparece la dirección del tajo; desliza hacia ella. */
+  if (tipo === "parada") {
+    const dir = ["izq", "der", "arr", "aba"][(o.semilla || 0) % 4], fl = el.querySelector(".flecha-dir");
+    fl.textContent = FLECHAS[dir];
+    let visible = 0, desde = null;
+    luego(() => { fl.hidden = false; visible = ahora(); }, 200);
+    el.onpointerdown = e => { e.preventDefault(); desde = [e.clientX, e.clientY]; };
+    el.onpointerup = e => {
+      if (!desde || !visible) return;
+      const dx = e.clientX - desde[0], dy = e.clientY - desde[1];
+      desde = null;
+      if (Math.hypot(dx, dy) < 28) return;
+      const d = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "izq" : "der") : dy < 0 ? "arr" : "aba";
+      fin(d !== dir ? 0 : ahora() - visible < (dur - 200) * 0.55 ? 2 : 1);
+    };
+  }
+  /* Contrahechizo: memoriza tres runas que se iluminan y repítelas. */
+  if (tipo === "contra") {
+    const sec = [0, 1, 2].map(() => Math.floor(azar() * 4)), runas = [...el.querySelectorAll(".contra .runa")], ayuda = el.querySelector(".c-fase");
+    const MOSTRAR = 420;
+    let k = 0, listo = false;
+    sec.forEach((r, i) => { luego(() => runas[r].classList.add("brilla"), 250 + i * MOSTRAR); luego(() => runas[r].classList.remove("brilla"), 250 + i * MOSTRAR + MOSTRAR * 0.7); });
+    luego(() => { listo = true; ayuda.textContent = "¡Ahora tú!"; el.classList.add("turno-mio"); }, 250 + sec.length * MOSTRAR);
+    const t1 = 250 + sec.length * MOSTRAR;
+    el.onpointerdown = e => {
+      const b = e.target.closest(".runa");
+      if (!b || !listo) return;
+      e.preventDefault();
+      if (+b.dataset.k !== sec[k]) { b.classList.add("mal"); return fin(0); }
+      b.classList.add("ok"); luego(() => b.classList.remove("ok"), 160); sonar("dado"); k++;
+      if (k >= sec.length) fin(ahora() - t1 < 1300 * generoso ? 2 : 1);
+    };
+  }
 }
+const FLECHAS = { izq: "⟵", der: "⟶", arr: "↑", aba: "↓" };
 function necesitaCertero(v) {
   const c = S && S.combate;
   if (!c || c.fase !== "plan") return false;
   const p = S.players[heroeVista()], id = p && p.habs[+v], h = id && H(id);
-  return !!h && h.efecto === "dano" && (p.pm || 0) >= costeHab(p, h);
+  return !!h && (h.efecto === "dano" || h.efecto === "cura") && (p.pm || 0) >= costeHab(p, h);
 }
 function sonar(k) { if (SONIDO.on && SONIDOS[k]) try { SONIDOS[k](); } catch (e) {} }
 function festejar(titulo, sub, clase = "") {
@@ -1402,6 +1602,30 @@ function usarFuera(id, i) {
 
 /* ---------- Combate ---------- */
 /* Estados que pueden sufrir héroes y enemigos (turnos restantes en obj.est). */
+/* Sucesos del campo de batalla: aparecen a veces y cualquiera puede aprovecharlos en vez de atacar. */
+const SUCESOS_CAMPO = {
+  lampara: { nombre: "Lámpara colgante", verbo: "Derribarla", desc: "Cae sobre todos los enemigos", mini: "diana", actos: [1, 2], area: true, dado: [2, 6], tipo: "fisica", estado: ["paralisis", 1, 0.35], icono: "tesoro" },
+  barril: { nombre: "Barril de aceite", verbo: "Hacerlo rodar", desc: "Revienta en llamas contra todos", mini: "carga", actos: [0, 1, 3], area: true, dado: [2, 4], tipo: "arcana", estado: ["quemadura", 2, 0.7], icono: "hoguera" },
+  rocas: { nombre: "Rocas sueltas", verbo: "Provocar el derrumbe", desc: "Aplasta al objetivo", mini: "frenesi", actos: [0, 3, 4], dado: [3, 6], tipo: "fisica", estado: ["paralisis", 1, 0.5], icono: "combate" },
+  fuente: { nombre: "Fuente bendita", verbo: "Beber y repartir", desc: "Cura a todo el grupo", mini: "flujo", actos: [0, 1, 2, 4], cura: [2, 4], icono: "hoguera" },
+  cofre: { nombre: "Cofre que se escurre", verbo: "Atraparlo", desc: "Oro para todo el grupo", mini: "debil", actos: [0, 1, 2, 3, 4], oro: [6, 14], icono: "tesoro" },
+  runa: { nombre: "Runa de poder", verbo: "Trazarla", desc: "Maná para todos y energía de equipo", mini: "trazo", actos: [1, 2, 4], pm: 3, equipo: 35, icono: "misterio" },
+  cadenas: { nombre: "Cadenas del techo", verbo: "Soltarlas", desc: "Enredan y debilitan a los enemigos", mini: "combo", actos: [1, 2], area: true, estado: ["debil", 3, 1], icono: "altar" },
+  colmena: { nombre: "Nido de avispas", verbo: "Tirarlo", desc: "Envenena a los enemigos", mini: "diana", actos: [0], area: true, dado: [1, 4], tipo: "fisica", estado: ["veneno", 3, 0.8], icono: "evento" },
+  grieta: { nombre: "Grieta de lava", verbo: "Abrirla", desc: "Quema al objetivo", mini: "carga", actos: [3, 4], dado: [3, 8], tipo: "arcana", estado: ["quemadura", 3, 0.8], icono: "hoguera" }
+};
+/* Rachas: los minijuegos bien hechos seguidos dan +1 de daño por nivel (hasta +3); uno fallado la corta. */
+function rachar(i, q) {
+  const c = S.combate;
+  if (!c) return 0;
+  c.racha = c.racha || {};
+  const antes = c.racha[i] || 0, ahora = q === 2 ? Math.min(5, antes + 1) : q === 0 ? 0 : antes;
+  c.racha[i] = ahora;
+  if (ahora >= 3 && ahora > antes) fx({ tipo: "numero", objetivo: "h" + i, texto: `RACHA ×${ahora}`, color: RP.fuego[3], fila: 2 });
+  if (antes >= 3 && !ahora) log(`${S.players[i].nombre} pierde la racha.`, "esc");
+  return ahora;
+}
+const bonoRacha = i => Math.min(3, (S.combate && S.combate.racha && S.combate.racha[i]) || 0);
 const ESTADOS = {
   veneno: { nombre: "Veneno", verbo: "envenena", color: "#7bdc5a", desc: "Pierde PG al empezar su turno." },
   quemadura: { nombre: "Quemadura", verbo: "quema", color: "#ff8a3d", desc: "Pierde 1d6 PG por turno y no puede regenerarse." },
@@ -1700,6 +1924,16 @@ function nuevaRonda() {
   S.players.forEach((p, i) => { if (p.alma > 0 && p.est && (p.est.paralisis || p.est.congelado)) c.planes[i] = { tipo: "nada" }; });
   c.planFin = S.online && S.players.length > 1 ? Date.now() + PLAN_MS : null;
   c.objetivo = objetivoValido(c.objetivo);
+  if (c.suceso && c.ronda > c.suceso.hasta) { log(`${SUCESOS_CAMPO[c.suceso.k].nombre}: la ocasión se pierde.`, "esc"); c.suceso = null; }
+  if (!c.suceso && c.ronda >= 2 && (c.sucesos || 0) < 2 && Math.random() < 0.32) {
+    const pool = Object.keys(SUCESOS_CAMPO).filter(k => SUCESOS_CAMPO[k].actos.includes(Math.max(0, S.acto)));
+    if (pool.length) {
+      const k = azarDe(pool), SC = SUCESOS_CAMPO[k];
+      c.suceso = { k, hasta: c.ronda + 1 }; c.sucesos = (c.sucesos || 0) + 1;
+      log(`¡Suceso! ${SC.nombre}: ${SC.desc.toLowerCase()}.`, "esc");
+      fx({ tipo: "anuncio", texto: `¡${SC.nombre}!`, sub: `${SC.verbo}: ${SC.desc.toLowerCase()}`, tono: "turno" });
+    }
+  }
   const sig = S.players.findIndex((x, k) => x.alma > 0 && !c.planes[k]);
   S.turno = sig >= 0 ? sig : siguienteVivo(0);
   submenu = null;
@@ -1729,7 +1963,8 @@ function planificar(i, tipo, arg) {
     if ((S.zurron[o] || 0) <= reservados) return rechazar(`Ya no quedan ${OBJETOS[o] ? OBJETOS[o].nombre.toLowerCase() : "objetos"} libres esta ronda.`);
   }
   if (tipo === "anillo" && (!S.anillo || c.anilloUsado || Object.values(c.planes).some(x => x.tipo === "anillo"))) return rechazar("El anillo ya está en uso esta ronda.");
-  if (!["hab", "equipo", "objeto", "concentrar", "forcejeo", "anillo"].includes(tipo)) return;
+  if (tipo === "suceso" && (!c.suceso || Object.values(c.planes).some(x => x.tipo === "suceso"))) return rechazar("Otro héroe ya se encarga de eso.");
+  if (!["hab", "equipo", "objeto", "concentrar", "forcejeo", "anillo", "suceso"].includes(tipo)) return;
   c.planes[i] = { tipo, arg };
   const sig = S.online ? S.players.findIndex((x, k) => x.alma > 0 && !c.planes[k]) : heroePlan(miId);
   if (sig >= 0) S.turno = sig;
@@ -1928,6 +2163,7 @@ function accion(tipo, arg) {
     const coste = h ? costeHab(p, h) : 0;
     if (!h || (p.pm || 0) < coste) return;
     p.pm -= coste;
+    if (h.efecto === "dano" || h.efecto === "cura") rachar(S.turno, q);
     if (q === 2) { c.perfectos++; c.equipo = Math.min(100, (c.equipo || 0) + 6); if (S.stats) S.stats[S.turno].perfectos++; }
     fx({ tipo: "anuncio", texto: h.nombre, sub: p.nombre, tono: h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo" });
     const m = statHab(p, h);
@@ -1944,7 +2180,7 @@ function accion(tipo, arg) {
     };
     if (h.efecto === "dano") {
       const extraArma = (h.tipo === "fisica" ? arma.fis || 0 : (arma.arc || 0) + (p.clase === "mago" && h.tipo === "arcana" ? 2 : 0))
-        + (tiene("filo") && h.tipo === "fisica" ? 2 : 0) + (tiene("arcano") && h.tipo !== "fisica" ? 2 : 0);
+        + (tiene("filo") && h.tipo === "fisica" ? 2 : 0) + (tiene("arcano") && h.tipo !== "fisica" ? 2 : 0) + bonoRacha(S.turno);
       const ritmo = q === 2 ? " · ¡perfecto!" : q === 0 ? " · fuera de ritmo" : "";
       const [forma, rampa] = formaAtaque(p, h);
       const golpes = (crit, mult = 1) => {
@@ -1968,6 +2204,15 @@ function accion(tipo, arg) {
               const espe = { veneno: ["veneno", 2, 0.5], fuego: ["quemadura", 2, 0.4], hielo: ["congelado", 1, 0.2] }[arma.especial];
               if (espe && rr.hp > 0 && Math.random() < espe[2] && ponerEstado(rr, espe[0], espe[1], false, "e" + k)) { marcar(rr); partes.push(`${arma.nombre}: ${ESTADOS[espe[0]].nombre.toLowerCase()}`); }
             }
+          }
+          /* Remate: un minijuego perfecto contra un enemigo casi muerto (no jefe) lo tumba de golpe. */
+          if (q === 2 && rr.hp > 0 && !rr.jefe && rr.hp <= Math.ceil(rr.hpMax * 0.22)) {
+            const quedaba = rr.hp;
+            rr.hp = 0;
+            if (S.stats && S.stats[S.turno]) { S.stats[S.turno].dano += quedaba; S.stats[S.turno].bajas++; }
+            fx({ tipo: "numero", objetivo: "e" + k, texto: "¡REMATE!", color: RP.bronce[4], grande: true, fila: 1 });
+            fx({ tipo: "muerte", objetivo: "e" + k }); fx({ tipo: "destello", color: "rgba(255,201,92,0.3)" });
+            partes.push(`¡remate! (${quedaba})`);
           }
           efectosExtra(rr, antes - rr.hp, partes);
         });
@@ -2003,7 +2248,7 @@ function accion(tipo, arg) {
     }
     if (h.efecto === "cura") {
       const base = Math.max(1, tirar(h.dado[0], h.dado[1], m) + (arma.cura || 0));
-      const n = p.clase === "clerigo" ? Math.ceil(base * 1.5) : base;
+      const n = Math.max(1, Math.round((p.clase === "clerigo" ? Math.ceil(base * 1.5) : base) * (q === 2 ? 1.4 : q === 0 ? 0.75 : 1)));
       const objetivos = h.a === "grupo" ? S.players : h.a === "yo" ? [p] : [masHerido()];
       const partes = objetivos.map(o => {
         const real = curar(o, n), oi = idx(o);
@@ -2013,7 +2258,7 @@ function accion(tipo, arg) {
         fx({ tipo: "cura", objetivo: "h" + oi }); fx({ tipo: "numero", objetivo: "h" + oi, texto: "+" + real, color: RP.hoja[4] });
         return `${o.nombre} +${real}`;
       });
-      const tx = `${p.nombre} usa ${h.nombre} → ${partes.join(", ")} PG`;
+      const tx = `${p.nombre} usa ${h.nombre}${q === 2 ? " · ¡perfecto!" : q === 0 ? " · pulso tembloroso" : ""} → ${partes.join(", ")} PG`;
       log(tx, "ok"); mostrarTirada(tx, true);
       return fin();
     }
@@ -2034,6 +2279,7 @@ function accion(tipo, arg) {
     const [qs, ts] = String(arg).split(":");
     const q = +qs || 0, t = objetivoValido(ts === undefined ? c.objetivo : +ts);
     c.equipo = A.sello.recarga || 0;
+    rachar(S.turno, q);
     const blancos = A.area ? vivosR() : [t];
     fx({ tipo: "anuncio", texto: "⚡ " + A.nombre, sub: `${p.nombre} y ${A.con.nombre}`, tono: A.tipo });
     fx({ tipo: "destello", color: "rgba(255,201,92,0.35)" });
@@ -2058,6 +2304,33 @@ function accion(tipo, arg) {
     if (A.cura) S.players.forEach((x, i) => { if (x.alma > 0) { const cu = curar(x, A.cura); if (cu) { fx({ tipo: "cura", objetivo: "h" + i }); fx({ tipo: "numero", objetivo: "h" + i, texto: "+" + cu, color: RP.hoja[4] }); } } });
     const tx = `¡Ataque en equipo! ${p.nombre} y ${A.con.nombre}: ${A.nombre} → ${partes.join(" · ")}${A.cura ? ` · el grupo se cura ${A.cura}` : ""}`;
     log(tx, "nivel"); mostrarTirada(tx, true);
+    return fin();
+  }
+  if (tipo === "suceso") {
+    const sc = c.suceso, SC = sc && SUCESOS_CAMPO[sc.k];
+    if (!SC) return;
+    const [qs, ts] = String(arg).split(":");
+    const q = +qs || 0, t = objetivoValido(ts === undefined ? c.objetivo : +ts), mult = q === 2 ? 1.5 : q === 1 ? 1 : 0.5;
+    c.suceso = null;
+    rachar(S.turno, q);
+    fx({ tipo: "anuncio", texto: SC.nombre, sub: `${p.nombre} · ${SC.verbo}`, tono: SC.cura ? "cura" : "turno" });
+    fx({ tipo: "ataque", actor: yo });
+    const partes = [];
+    if (SC.dado || SC.estado) {
+      (SC.area ? vivosR() : [t]).forEach(k => {
+        const rr = c.rivales[k];
+        if (rr.hp <= 0) return;
+        if (SC.dado) { fx({ tipo: SC.tipo === "fisica" ? "tajo" : "magia", objetivo: "e" + k, rampa: RP.fuego }); partes.push(danarRival(k, Math.round(tirar(SC.dado[0], SC.dado[1]) * mult), SC.tipo, q === 2, 1, RP.fuego, S.turno)); }
+        if (SC.estado && rr.hp > 0 && Math.random() < SC.estado[2] * (q ? 1 : 0.5) && ponerEstado(rr, SC.estado[0], SC.estado[1], false, "e" + k)) { marcar(rr); partes.push(`${rr.nombre}: ${ESTADOS[SC.estado[0]].nombre.toLowerCase()}`); }
+      });
+      if (SC.area) fx({ tipo: "destello", color: "rgba(255,159,90,0.3)" });
+    }
+    if (SC.cura) S.players.forEach((x, i) => { if (x.alma > 0) { const cu = curar(x, Math.round(tirar(SC.cura[0], SC.cura[1]) * mult)); if (cu) { fx({ tipo: "cura", objetivo: "h" + i }); fx({ tipo: "numero", objetivo: "h" + i, texto: "+" + cu, color: RP.hoja[4] }); partes.push(`${x.nombre} +${cu}`); } } });
+    if (SC.oro) { const n = Math.round((SC.oro[0] + Math.floor(Math.random() * (SC.oro[1] - SC.oro[0] + 1))) * mult); S.players.forEach(x => { x.oro += n; }); fx({ tipo: "numero", objetivo: yo, texto: `+${n} po`, color: RP.bronce[4], fila: 1 }); partes.push(`+${n} po cada uno`); }
+    if (SC.pm) { S.players.forEach(x => { if (x.alma > 0) x.pm = Math.min(pmMax(x), (x.pm || 0) + Math.round(SC.pm * mult)); }); partes.push(`+${Math.round(SC.pm * mult)} PM al grupo`); }
+    if (SC.equipo) { c.equipo = Math.min(100, (c.equipo || 0) + Math.round(SC.equipo * mult)); partes.push("energía de equipo"); }
+    const tx = `${p.nombre}: ${SC.verbo.toLowerCase()} (${SC.nombre.toLowerCase()})${q === 2 ? " · ¡perfecto!" : q === 0 ? " · a medias" : ""} → ${partes.join(" · ") || "nada"}`;
+    log(tx, "ok"); mostrarTirada(tx, true);
     return fin();
   }
   if (tipo === "objeto") {
@@ -2106,12 +2379,12 @@ const esperar = ms => new Promise(res => setTimeout(res, RAPIDO ? 10 : reducido 
 /* Defensa activa: cuando un ataque va a dar, el dueño del héroe juega un minijuego de defensa en su móvil.
    El anfitrión espera el resultado (0, 1 o 2) un tiempo y, si no llega, cuenta como 0. */
 let ventana = null;
-const DURACION_DEFENSA = () => (RAPIDO ? 300 : 1500);
+const DURACION_DEFENSA = tipo => (RAPIDO ? 300 : { contra: 3700, zafarse: 2100, parada: 1600 }[tipo] || 1500);
 const MAGICOS = new Set(["liche", "elemental", "diablillo", "sombra", "devorador", "vampiro"]);
 function ventanaBloqueo(ti, tipo) {
   const p = S.players[ti];
   if (!p || p.alma <= 0) return Promise.resolve(0);
-  const dur = DURACION_DEFENSA();
+  const dur = DURACION_DEFENSA(tipo);
   S.bloqueo = { i: ti, n: Date.now(), tipo, dur, dir: Math.random() < 0.5 ? "izq" : "der", semilla: Math.floor(Math.random() * 1e6) };
   guardar(); render();
   return new Promise(res => {
@@ -2193,23 +2466,33 @@ async function turnoEnemigo(ri, enRonda = false) {
           let dmg = Math.max(1, Math.round((tirar(e.dano[0] * (rr === 20 ? 2 : 1), e.dano[1], e.dano[2] + (r.danoExtra || 0)) - (c.blando ? 2 : 0)) * (especial ? sp.mult || 1 : 1)));
           if (especial && sp.sinDano) dmg = 0;
           /* Defensa según el ataque: especial → esquivar; mágico → disipar; normal → bloquear. */
-          const tipoDef = especial ? "esquiva" : MAGICOS.has(r.clave) ? "disipar" : "bloqueo";
+          const alterna = Math.random() < 0.5;
+          const tipoDef = especial ? (alterna ? "esquiva" : "zafarse") : MAGICOS.has(r.clave) ? (alterna ? "disipar" : "contra") : alterna ? "bloqueo" : "parada";
+          const fam = FAMILIA_DEF[tipoDef];
           fx({ tipo: "tiradaEnemigo", n: rr, det: { quien: r.nombre, accion: especial ? sp.nombre : `ataca a ${t.nombre}`, mod: atk, total: rr + atk, contra: `CA ${def}`, ok: true, tipo: "ataque" } });
           await esperar(650);
           if (!sigue()) return;
           const q = await ventanaBloqueo(ti, tipoDef);
           if (!sigue()) return;
-          const mult = q === 2 ? (tipoDef === "esquiva" ? 0 : 0.25) : q === 1 ? (tipoDef === "disipar" ? 0.6 : 0.5) : 1;
+          const mult = q === 2 ? (fam === "esquiva" ? 0 : 0.25) : q === 1 ? (fam === "disipar" ? 0.6 : 0.5) : 1;
+          rachar(ti, q);
           if (q) {
+            const evitado = dmg - Math.round(dmg * mult);
             dmg = Math.round(dmg * mult); c.bloqueos++; if (S.stats) S.stats[ti].bloqueos++;
-            fx({ tipo: "numero", objetivo: "h" + ti, texto: { bloqueo: "BLOQUEO", esquiva: "ESQUIVA", disipar: "DISIPADO" }[tipoDef], color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" });
-            if (q === 2) { c.equipo = Math.min(100, (c.equipo || 0) + 15); if (objEspecial(t, "eco") && r.hp > 0) log(`Anillo del eco: ${t.nombre} contraataca → ${danarRival(ri, tirar(1, 8, 2), "fisica", false, 1, undefined, ti)}`, "ok"); }
+            fx({ tipo: "numero", objetivo: "h" + ti, texto: { bloqueo: "BLOQUEO", parada: "PARADA", esquiva: "ESQUIVA", zafarse: "¡LIBRE!", disipar: "DISIPADO", contra: "REFLEJADO" }[tipoDef], color: RP.mar[4], fila: 1 }); fx({ tipo: "bloqueo" });
+            if (q === 2) {
+              c.equipo = Math.min(100, (c.equipo || 0) + 15);
+              if (objEspecial(t, "eco") && r.hp > 0) log(`Anillo del eco: ${t.nombre} contraataca → ${danarRival(ri, tirar(1, 8, 2), "fisica", false, 1, undefined, ti)}`, "ok");
+              /* Parada perfecta: réplica inmediata. Contrahechizo perfecto: el hechizo vuelve a quien lo lanzó. */
+              if (tipoDef === "parada" && r.hp > 0) { fx({ tipo: "ataque", actor: "h" + ti }); fx({ tipo: "tajo", actor: "h" + ti, objetivo: o }); log(`${t.nombre} para y replica → ${danarRival(ri, tirar(1, 6, Math.max(0, stat(t, "ani"))), "fisica", false, 1, undefined, ti)}`, "ok"); }
+              if (tipoDef === "contra" && r.hp > 0 && evitado > 0) { fx({ tipo: "proyectil", actor: "h" + ti, objetivo: o, forma: "orbe", rampa: RP.magia }); log(`${t.nombre} devuelve el hechizo → ${danarRival(ri, Math.max(1, Math.ceil(evitado * 0.6)), "arcana", false, 1, RP.magia, ti)}`, "ok"); }
+            }
           }
           if (r.hp <= 0) { log(`${r.nombre} cae antes de rematar su golpe.`, "ok"); fx({ tipo: "muerte", objetivo: o }); render(); break; }
-          const nota = q === 2 ? ` · ¡${tipoDef === "esquiva" ? "esquiva limpia" : tipoDef === "disipar" ? "disipado" : "parada perfecta"}!` : q === 1 ? ` · ${tipoDef === "esquiva" ? "esquiva a medias" : "¡bloqueado!"}` : "";
+          const nota = q === 2 ? ` · ¡${{ esquiva: "esquiva limpia", zafarse: "se libera", disipar: "disipado", contra: "contrahechizo", parada: "parada y réplica" }[tipoDef] || "parada perfecta"}!` : q === 1 ? ` · ${fam === "esquiva" ? "esquiva a medias" : fam === "disipar" ? "lo debilita" : "¡bloqueado!"}` : "";
           let txt = `${especial ? sp.nombre : r.nombre} → ${t.nombre}: ${rr} ${fmt(atk)} vs CA ${def}${nota} → ${dmg > 0 ? danarHeroe(ti, dmg, true, ri) : "sin daño"}`;
           if (dmg > 0 && objEspecial(t, "espinas") && r.hp > 0) { r.hp = Math.max(0, r.hp - 2); fx({ tipo: "numero", objetivo: o, texto: "-2", color: RP.hoja[4], fila: 1 }); txt += ". Espinas: 2"; if (r.hp <= 0) fx({ tipo: "muerte", objetivo: o }); }
-          if (especial && t.alma > 0 && !(q === 2 && tipoDef === "esquiva")) [sp.estado, sp.extra].forEach(es => { if (es && Math.random() < es[2] * (q ? 0.5 : 1) && ponerEstado(t, es[0], es[1], true, "h" + ti)) txt += `. ${ESTADOS[es[0]].nombre}`; });
+          if (especial && t.alma > 0 && !(q === 2 && fam === "esquiva")) [sp.estado, sp.extra].forEach(es => { if (es && Math.random() < es[2] * (q ? 0.5 : 1) && ponerEstado(t, es[0], es[1], true, "h" + ti)) txt += `. ${ESTADOS[es[0]].nombre}`; });
           if (r.drena && r.hp > 0) { const cu = Math.max(1, Math.floor(dmg / 2)); r.hp = Math.min(r.hpMax, r.hp + cu); txt += `. Bebe y se cura ${cu}`; }
           if (r.roba && t.oro > 0) { const rob = Math.min(r.roba, t.oro); t.oro -= rob; c.robado[ti] = (c.robado[ti] || 0) + rob; txt += `. Roba ${rob} po`; }
           log(txt, "ko"); mostrarTirada(txt, false);
@@ -2491,7 +2774,8 @@ function cambiarSeleccion(campo, paso) {
 /* ---------- Pantalla de juego ---------- */
 function limitesJuego() {
   const ancho = $("#p-juego").clientWidth;
-  return [ancho - 12, Math.max(108, Math.min(window.innerHeight * 0.3, (ancho * 9) / 16))];
+  const f = S && S.modo === "mapa" && window.innerHeight < 720 ? 0.26 : 0.3;
+  return [ancho - 12, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
 }
 function renderJuego() {
   if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
@@ -2563,7 +2847,7 @@ function renderGrupo() {
     const g = GESTOS[i] && GESTOS[i].hasta > performance.now() ? " " + GESTOS[i].clase : "";
     return `<button type="button" class="heroe${g}${activo ? " activo" : ""}${p.alma <= 0 ? " caido" : ""}${pct <= 30 && p.alma > 0 ? " grave" : ""}${conectado ? "" : " fuera"}" data-ui="ficha" data-i="${i}" aria-label="Ficha de ${esc(p.nombre)}">
       <canvas class="retrato" data-tam="28" data-look='${esc(JSON.stringify(lookConGesto(i)))}'></canvas>
-      ${planeado ? '<i class="planeado" title="Acción elegida">✓</i>' : ""}<span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
+      ${planeado ? '<i class="planeado" title="Acción elegida">✓</i>' : ""}${cb && cb.racha && cb.racha[i] >= 2 ? `<i class="racha" title="Racha: +${Math.min(3, cb.racha[i])} al daño">×${cb.racha[i]}</i>` : ""}<span class="heroe-datos"><strong>${esc(p.nombre)}${S.online && p.uid === miId ? " (tú)" : ""}</strong>
       <span class="barra-alma"><i style="width:${pct}%"></i></span><span class="cifras"><span>${p.alma}/${max}</span><span class="nv">Nv ${p.nivel}</span></span>
       <span class="barra-pm" title="Maná ${p.pm || 0}/${pmMax(p)}"><i style="width:${Math.round((100 * (p.pm || 0)) / pmMax(p))}%"></i></span>
       <span class="barra-xp"><i style="width:${pctXp(p)}%"></i></span>
@@ -2818,7 +3102,7 @@ function renderCombate(el, sc, p0, mio0) {
   else if (!plan) {
     const quien = S.players[S.turno], pl = quien && c.planes && c.planes[S.turno];
     const que = !pl ? "" : pl.tipo === "hab" ? H(quien.habs[+String(pl.arg).split(":")[0]]).nombre : pl.tipo === "equipo" ? "ataque en equipo"
-      : pl.tipo === "objeto" ? (OBJETOS[String(pl.arg).split(":")[0]] || {}).nombre || "objeto" : { forcejeo: "Forcejeo", concentrar: "Concentrarse", anillo: "Anillo", nada: "no puede moverse" }[pl.tipo] || "";
+      : pl.tipo === "objeto" ? (OBJETOS[String(pl.arg).split(":")[0]] || {}).nombre || "objeto" : pl.tipo === "suceso" ? "aprovecha el suceso" : { forcejeo: "Forcejeo", concentrar: "Concentrarse", anillo: "Anillo", nada: "no puede moverse" }[pl.tipo] || "";
     menu = c.actuando ? `<p class="quien espera">Ronda ${c.ronda} · <b>${esc(quien ? quien.nombre : "")}</b>${que ? `: ${esc(que)}${pl && pl.auto ? " (automático)" : ""}` : ""}…</p>`
       : `<p class="quien espera">Ronda ${c.ronda} · se resuelve por orden de iniciativa…</p>`;
   }
@@ -2827,6 +3111,10 @@ function renderCombate(el, sc, p0, mio0) {
       const A = ataqueEquipo(p);
       if (!A || (c.equipo || 0) < 100 || Object.values(c.planes || {}).some(x => x.tipo === "equipo")) return "";
       return `<button type="button" class="equipo-btn" data-juego="equipo" data-v="1" ${mio ? "" : "disabled"}><b>⚡ ${A.nombre}</b><small>Con ${esc(A.con.nombre)} · ${A.area ? "a todos · " : ""}${A.aplica ? ESTADOS[A.aplica[0]].verbo : A.cura ? "cura al grupo" : ""}${A.sello.nota ? ` · ${A.sello.nota}` : ""}</small></button>`;
+    })()}${(() => {
+      const sc = c.suceso, SC = sc && SUCESOS_CAMPO[sc.k];
+      if (!SC || Object.values(c.planes || {}).some(x => x.tipo === "suceso")) return "";
+      return `<button type="button" class="suceso-btn" data-juego="suceso" data-v="1" ${mio ? "" : "disabled"}><canvas data-icono="${SC.icono}" data-tam="22" aria-hidden="true"></canvas><span><b>${SC.verbo}: ${SC.nombre.toLowerCase()}</b><small>${SC.desc}${sc.hasta > c.ronda ? " · quedan 2 rondas" : " · ¡última ronda!"}</small></span></button>`;
     })()}<div class="menu dos acciones">${p.habs.map((id, k) => {
       const h = H(id), coste = costeHab(p, h);
       const ef = h.efecto !== "dano" ? "" : r.debil === h.tipo || (h.noMuerto && r.nomuerto) ? "alto" : r.resiste === h.tipo ? "bajo" : "";
@@ -2839,6 +3127,7 @@ function renderCombate(el, sc, p0, mio0) {
     <div class="rival-info">${varios ? `<span class="etiqueta">Objetivo: ${esc(r.nombre)}</span>` : ""}<span class="chips">${chips.map(x => `<span>${x}</span>`).join("")}</span><button type="button" class="info" data-ui="bestia" data-k="${r.clave}" aria-label="Ver en el bestiario">ⓘ</button></div>
     <p class="intencion"><span>Su turno:</span> ${intencion(c, t)}</p>
     <ol class="orden">${orden}</ol>${menu}`;
+  pintarIconos(el);
 }
 
 /* ---------- Ventanas ---------- */
@@ -2955,6 +3244,7 @@ function ejecutar(k, v) {
     case "accion": return accion("accion", v);
     case "hab": return accion("hab", v);
     case "equipo": return accion("equipo", v);
+    case "suceso": return accion("suceso", v);
     case "abrir": return abrirCofre();
     case "equipar": { const [k, i] = String(v).split(":"); return equipar(k, +i); }
     case "aprender": return aprender(+v);
@@ -2987,7 +3277,7 @@ document.addEventListener("click", ev => {
     if (S && VOTABLES.has(k) && hayVotacion()) { v = `${k}|${v}`; k = "votar"; }
     if (!S || (ocupado && k !== "bloquear") || (esperandoHost && k !== "bloquear") || certeroActivo) return;
     if (k === "reintentar" ? S.online && !esHost() : !permitido(k, miId)) return;
-    const enCombate = S.combate && ["hab", "equipo", "objeto", "accion"].includes(k);
+    const enCombate = S.combate && ["hab", "equipo", "objeto", "accion", "suceso"].includes(k);
     const mandar = (vv = v) => {
       if (enCombate) { if (!S.combate || S.combate.fase !== "plan") return; vv = `${vv}#${S.combate.ronda}`; }
       return S.online && !esHost() ? (k === "bloquear" ? enviarBloqueo() : enviarJugada(k, vv)) : ejecutar(k, vv);
@@ -2997,10 +3287,12 @@ document.addEventListener("click", ev => {
     const t = S.combate ? miObjetivo() : 0;
     if (k === "hab" && necesitaCertero(v)) {
       const p = S.players[heroeVista()], h = H(p.habs[+v]);
-      return minijuego(tipoMinijuego(p, h), { sub: `${p.nombre} · ${h.nombre}` }, q => { if (S && S.combate) mandar(`${v}:${q}:${t}`); });
+      const rv = S.combate.rivales[t];
+      return minijuego(tipoMinijuego(p, h), { sub: `${p.nombre} · ${h.nombre}`, rival: rv ? `enemigo:${rv.clave}` : "", semilla: Date.now() }, q => { if (S && S.combate) mandar(`${v}:${q}:${t}`); });
     }
     if (k === "hab") return mandar(`${v}:1:${t}`);
-    if (k === "equipo") { const p = S.players[heroeVista()], A = ataqueEquipo(p); return minijuego("pulso", { sub: `${p.nombre} y ${A ? A.con.nombre : ""} · ${A ? A.nombre : ""}` }, q => { if (S && S.combate) mandar(`${q}:${t}`); }); }
+    if (k === "suceso") { const sc = S.combate.suceso, SC = sc && SUCESOS_CAMPO[sc.k], rv = S.combate.rivales[t]; if (!SC) return; return minijuego(SC.mini, { sub: `${SC.nombre} · ${SC.verbo}`, rival: rv ? `enemigo:${rv.clave}` : "" }, q => { if (S && S.combate) mandar(`${q}:${t}`); }); }
+    if (k === "equipo") { const p = S.players[heroeVista()], A = ataqueEquipo(p); return minijuego(["pulso", "ritmo", "frenesi", "combo"][S.combate.ronda % 4], { sub: `${p.nombre} y ${A ? A.con.nombre : ""} · ${A ? A.nombre : ""}` }, q => { if (S && S.combate) mandar(`${q}:${t}`); }); }
     if (k === "objeto") return mandar(`${v}:${t}`);
     return mandar();
   }
@@ -3063,7 +3355,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modal) cerrarModal(); });
 window.addEventListener("resize", () => { if (S && S.modo === "mapa") requestAnimationFrame(dibujarLineas); });
 
-if (/^#prueba/.test(location.hash)) window.__dym = { estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo(), interno: () => ({ resolviendo, ocupado, tiradaEnCurso, terminar: !!terminarAccion, ventana: !!ventana, certeroActivo, vista, esperandoHost }) };
+if (/^#prueba/.test(location.hash)) window.__dym = { mini: (t, o) => minijuego(t, o || {}, q => { window.__dym.q = q; }), estado: () => S, H, render: () => render(), siguienteActo: () => siguienteActo(), interno: () => ({ resolviendo, ocupado, tiradaEnCurso, terminar: !!terminarAccion, ventana: !!ventana, certeroActivo, vista, esperandoHost }) };
 render();
 conectar();
 })();
