@@ -8116,6 +8116,540 @@ const FONDOS = (() => {
     pon(g, ORO, 3, [hx + 2, hy + 3], [hx - 2, hy + 3]);
   }
 
+  /* ---------- Poses ----------
+     aspecto.pose: "ataque", "conjuro", "herido" o "victoria" (cualquier otra cosa es la postura de siempre).
+     La pose mueve la plantilla (tronco adelantado o echado atrás, rodillas y pies), inclina lo que hay por encima
+     de la cadera desplazando sus filas (cizalla: escalones de un píxel, como se inclina a mano) y vuelve a dibujar
+     brazos y armas con articulaciones libres. Cada arma se dibuja en un marco local (de pie, con la mano en 0,0)
+     que luego se gira a la rejilla, así que sirve para cualquier ángulo; las formas se rasterizan ya giradas y el
+     relieve se calcula después, con la luz de siempre. */
+  const POSES = ["normal", "ataque", "conjuro", "herido", "victoria"];
+  /* Luz de los conjuros: el tono 4 es el corazón y los bajos, el halo. El brujo, verde con el halo violeta. */
+  const LUZ = {
+    mago: ["#1d1650", "#3b36a6", "#6a6fe2", "#a9b2fa", "#eef0ff"],
+    brujo: ["#2a1240", "#6a2c9a", "#46b064", "#9cf08e", "#efffe0"],
+    clerigo: ["#4a2a0c", "#9a6418", "#dca632", "#ffe27c", "#fffbe2"],
+    bardo: ["#0b2c30", "#167068", "#27ae9e", "#66e8d2", "#dcfff6"],
+    neutro: ["#3a3848", "#6c6a80", "#a8aabe", "#dcdeea", "#ffffff"]
+  };
+  const ESTELA = ["#4a4e66", "#7c8298", "#b0b8cc", "#dce2ee", "#fbfcff"];
+
+  /* Desplaza el tronco y la cabeza (los pies se quedan donde están). */
+  function mover(t, dx, dy) {
+    for (const k of ["cx", "cabX", "ojo1", "ojo2", "narizX", "torL", "torR", "wL", "wR", "caderaAtras", "caderaDelante"]) t[k] += dx;
+    for (const k of ["cabY", "ojoY", "bocaY", "torTop", "torBot", "pierTop"]) t[k] += dy;
+    for (const k of ["hombro", "codo", "mano", "hombroAtras", "manoAtras", "tiro"]) if (t[k]) t[k] = [t[k][0] + dx, t[k][1] + dy];
+    t.rodillaY = Math.round((t.pierTop + t.suelo) / 2) - 1;
+    return t;
+  }
+  function posar(t, pose) {
+    const P = { pose, incl: 0, cab: 0 };
+    t.pose = pose;
+    /* El sombrero del mago no cambia de forma al agacharse. */
+    t.altSombrero = Math.min(15, t.cabY - 5);
+    if (pose === "ataque") {
+      /* Zancada: el pie de delante avanza con la rodilla doblada sobre él, el de atrás se estira. */
+      mover(t, 1, 3); P.incl = 0.075;
+      t.pieAtras -= 3; t.pieDelante += 4; t.kDx = 3.5;
+      t.faldaI = -3; t.faldaD = 3; t.capaDx = -5; t.capaDy = -3;
+    } else if (pose === "conjuro") {
+      t.pieAtras -= 1; t.pieDelante += 1; P.incl = -0.03;
+      /* El aire de la magia levanta el bajo de la túnica y la capa hacia atrás. */
+      t.faldaI = -3; t.faldaIy = -3; t.faldaD = 2; t.faldaDy = -1; t.capaDx = -6; t.capaDy = -4;
+    } else if (pose === "herido") {
+      /* Retroceso: el golpe echa el tronco atrás y la cabeza todavía más; la rodilla de delante cede. */
+      mover(t, -1, 2); P.incl = -0.085; P.cab = -0.11;
+      t.pieAtras -= 1; t.kDx = 3.5; t.kAx = -0.5;
+      t.faldaI = -1; t.faldaD = 2; t.capaDx = 2; t.capaDy = 1;
+    } else if (pose === "victoria") {
+      t.pieAtras -= 1; t.pieDelante += 1; P.incl = -0.025;
+    }
+    const piv = t.pierTop, cuello = t.torTop + 1;
+    P.desp = y => y >= piv ? 0 : Math.round(P.incl * (piv - y)) + (P.cab && y < cuello ? Math.round(P.cab * (cuello - y)) : 0);
+    return P;
+  }
+  /* Desplaza cada fila según desp(y). */
+  function cizallar(g, desp) {
+    for (let y = 0; y < H; y++) {
+      const d = desp(y);
+      if (!d) continue;
+      const o = y * W, c = g.c.slice(o, o + W), r = g.r.slice(o, o + W);
+      for (let x = 0; x < W; x++) { g.c[o + x] = null; g.r[o + x] = null; }
+      for (let x = 0; x < W; x++) if (c[x]) { const nx = x + d; if (nx >= 0 && nx < W) { g.c[o + nx] = c[x]; g.r[o + nx] = r[x]; } }
+    }
+  }
+  /* Dibuja algo por detrás de lo ya pintado: solo ocupa los huecos, en sombra, y con una línea honda donde
+     asoma junto al cuerpo. */
+  function detras(g, dibujar) {
+    const gb = new Rejilla(W, H);
+    dibujar(gb);
+    const nuevo = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) if (gb.c[i] && !g.c[i]) {
+      const r = gb.r[i], k = r ? r.indexOf(gb.c[i]) : -1;
+      g.c[i] = r && k > 2 ? r[2] : gb.c[i]; g.r[i] = r; nuevo[i] = 1;
+    }
+    const toca = (x, y) => x >= 0 && y >= 0 && x < W && y < H && g.c[y * W + x] && !nuevo[y * W + x];
+    const marcas = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (nuevo[y * W + x] && (toca(x + 1, y) || toca(x - 1, y) || toca(x, y - 1) || toca(x, y + 1))) marcas.push(y * W + x);
+    for (const i of marcas) { const r = g.r[i]; if (r) g.c[i] = r[0]; }
+  }
+
+  /* Marco local girado: (x, y) del objeto de pie, con la mano en 0,0 y la punta hacia y negativas.
+     ang en grados: 0 = hacia arriba, 90 = hacia delante (derecha), 180 = hacia abajo. */
+  function marco(ox, oy, angGrados) {
+    const a = (angGrados * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+    const f = (x, y) => [ox + x * c - y * s, oy + x * s + y * c];
+    const m = {
+      f,
+      inv: (X, Y) => { const dx = X - ox, dy = Y - oy; return [dx * c + dy * s, -dx * s + dy * c]; },
+      at: (x, y) => { const [X, Y] = f(x, y); return [Math.round(X), Math.round(Y)]; },
+      poly: (k, pts) => k.poly(pts.map(p => f(p[0], p[1]))),
+      ell: (k, cx, cy, rx, ry = rx) => { const pts = []; for (let i = 0; i < 24; i++) { const b = (i / 24) * Math.PI * 2; pts.push([cx + Math.cos(b) * (rx + 0.3), cy + Math.sin(b) * (ry + 0.3)]); } return m.poly(k, pts); },
+      rect: (k, x, y, w, h) => m.poly(k, [[x - 0.5, y - 0.5], [x + w - 0.5, y - 0.5], [x + w - 0.5, y + h - 0.5], [x - 0.5, y + h - 0.5]]),
+      linea: (k, x0, y0, x1, y1, gr) => { const [a0, b0] = f(x0, y0), [a1, b1] = f(x1, y1); return k.linea(a0, b0, a1, b1, gr); },
+      curva: (k, x0, y0, cx, cy, x1, y1, g0, g1) => { const [a0, b0] = f(x0, y0), [ca, cb] = f(cx, cy), [a1, b1] = f(x1, y1); return k.curva(a0, b0, ca, cb, a1, b1, g0, g1); },
+      pon: (g, ram, k, ...pts) => { for (const [x, y] of pts) { const [X, Y] = m.at(x, y); g.set(X, Y, ram[lim(k, 0, 4)], ram); } },
+      surco: (g, ram, k, x0, y0, x1, y1, solo) => { const [a0, b0] = f(x0, y0), [a1, b1] = f(x1, y1); surco(g, ram, k, a0, b0, a1, b1, solo); }
+    };
+    return m;
+  }
+  /* Hoja de acero en cualquier ángulo: el filo de la izquierda local mira a la luz, el de la derecha a la sombra. */
+  function pintarHoja(g, c, m, punta, ancho = 1.5) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!c.tiene(x, y)) continue;
+      const [lx, ly] = m.inv(x, y);
+      const k = lx < -ancho / 3 ? 4 : lx > ancho / 3 ? 1 : ly < punta + 3 ? 3 : 2;
+      g.set(x, y, ACERO[ancho < 1.5 && k === 2 ? 3 : k], ACERO);
+    }
+  }
+
+  /* ---------- Armas en su marco ---------- */
+  function espadaL(g, m, largo) {
+    const hj = capa();
+    m.poly(hj, [[-1.5, -3.5], [1.5, -3.5], [1.5, -largo + 1.5], [0, -largo - 1.5], [-1.5, -largo + 1.5]]);
+    pintarHoja(g, hj, m, -largo);
+    const [bx, by] = m.at(-1, -largo + 5); g.set(bx, by, BRILLO, ACERO);
+    perfilar(g, hj);
+    const gd = capa(); m.rect(gd, -4, -3, 9, 2); m.rect(gd, -5, -4, 1, 1); m.rect(gd, 5, -4, 1, 1);
+    gd.pintar(g, ORO, { relieve: 1, min: 2, separar: true });
+    m.pon(g, ORO, 4, [-3, -3], [-2, -3], [-5, -4]);
+    m.pon(g, R.sangre, 4, [0, -3]); m.pon(g, R.sangre, 2, [0, -2]);
+    m.pon(g, CUERO, 2, [0, 4]); m.pon(g, CUERO, 3, [-1, 4]);
+    const pm = capa(); m.ell(pm, 0, 5.5, 1.2, 1); pm.pintar(g, ORO, { relieve: 1, min: 2 });
+  }
+  function hachaL(g, m) {
+    const mango = capa(); m.linea(mango, 0, 11, 0, -17, 3);
+    mango.pintar(g, MADERA, { relieve: 1.4, min: 1 });
+    for (let j = -2; j <= 8; j += 2) m.pon(g, CUERO, 1, [0, j], [-1, j + 1]), m.pon(g, CUERO, 3, [1, j]);
+    const hx = 2, hy = -16;
+    const hj = capa(); m.poly(hj, [[hx, hy - 3], [hx + 6, hy - 9], [hx + 11, hy - 4], [hx + 12, hy + 3], [hx + 8, hy + 9], [hx + 1, hy + 4]]);
+    hj.restar(m.ell(capa(), hx + 4, hy - 7.5, 2.3, 2)).restar(m.ell(capa(), hx + 4, hy + 8, 2.3, 2));
+    hj.pintar(g, ACERO, { relieve: 3, separar: true });
+    /* El filo curvo brilla: el borde del lado del corte. */
+    const marcas = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!hj.tiene(x, y)) continue;
+      const [lx, ly] = m.inv(x, y);
+      const [a1, b1] = m.at(lx + 1.3, ly), [a2, b2] = m.at(lx + 2.4, ly);
+      if (!hj.tiene(a1, b1)) marcas.push([x, y, 4]); else if (!hj.tiene(a2, b2)) marcas.push([x, y, 3]);
+    }
+    for (const [x, y, k] of marcas) g.set(x, y, ACERO[k], ACERO);
+    m.surco(g, ACERO, 1, hx + 4, hy - 1, hx + 7, hy + 2, ACERO);
+    const [dx, dy] = m.at(hx + 8, hy - 2); destello(g, ACERO, dx, dy, true);
+    const ab = capa(); m.rect(ab, hx - 2, hy - 3, 4, 7); ab.pintar(g, R.hierro, { relieve: 1.2, separar: true });
+    m.pon(g, R.hierro, 4, [hx - 2, hy - 3], [hx, hy - 1]);
+    const pc = capa(); m.poly(pc, [[hx - 2, hy - 1.5], [hx - 7, hy + 0.5], [hx - 2, hy + 2.5]]); pc.pintar(g, ACERO, { relieve: 1, separar: true });
+  }
+  function dagaL(g, m) {
+    const hj = capa(); m.poly(hj, [[-1, -3.5], [1, -3.5], [1, -10], [0, -13], [-1, -10]]);
+    pintarHoja(g, hj, m, -12, 1);
+    const [bx, by] = m.at(-0.5, -8); g.set(bx, by, BRILLO, ACERO);
+    perfilar(g, hj);
+    const gd = capa(); m.rect(gd, -3, -3, 6, 1); gd.pintar(g, ORO, { relieve: 1, min: 2 });
+    m.pon(g, ORO, 4, [-3, -3]);
+    const pm = capa(); m.ell(pm, 0, 3.5, 1, 1); pm.pintar(g, ORO, { relieve: 1, min: 2 });
+  }
+  function mazaL(g, m) {
+    const mg = capa(); m.rect(mg, -1, -10, 2, 16); mg.pintar(g, MADERA, { relieve: 1, min: 1 });
+    for (let j = -8; j <= 5; j += 2) m.pon(g, CUERO, 2, [-1, j], [0, j]);
+    const cy = -13;
+    const cb = capa(); m.ell(cb, 0, cy, 2.6, 3.2); cb.pintar(g, R.hierro, { relieve: 1.8, min: 1, separar: true });
+    const al = capa();
+    m.poly(al, [[-5.5, cy - 2.5], [-2, cy - 3.5], [-2, cy + 3.5], [-5.5, cy + 2.5]]); m.poly(al, [[5.5, cy - 2.5], [2, cy - 3.5], [2, cy + 3.5], [5.5, cy + 2.5]]); m.rect(al, -1, cy - 6, 2, 3);
+    al.pintar(g, R.hierro, { relieve: 1.2, min: 1, separar: true });
+    for (let j = cy - 3; j <= cy + 3; j++) m.pon(g, R.hierro, 3, [-5, j], [2, j]);
+    const [dx, dy] = m.at(-1, cy - 2); destello(g, R.hierro, dx, dy, true);
+    const pm = capa(); m.ell(pm, 0, cy - 7, 1.2); pm.pintar(g, ORO, { relieve: 1, min: 2 });
+    m.pon(g, ORO, 3, [-1, -10], [0, -10]); m.pon(g, ORO, 4, [-1, -10]);
+    const po = capa(); m.ell(po, 0, 7, 1.2, 1); po.pintar(g, ORO, { relieve: 1, min: 2 });
+  }
+  /* Báculo: el orbe a «arriba» píxeles de la mano y el regatón a «abajo». */
+  function bastonL(g, m, arriba, abajo) {
+    const oy = -arriba;
+    const vara = capa(); m.rect(vara, -1, oy + 3, 2, abajo - oy - 3); vara.pintar(g, MADERA, { relieve: 1.2, min: 1 });
+    for (let j = oy + 7; j < abajo; j += 6) m.pon(g, MADERA, 1, [0, j], [-1, j + 1]), m.pon(g, MADERA, 4, [-1, j - 1]);
+    const [X, Y] = m.at(0, oy);
+    capa().ell(X, Y, 3.4, 3.4).pintar(g, R.mar, { relieve: 2.6, min: 2 });
+    pon(g, R.mar, 4, [X - 1, Y - 1], [X - 2, Y], [X, Y - 2]);
+    g.set(X - 1, Y - 2, BRILLO, R.mar);
+    pon(g, R.mar, 1, [X + 2, Y + 1], [X + 1, Y + 2]);
+    m.pon(g, MADERA, 3, [-3, oy + 2], [2, oy + 2], [-3, oy + 1], [3, oy + 1], [-4, oy], [3, oy]);
+    m.pon(g, MADERA, 2, [-2, oy + 3], [1, oy + 3]);
+    m.pon(g, ORO, 3, [-1, oy + 4], [0, oy + 4]); m.pon(g, ORO, 4, [-1, oy + 4]);
+    return [X, Y];
+  }
+  function chispa(g, ram, X, Y, grande) {
+    pon(g, ram, 4, [X, Y]);
+    if (grande) pon(g, ram, 3, [X - 1, Y], [X + 1, Y], [X, Y - 1], [X, Y + 1]), pon(g, ram, 2, [X - 2, Y], [X + 2, Y], [X, Y - 2], [X, Y + 2]);
+  }
+  function cristal(g, cx, cy) {
+    const cr = capa().poly([[cx + 0.5, cy - 6], [cx + 3.5, cy - 1], [cx + 0.5, cy + 5], [cx - 2.5, cy - 1]]);
+    cr.pintar(g, R.magia, { relieve: 2, min: 1 });
+    surco(g, R.magia, 4, cx, cy - 5, cx - 1, cy - 1, R.magia);
+    surco(g, R.magia, 2, cx + 1, cy - 1, cx + 1, cy + 3, R.magia);
+    g.set(cx - 1, cy - 3, BRILLO, R.magia);
+  }
+  /* Arco: «cuerda» es el punto (en la rejilla) del que tira la mano, o null con la cuerda suelta y recta. */
+  function arcoL(g, m, alto, bajo, cuerda) {
+    const ax = 2, top = -alto, bot = bajo;
+    const a = capa();
+    m.curva(a, ax - 4, top, ax + 5, top / 2 - 2, ax + 1, 0, 2.4, 2.8); m.curva(a, ax + 1, 0, ax + 5, bot / 2 + 2, ax - 4, bot, 2.8, 2.4);
+    a.pintar(g, MADERA, { relieve: 1.4, min: 1 });
+    m.surco(g, MADERA, 4, ax - 2, top + 2, ax + 1, top + 7, MADERA);
+    m.surco(g, MADERA, 4, ax + 2, 4, ax + 1, 8, MADERA);
+    m.pon(g, R.hueso, 4, [ax - 5, top - 1], [ax - 5, bot + 1]); m.pon(g, R.hueso, 3, [ax - 4, top - 1], [ax - 4, bot + 1]);
+    const linea = (x0, y0, x1, y1) => {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let s = 0; s <= n; s++) { const X = Math.round(x0 + (x1 - x0) * s / n), Y = Math.round(y0 + (y1 - y0) * s / n); if (g.rampa(X, Y) !== MADERA) g.set(X, Y, R.hueso[3], R.hueso); }
+    };
+    const [t0, t1] = m.f(ax - 5, top), [b0, b1] = m.f(ax - 5, bot);
+    if (cuerda) { linea(t0, t1, cuerda[0], cuerda[1]); linea(b0, b1, cuerda[0], cuerda[1]); }
+    else linea(t0, t1, b0, b1);
+  }
+  function laudL(g, m) {
+    const lx = -1, ly = 4;
+    const mast = capa(); m.linea(mast, lx + 4, ly - 4, lx + 11, ly - 14, 3);
+    mast.pintar(g, MADERA, { relieve: 1, max: 2 });
+    perfilar(g, mast);
+    for (let k = 1; k < 5; k++) m.pon(g, R.hueso, 2, [lx + 5 + k * 1.4 | 0, ly - 5 - k * 2]);
+    const cl = capa(); m.poly(cl, [[lx + 10, ly - 13.5], [lx + 13, ly - 16], [lx + 15.5, ly - 14], [lx + 12.5, ly - 11.5]]);
+    cl.pintar(g, MADERA, { relieve: 1, max: 3, separar: true });
+    m.pon(g, R.hueso, 4, [lx + 11, ly - 17], [lx + 14, ly - 17], [lx + 16, ly - 14], [lx + 15, ly - 12]);
+    const caja = capa(); m.ell(caja, lx, ly, 6.4, 5.4); m.ell(caja, lx + 3.6, ly - 3, 3.8, 3.2);
+    caja.pintar(g, LAUD, { relieve: 4, luz: [-0.55, -0.6, 0.7] });
+    perfilar(g, caja);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (caja.tiene(x, y) && !caja.tiene(x, y + 1)) { pon(g, MADERA, 1, [x, y]); if (caja.tiene(x, y - 1)) pon(g, MADERA, 2, [x, y - 1]); }
+    const bo = capa(); m.ell(bo, lx + 1.5, ly - 1, 1.5); bo.pintar(g, MADERA, { plano: 0 });
+    m.pon(g, ORO, 3, [lx + 1, ly - 3], [lx + 3, ly - 2], [lx + 3, ly], [lx + 1, ly + 1], [lx - 1, ly], [lx - 1, ly - 2]);
+    const pu = capa(); m.rect(pu, lx - 4, ly + 2, 4, 1); pu.pintar(g, MADERA, { plano: 1 });
+    m.pon(g, MADERA, 3, [lx - 4, ly + 1]);
+    m.surco(g, R.hueso, 4, lx - 3, ly + 2, lx + 11, ly - 15, null);
+    m.surco(g, R.hueso, 2, lx - 2, ly + 2, lx + 12, ly - 15, null);
+    return m.at(lx + 13, ly - 15);
+  }
+
+  /* ---------- Manos de las poses ---------- */
+  /* Mano abierta con la palma hacia delante y los dedos arriba (para conjurar o al recibir un golpe). */
+  function manoAbierta(g, x, y, ram) {
+    const c = capa().rect(x - 2, y - 2, 4, 4).rect(x - 1, y + 2, 3, 1).on(x - 2, y - 3).on(x - 1, y - 4).on(x, y - 4).on(x + 1, y - 3).on(x + 2, y - 1).on(x + 2, y).on(x + 3, y - 2);
+    c.pintar(g, ram, { relieve: 1.3, separar: true });
+    pon(g, ram, 3, [x - 2, y - 3], [x, y - 4], [x - 2, y - 1]);
+    pon(g, ram, 4, [x - 1, y - 4], [x - 1, y - 2]);
+    pon(g, ram, 2, [x + 1, y - 3]);
+    pon(g, ram, 1, [x - 1, y - 3], [x + 1, y - 2], [x, y + 1], [x + 1, y + 2], [x + 2, y]);
+  }
+  /* Palma hacia arriba, plana, bajo el cristal del brujo. */
+  function palmaArriba(g, mx, my, ram) {
+    capa().rect(mx - 2, my - 1, 5, 3).rect(mx + 3, my - 2, 1, 2).on(mx - 2, my - 2).pintar(g, ram, { relieve: 1.2, separar: true });
+    pon(g, ram, 1, [mx - 1, my + 1], [mx + 1, my + 1]); pon(g, ram, 4, [mx - 1, my - 1], [mx, my - 1]);
+  }
+  /* Codo por cinemática inversa de dos huesos; «pref» dice hacia dónde se dobla. Devuelve [codo, mano]. */
+  function codoIK(Hm, M, l1, l2, pref) {
+    let dx = M[0] - Hm[0], dy = M[1] - Hm[1], d = Math.hypot(dx, dy) || 1;
+    const max = l1 + l2 - 0.2;
+    if (d > max) { M = [Hm[0] + (dx / d) * max, Hm[1] + (dy / d) * max]; dx = M[0] - Hm[0]; dy = M[1] - Hm[1]; d = max; }
+    const a = Math.acos(lim((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1)), b = Math.atan2(dy, dx);
+    const e1 = [Hm[0] + Math.cos(b + a) * l1, Hm[1] + Math.sin(b + a) * l1], e2 = [Hm[0] + Math.cos(b - a) * l1, Hm[1] + Math.sin(b - a) * l1];
+    const p = (e) => (e[0] - Hm[0]) * pref[0] + (e[1] - Hm[1]) * pref[1];
+    return [p(e1) >= p(e2) ? e1 : e2, M];
+  }
+  /* Brazo con articulaciones libres; la manga ancha cuelga siempre hacia el suelo. */
+  function brazoLibre(g, t, piel, m, Hm, E, M, mano) {
+    const gr = t.grosor;
+    const d = Math.hypot(M[0] - E[0], M[1] - E[1]) || 1, ux = (M[0] - E[0]) / d, uy = (M[1] - E[1]) / d;
+    const Wm = [M[0] - ux * 1.5, M[1] - uy * 1.5];
+    const sup = capa().linea(Hm[0], Hm[1], E[0], E[1], gr + 1);
+    const inf = capa().linea(E[0], E[1], Wm[0], Wm[1], gr + (m.ancha ? 1 : 0));
+    sup.pintar(g, m.sup || piel, { relieve: 2.4, separar: true });
+    inf.pintar(g, m.inf || piel, { relieve: 2.2, separar: true });
+    if (!m.ancha && !m.brazal && (m.inf || piel) === piel) pon(g, piel, 3, [E[0], E[1] - 1]);
+    if (m.ancha) {
+      const cae = 3.2 + Math.abs(ux) * 1.6, bajoY = Math.max(E[1], Wm[1]);
+      const b = capa().poly([[E[0] - 1.2, E[1] - 1], [Wm[0] - uy * 0.5, Wm[1] - 2], [Wm[0] + 0.6, Wm[1] + 2.5], [E[0] + (Wm[0] - E[0]) * 0.6, bajoY + cae], [E[0] - 1.6, E[1] + 3]]);
+      b.pintar(g, m.inf, { relieve: 2.2, separar: true });
+      const rib = m.ribete || m.inf;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (b.tiene(x, y) && !b.tiene(x, y + 1) && g.rampa(x, y) === m.inf) g.set(x, y, rib[m.ribete ? 3 : 1], rib);
+      pliegue(g, m.inf, E[0] + 1, E[1] + 1, (E[0] + Wm[0]) / 2, bajoY + cae - 2);
+    }
+    if (m.brazal) {
+      const bz = capa().linea(E[0] + ux, E[1] + uy, Wm[0] - ux, Wm[1] - uy, gr + 1);
+      bz.recortar(inf).pintar(g, m.brazal, { relieve: 1.6, separar: true });
+      for (let s = 1; s < 4; s++) { const cx = E[0] + ux * s * 1.4, cy = E[1] + uy * s * 1.4; surco(g, m.brazal, 0, cx - uy * 1.5 - ux, cy + ux * 1.5 - uy, cx + uy * 1.5 + ux, cy - ux * 1.5 + uy, m.brazal); }
+    }
+    const ram = m.guante || piel;
+    if (mano === "puno") puno(g, M[0], M[1], ram);
+    else if (mano === "abierta") manoAbierta(g, Math.round(M[0]), Math.round(M[1]), ram);
+    else if (mano === "palma") palmaArriba(g, Math.round(M[0]), Math.round(M[1]), ram);
+    else if (mano === "colgando") mano(g, Math.round(M[0]), Math.round(M[1]), ram, false);
+  }
+  /* Luz de magia de 5×5 (cruz con el corazón blanco) y un par de motas. */
+  function luzMagia(g, x, y, ram, grande = true) {
+    x = Math.round(x); y = Math.round(y);
+    if (grande) {
+      pon(g, ram, 1, [x - 3, y], [x + 3, y], [x, y - 3], [x, y + 3]);
+      pon(g, ram, 2, [x - 2, y], [x + 2, y], [x, y - 2], [x, y + 2], [x - 1, y - 1], [x + 1, y - 1], [x - 1, y + 1], [x + 1, y + 1]);
+    }
+    pon(g, ram, 3, [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+    g.set(x, y, BRILLO, ram);
+    if (grande) { pon(g, ram, 4, [x + 3, y - 3], [x - 3, y + 2]); pon(g, ram, 3, [x + 4, y + 2]); }
+  }
+  /* Estela del golpe: arco claro alrededor de «c» de a0 a a1 (grados de pantalla), que se apaga hacia a0.
+     Se pinta después del contorno y solo en los huecos, sin línea, como un barrido de movimiento. */
+  function estela(g, c, r, a0, a1, ancho) {
+    const pasos = Math.ceil(Math.abs(a1 - a0) * r / 25) + 6;
+    const vistos = new Set();
+    for (let s = 0; s <= pasos; s++) {
+      const u = s / pasos, a = ((a0 + (a1 - a0) * u) * Math.PI) / 180;
+      const gr = 0.7 + ancho * Math.pow(u, 0.7);
+      for (let e = -gr; e <= gr + 0.01; e += 0.5) {
+        const X = Math.round(c[0] + Math.cos(a) * (r + e)), Y = Math.round(c[1] + Math.sin(a) * (r + e));
+        const k = X + Y * W;
+        if (vistos.has(k) || X < 1 || Y < 1 || X > W - 2 || Y > H - 2 || g.get(X, Y)) continue;
+        if (u < 0.35 && umbral(X, Y) > u * 2.6) continue;
+        vistos.add(k);
+        const tono = u > 0.8 ? 4 : u > 0.5 ? 3 : u > 0.25 ? 2 : 1;
+        g.set(X, Y, ESTELA[Math.max(1, tono - (Math.abs(e) > gr - 0.6 ? 1 : 0))], ESTELA);
+      }
+    }
+  }
+  /* Rayas rectas de velocidad (estocadas, flechas): solo en los huecos. */
+  function rayas(g, x0, x1, y, tono = 3) {
+    for (let x = Math.round(x0); x <= Math.round(x1); x++) {
+      if (x < 1 || x > W - 2 || g.get(x, y)) continue;
+      const u = (x - x0) / Math.max(1, x1 - x0);
+      if (u < 0.5 && umbral(x, y) > u * 2) continue;
+      g.set(x, y, ESTELA[u > 0.75 ? tono : Math.max(1, tono - 1)], ESTELA);
+    }
+  }
+
+  /* Qué arma lleva cada clase y cómo la dibuja su marco. */
+  const ARMA = { guerrero: "espada", barbaro: "hacha", picaro: "daga", explorador: "arco", mago: "baston", brujo: "cristal", clerigo: "maza", bardo: "laud" };
+  function dibujarArma(g, tipo, M, o) {
+    const m = marco(M[0], M[1], o.ang || 0);
+    switch (tipo) {
+      case "espada": espadaL(g, m, o.largo || 20); return m.at(0, -(o.largo || 20));
+      case "hacha": hachaL(g, m); return m.at(8, -16);
+      case "daga": dagaL(g, m); return m.at(0, -12);
+      case "maza": mazaL(g, m); return m.at(0, -13);
+      case "baston": return bastonL(g, m, o.arriba || 14, o.abajo || 20);
+      case "arco": arcoL(g, m, o.alto || 18, o.bajo || 18, o.cuerda || null); return m.at(4, 0);
+      case "laud": return laudL(g, m);
+      case "cristal": { const [X, Y] = m.at(o.cx || 0, o.cy || -10); cristal(g, X, Y); return [X, Y]; }
+    }
+    return M;
+  }
+  /* Caja de lo que pinta un arma respecto a la mano (se dibuja en el centro de una rejilla de prueba). */
+  const cacheCaja = new Map();
+  function cajaArma(tipo, o) {
+    const clave = [tipo, o.ang, o.largo, o.arriba, o.abajo, o.alto, o.bajo, o.cx, o.cy].join();
+    if (cacheCaja.has(clave)) return cacheCaja.get(clave);
+    const caja = cajaArma0(tipo, o);
+    cacheCaja.set(clave, caja);
+    return caja;
+  }
+  function cajaArma0(tipo, o) {
+    const g = new Rejilla(W, H);
+    dibujarArma(g, tipo, [32, 32], o);
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g.get(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    return { x0: x0 - 32, y0: y0 - 32, x1: x1 - 32, y1: y1 - 32 };
+  }
+  /* Nota musical de 3×5 para el bardo. */
+  function nota(g, x, y, ram) {
+    pon(g, ram, 3, [x + 1, y - 4], [x + 1, y - 3], [x + 1, y - 2], [x + 2, y - 4], [x + 3, y - 3]);
+    pon(g, ram, 4, [x, y - 1], [x + 1, y - 1]); pon(g, ram, 2, [x, y], [x + 1, y]);
+  }
+
+  /* Plan de cada pose: adónde va cada mano (desde su hombro, en un cuerpo normal), qué forma tiene y cómo va el arma.
+     cerca = brazo del lado del espectador; lejos = el otro, que se dibuja por detrás. */
+  function planPose(pose, tipo, clase) {
+    const B = (d, mano, pref = [0, 1], mas = {}) => Object.assign({ d, mano, pref }, mas);
+    const luzC = LUZ[clase] || LUZ.neutro;
+    const colgando = B([-4, 11], "colgando", [-1, 0]);
+    if (pose === "ataque") {
+      const atras = B([-8, 8], "puno", [0, 1]);
+      switch (tipo) {
+        case "espada": return { cerca: B([8, 4], "puno"), lejos: null, arma: { tipo, ang: 118 }, escudo: [-2, 9], estela: { barrido: 115, ancho: 2.6 } };
+        case "hacha": return { cerca: B([10, 7], "puno"), lejos: B([0, 0], "puno", [0, 1], { mango: 3.5 }), arma: { tipo, ang: 118 }, estela: { barrido: 120, ancho: 2.6 } };
+        case "daga": return { cerca: B([12, 4], "puno"), lejos: atras, arma: { tipo, ang: 100 }, rayas: true, luz: { en: "arma", ram: LUZ.neutro, d: [1, 0], grande: false } };
+        case "arco": return { cerca: B([12, -1], "puno", [0, 1]), lejos: null, arma: { tipo, ang: 0, cuerda: null }, flecha: true, suelta: true };
+        case "baston": return { cerca: B([9, 2], "puno"), lejos: colgando, arma: { tipo, ang: 74, arriba: 15, abajo: 17 }, luz: { en: "arma", ram: LUZ.mago, d: [3, -1], grande: false }, rayas: true };
+        case "cristal": return { cerca: B([12, 0], "abierta"), lejos: colgando, arma: { tipo, ang: 0, cx: 6, cy: -3 }, luz: { en: "arma", ram: LUZ.brujo, d: [5, 1], grande: false }, rayas: true };
+        case "maza": return { cerca: B([10, 5], "puno"), lejos: colgando, arma: { tipo, ang: 122 }, estela: { barrido: 115, ancho: 2.4 }, simbolo: true };
+        case "laud": return { cerca: B([9, 5], "puno"), lejos: colgando, arma: { tipo, ang: 38, antes: true }, luz: { en: "arma", ram: LUZ.bardo, d: [2, -1], grande: false }, nota: true };
+      }
+      return { cerca: B([12, 2], "puno"), lejos: atras, arma: null, rayas: true };
+    }
+    if (pose === "conjuro") {
+      const alzada = B([8, -9], "abierta", [1, 1]);
+      const atras = B([6, -9], "abierta", [1, 1]);
+      const luzMano = ram => ({ en: "mano", ram, d: [1, -7], grande: true });
+      switch (tipo) {
+        case "espada": return { cerca: B([7, -7], "puno", [1, 1]), lejos: null, arma: { tipo, ang: 32 }, escudo: [3, 7], luz: { en: "arma", ram: LUZ.neutro, d: [0, 0], grande: true } };
+        case "hacha": return { cerca: alzada, lejos: B([-3, 11], "puno", [-1, 0]), arma: { tipo, ang: -18, en: "lejos" }, luz: luzMano(LUZ.neutro) };
+        case "daga": return { cerca: alzada, lejos: B([-3, 10], "puno", [-1, 0]), arma: { tipo, ang: 180, en: "lejos" }, luz: luzMano(LUZ.neutro) };
+        case "arco": return { cerca: alzada, lejos: B([-2, 10], "puno", [-1, 0]), arma: { tipo, ang: 0, en: "lejos", alto: 15, bajo: 14 }, luz: luzMano(LUZ.neutro) };
+        case "baston": return { cerca: B([7, -6], "puno", [1, 1]), lejos: atras, arma: { tipo, ang: 12, arriba: 15, abajo: 22 }, luz: { en: "arma", ram: LUZ.mago, d: [4, -4], grande: true } };
+        case "cristal": return { cerca: B([9, -7], "palma", [1, 1]), lejos: atras, arma: { tipo, ang: 0, cx: 1, cy: -9 }, luz: { en: "arma", ram: LUZ.brujo, d: [5, -3], grande: true } };
+        case "maza": return { cerca: alzada, lejos: B([-3, 9], "puno", [-1, 0]), arma: { tipo, ang: 180, en: "lejos" }, luz: luzMano(LUZ.clerigo) };
+        case "laud": return { cerca: B([7, -3], "puno", [1, 1]), lejos: atras, arma: { tipo, ang: -12, antes: true }, luz: { en: "arma", ram: LUZ.bardo, d: [3, -2], grande: true }, nota: true };
+      }
+      return { cerca: alzada, lejos: atras, arma: null, luz: luzMano(luzC) };
+    }
+    if (pose === "herido") {
+      const atras = B([-10, 1], "abierta", [0, 1]);
+      const fuera = B([9, 6], "puno", [0, 1]);
+      switch (tipo) {
+        case "espada": return { cerca: B([8, 8], "puno"), lejos: null, arma: { tipo, ang: 38 }, escudo: [0, 4] };
+        case "hacha": return { cerca: B([8, 8], "puno"), lejos: atras, arma: { tipo, ang: 42 } };
+        case "daga": return { cerca: fuera, lejos: atras, arma: { tipo, ang: 205 } };
+        case "arco": return { cerca: fuera, lejos: atras, arma: { tipo, ang: 22, alto: 16, bajo: 14 } };
+        case "baston": return { cerca: fuera, lejos: atras, arma: { tipo, ang: 24, arriba: 14, abajo: 20 } };
+        case "cristal": return { cerca: B([9, 5], "abierta"), lejos: atras, arma: { tipo, ang: 0, cx: 7, cy: -7 } };
+        case "maza": return { cerca: B([8, 8], "puno"), lejos: atras, arma: { tipo, ang: 40 } };
+        case "laud": return { cerca: fuera, lejos: atras, arma: { tipo, ang: 28, antes: true } };
+      }
+      return { cerca: B([9, 5], "abierta"), lejos: atras, arma: null };
+    }
+    if (pose === "victoria") {
+      const arriba = B([9, -11], "puno", [1, 0]);
+      const otra = B([-1, -12], "puno", [-1, 0]);
+      switch (tipo) {
+        case "espada": return { cerca: arriba, lejos: null, arma: { tipo, ang: 40 }, escudo: [2, 8] };
+        case "hacha": return { cerca: arriba, lejos: otra, arma: { tipo, ang: 22 } };
+        case "daga": return { cerca: arriba, lejos: otra, arma: { tipo, ang: 15 } };
+        case "arco": return { cerca: arriba, lejos: otra, arma: { tipo, ang: 10, alto: 14, bajo: 12 } };
+        case "baston": return { cerca: arriba, lejos: otra, arma: { tipo, ang: 6, arriba: 13, abajo: 24 }, luz: { en: "arma", ram: LUZ.mago, d: [4, -3], grande: false } };
+        case "cristal": return { cerca: B([9, -11], "palma", [1, 0]), lejos: otra, arma: { tipo, ang: 0, cx: 1, cy: -9 }, luz: { en: "arma", ram: LUZ.brujo, d: [5, -2], grande: false } };
+        case "maza": return { cerca: arriba, lejos: otra, arma: { tipo, ang: 15 } };
+        case "laud": return { cerca: B([10, -9], "puno", [1, 0]), lejos: otra, arma: { tipo, ang: -30, antes: true }, nota: true };
+      }
+      return { cerca: arriba, lejos: otra, arma: null };
+    }
+    return null;
+  }
+
+  /* Brazos, armas y adornos de los hombros en una pose. Devuelve lo que se pinta después del contorno. */
+  function armarPose(g, t, o) {
+    const { clase, piel, tela, manga, conArma, extra } = o, nombreExtra = o.objeto;
+    const tipo = extra || !conArma ? null : ARMA[clase] || null;
+    const pl = planPose(o.pose, tipo, clase);
+    const l1 = Math.hypot(t.codo[0] - t.hombro[0], t.codo[1] - t.hombro[1]), l2 = Math.hypot(t.mano[0] - t.codo[0], t.mano[1] - t.codo[1]);
+    const s = (l1 + l2) / 12.4;
+    const lado = (b, Hm) => b && { Hm, M: [Hm[0] + b.d[0] * s, Hm[1] + b.d[1] * s], pref: b.pref, mano: b.mano, mango: b.mango };
+    const C = lado(pl.cerca, t.hombro), L = lado(pl.lejos, t.hombroAtras);
+    const A = pl.arma ? Object.assign({}, pl.arma) : null;
+    if (A && A.tipo === "espada") A.largo = t.bajo ? 21 : 26;
+    const conArmaEn = A ? (A.en === "lejos" ? L : C) : null;
+    /* Que el arma quepa: se acorta la espada o se recoge la mano. */
+    if (A && conArmaEn) for (let it = 0; it < 8; it++) {
+      const [, M] = codoIK(conArmaEn.Hm, conArmaEn.M, l1, l2, conArmaEn.pref);
+      conArmaEn.M = M;
+      const b = cajaArma(A.tipo, A);
+      const dr = M[0] + b.x1 - 60, du = 2 - (M[1] + b.y0), dl = 2 - (M[0] + b.x0), dd = M[1] + b.y1 - 61;
+      if (dr <= 0 && du <= 0 && dl <= 0 && dd <= 0) break;
+      if (A.tipo === "espada" && A.largo > 13 && (dr > 0 || du > 0)) { A.largo = Math.max(13, A.largo - Math.max(1, Math.max(dr, du))); continue; }
+      conArmaEn.M = [M[0] - Math.max(0, dr) + Math.max(0, dl), M[1] + Math.max(0, du) - Math.max(0, dd)];
+    }
+    for (const X of [C, L]) if (X) { const [E, M] = codoIK(X.Hm, X.M, l1, l2, X.pref); X.E = E; X.M = M; }
+    /* Hacha a dos manos: la mano de atrás agarra el mango un poco más abajo. */
+    if (L && L.mango && A) {
+      const a = (A.ang * Math.PI) / 180;
+      L.M = [C.M[0] - Math.sin(a) * L.mango, C.M[1] + Math.cos(a) * L.mango];
+      const [E, M] = codoIK(L.Hm, L.M, l1, l2, L.pref); L.E = E; L.M = M;
+    }
+    const ram = manga.guante || piel;
+    const ponMano = (gg, X) => {
+      const x = X.M[0], y = X.M[1];
+      if (X.mano === "puno") puno(gg, x, y, ram);
+      else if (X.mano === "abierta") manoAbierta(gg, Math.round(x), Math.round(y), ram);
+      else if (X.mano === "palma") palmaArriba(gg, Math.round(x), Math.round(y), ram);
+      else if (X.mano === "colgando") mano(gg, Math.round(x), Math.round(y), ram, true);
+    };
+    let punta = null;
+    /* 1. El brazo de atrás (con su arma si la lleva él), por detrás de todo. */
+    if (L) detras(g, gb => {
+      brazoLibre(gb, t, piel, manga, L.Hm, L.E, L.M, null);
+      if (A && A.en === "lejos") punta = dibujarArma(gb, A.tipo, L.M, A);
+      ponMano(gb, L);
+      if (pl.simbolo || (L.mano === "colgando" && clase === "clerigo" && conArma && !extra)) {
+        const ax = Math.round(L.M[0]), ay = Math.round(L.M[1]);
+        surco(gb, ORO, 2, ax, ay + 4, ax, ay + 7, null);
+        capa().ell(ax, ay + 9, 1.8, 1.8).pintar(gb, ORO, { relieve: 1.2, min: 2 });
+        pon(gb, ORO, 4, [ax - 1, ay + 8]);
+      }
+    });
+    /* 2. El escudo delante del cuerpo. */
+    if (pl.escudo) objeto(g, Object.assign({}, t, { escudo: [t.torR + pl.escudo[0], t.torTop + pl.escudo[1]] }), "guerrero", tela, piel);
+    /* 3. El brazo de delante y su arma (el laúd va por debajo del brazo). */
+    const tX = Object.assign({}, t, { mano: [Math.round(C.M[0]), Math.round(C.M[1])], piel });
+    if (A && A.en !== "lejos" && A.antes) punta = dibujarArma(g, A.tipo, C.M, A);
+    if (extra && nombreExtra !== "martillo") OBJETOS_EXTRA[nombreExtra](g, tX);
+    brazoLibre(g, t, piel, manga, C.Hm, C.E, C.M, null);
+    if (A && A.en !== "lejos" && !A.antes) punta = dibujarArma(g, A.tipo, C.M, A);
+    if (extra && nombreExtra === "martillo") OBJETOS_EXTRA.martillo(g, tX);
+    else ponMano(g, C);
+    /* 4. Lo que va sobre el hombro. */
+    if (clase === "guerrero" || clase === "clerigo") hombrera(g, t);
+    if (clase === "bardo") {
+      const [hx, hy] = t.hombro;
+      capa().ell(hx + 0.5, hy + 1, 3.4, 3.4).pintar(g, tela, { relieve: 2.4, separar: true });
+      for (const i of [hx - 1, hx + 1, hx + 3]) pon(g, R.tela.granate, 3, [i, hy], [i, hy + 1]), pon(g, R.tela.granate, 1, [i, hy + 2]);
+    }
+    /* 5. Luz de la magia y destellos. */
+    if (pl.luz) {
+      const base = pl.luz.en === "arma" && punta ? punta : C.M;
+      luzMagia(g, base[0] + pl.luz.d[0], base[1] + pl.luz.d[1], pl.luz.ram, pl.luz.grande);
+    }
+    if (pl.nota && punta) nota(g, Math.round(Math.min(punta[0] - 3, 57)), Math.round(Math.max(punta[1] - 4, 6)), LUZ.bardo);
+    /* La mano que suelta la cuerda sale despedida hacia atrás, junto al hombro. */
+    if (pl.suelta) {
+      const hx = t.cx - 1, hy = t.torTop + 2;
+      capa().linea(t.torL + 2, t.torTop + 5, hx, hy + 1, t.grosor).pintar(g, piel, { relieve: 1.6, separar: true });
+      manoAbierta(g, hx, hy, piel);
+    }
+    /* La flecha ya se va: solo asoma su punta en el borde. */
+    if (pl.flecha) {
+      const y = Math.round(C.M[1]) - 1;
+      pon(g, ACERO, 4, [59, y], [60, y]); pon(g, ACERO, 2, [59, y - 1], [59, y + 1]); pon(g, MADERA, 3, [57, y], [58, y]);
+    }
+    /* Lo de después del contorno: estelas y rayas de velocidad. */
+    const post = [];
+    if (pl.estela && punta) {
+      const [hx, hy] = t.hombro, r = Math.hypot(punta[0] - hx, punta[1] - hy) - 1.5, a1 = (Math.atan2(punta[1] - hy, punta[0] - hx) * 180) / Math.PI;
+      post.push(gg => estela(gg, t.hombro, r, a1 - pl.estela.barrido, a1 - 6, pl.estela.ancho));
+    }
+    if (pl.rayas) {
+      const y = Math.round(C.M[1]), x = Math.round(C.M[0]), x1 = punta ? Math.min(Math.round(punta[0]) - 2, 60) : x + 4;
+      post.push(gg => { rayas(gg, x - 6, x1, y - 4); rayas(gg, x - 4, x1 - 2, y + 4); });
+    }
+    if (pl.flecha) {
+      const y = Math.round(C.M[1]) - 1, x = Math.round(C.M[0]);
+      post.push(gg => { rayas(gg, x + 5, 56, y, 4); rayas(gg, x + 9, 55, y - 2, 3); rayas(gg, x + 9, 55, y + 2, 3); });
+    }
+    return post;
+  }
+
   /* ---------- Composición ---------- */
   const PIERNAS = {
     guerrero: { ramPierna: PLACA, ramBota: PLACA, rodillera: PLACA, alto: 9 },
@@ -8146,7 +8680,10 @@ const FONDOS = (() => {
     const ramPelo = matizar(R0.pelo[a.pelo] || R0.pelo[(vis.pelos || [])[0] || "negro"] || R0.pelo.negro);
     const tela = matizar(R0.tela[a.tela] || R0.tela[TELA_CLASE[clase]] || R0.tela.terracota);
     const peinado = vis.sinPelo ? "rapado" : (PEINADOS.includes(a.peinado) ? a.peinado : "corto");
-    const gesto = GESTOS.includes(a.gesto) ? a.gesto : "normal";
+    const pose = POSES.includes(a.pose) ? a.pose : "normal";
+    const gesto0 = GESTOS.includes(a.gesto) ? a.gesto : "normal";
+    /* Las poses traen su gesto: dolor al recibir, alegría al vencer y rabia al golpear (si no había otro). */
+    const gesto = pose === "herido" ? "dolor" : pose === "victoria" ? "alegre" : pose === "ataque" && gesto0 === "normal" ? "furia" : gesto0;
     const draco = raza === "draconido";
     const iris = raza === "elfo" ? IRISES.verde : raza === "gnomo" ? IRISES.azul : raza === "semiorco" ? IRISES.ambar
       : [IRISES.castano, IRISES.azul, IRISES.verde, IRISES.castano, IRISES.gris][hashTexto((a.piel || "") + (a.pelo || "") + raza) % 5];
@@ -8163,12 +8700,14 @@ const FONDOS = (() => {
       t.mano = [t.torR + 8, t.torTop + 5];
       t.tiro = [t.cx + 3, t.torTop + 5];
     }
+    const P = pose !== "normal" ? posar(t, pose) : null;
 
     cola(g, t, piel, raza);
     espalda(g, t, clase, tela);
     const mg = MANGAS[clase] || {};
     const manga = { sup: mg.sup || (clase === "barbaro" ? piel : tela), inf: mg.inf || (mg.ancha || ["picaro", "bardo"].includes(clase) ? tela : piel), guante: mg.guante, ancha: mg.ancha, ribete: mg.ribete, brazal: mg.brazal };
-    if (!arquero) brazoAtras(g, t, piel, manga);
+    if (P) { /* en las poses el brazo de atrás se dibuja al final, por detrás */ }
+    else if (!arquero) brazoAtras(g, t, piel, manga);
     else {
       /* Codo de atrás levantado a la altura del hombro. */
       const [hx, hy] = t.hombroAtras;
@@ -8219,7 +8758,13 @@ const FONDOS = (() => {
       surco(g, tela, 3, t.cabX + 1, t.ojoY + 2, t.cabX + 9, t.ojoY + 2, tela);
       surco(g, tela, 3, t.cabX + 2, t.bocaY + 1, t.cabX + 7, t.bocaY, tela);
     }
-    if (clase === "guerrero" && conArma) {
+    let tt = t, post = [];
+    if (P) {
+      /* Inclina el tronco y la cabeza, y dibuja brazos y armas ya en su sitio inclinado. */
+      cizallar(g, P.desp);
+      tt = mover(Object.assign({}, t), P.desp(t.torTop + 3), 0);
+      post = armarPose(g, tt, { pose, clase, piel, tela, manga, conArma, extra, objeto: a.objeto });
+    } else if (clase === "guerrero" && conArma) {
       /* El escudo tapa el brazo; el puño asoma a su lado con la espada. */
       t.mano = [t.torR + 12, t.torTop + (t.bajo ? 8 : 9)];
       brazoDelante(g, t, piel, manga, false);
@@ -8240,7 +8785,7 @@ const FONDOS = (() => {
       if (!extra || a.objeto !== "martillo") brazoDelante(g, t, piel, manga, !(arquero));
       if (arquero) puno(g, t.mano[0], t.mano[1], piel);
     }
-    if (arquero) {
+    if (arquero && !P) {
       /* Mano que tensa la cuerda, delante del pecho, con el antebrazo cruzado. */
       const [dx, dy] = t.tiro;
       capa().linea(t.torL + 2, t.torTop + 4, dx - 2, dy, t.grosor).pintar(g, piel, { relieve: 1.6, separar: true });
@@ -8248,8 +8793,8 @@ const FONDOS = (() => {
       pon(g, piel, 1, [dx - 1, dy], [dx, dy + 1]); pon(g, piel, 4, [dx - 2, dy - 2]);
       for (let i = dx - 4; i <= dx - 2; i++) pon(g, CUERO, 2, [i, dy - 1], [i, dy + 1]);
     }
-    if ((clase === "guerrero" && !conArma) || clase === "clerigo") hombrera(g, t);
-    if (clase === "bardo") {
+    if (!P && ((clase === "guerrero" && !conArma) || clase === "clerigo")) hombrera(g, t);
+    if (clase === "bardo" && !P) {
       /* Manga abullonada con cuchilladas. */
       const [hx, hy] = t.hombro;
       capa().ell(hx + 0.5, hy + 1, 3.4, 3.4).pintar(g, tela, { relieve: 2.4, separar: true });
@@ -8258,14 +8803,14 @@ const FONDOS = (() => {
     if (clase === "barbaro") {
       /* Pelliza de lobo sobre los hombros, con la cabeza del lobo en el hombro de delante. */
       /* Solo por el hombro de atrás y la nuca: el pecho queda al aire. */
-      const pz = capa().ell(t.torL + 4, t.torTop + 1, 6.5, 2.8).ell(t.torL + 1, t.torTop + 3, 4, 5.5);
-      for (let i = t.torL - 5; i <= t.torR + 5; i++) if ((i & 1) === 0) pz.off(i, Math.round(t.torTop + 4.6));
+      const pz = capa().ell(tt.torL + 4, tt.torTop + 1, 6.5, 2.8).ell(tt.torL + 1, tt.torTop + 3, 4, 5.5);
+      for (let i = tt.torL - 5; i <= tt.torR + 5; i++) if ((i & 1) === 0) pz.off(i, Math.round(tt.torTop + 4.6));
       pz.pintar(g, PELLIZA, { relieve: 2.8, separar: true });
-      cada(g, PELLIZA, t.torL - 6, t.torTop - 4, t.torR + 6, t.torTop + 9, (x, y, k) => {
+      cada(g, PELLIZA, tt.torL - 6, tt.torTop - 4, tt.torR + 6, tt.torTop + 9, (x, y, k) => {
         if ((x * 5 + y * 3) % 7 === 0) g.set(x, y, PELLIZA[Math.max(1, k - 1)], PELLIZA);
         else if ((x * 3 + y * 5) % 11 === 0 && k < 4) g.set(x, y, PELLIZA[k + 1], PELLIZA);
       });
-      const [hx, hy] = t.hombro;
+      const [hx, hy] = tt.hombro;
       const lobo = capa().ell(hx - 1, hy - 1, 4.4, 3.4).poly([[hx + 1, hy - 3.5], [hx + 8.5, hy - 1.5], [hx + 8.5, hy + 1.5], [hx + 1, hy + 2.5]]).poly([[hx - 4.5, hy - 2], [hx - 3.5, hy - 8], [hx - 0.5, hy - 3.5]]);
       lobo.pintar(g, LOBO, { relieve: 2.2, min: 1 });
       perfilar(g, lobo);
@@ -8278,7 +8823,7 @@ const FONDOS = (() => {
       for (const i of [hx + 3, hx + 6]) g.set(i, hy + 2, R.hueso[4], R.hueso), g.set(i, hy + 1, R.hueso[3], R.hueso);
       cada(g, LOBO, hx - 6, hy - 4, hx + 1, hy + 3, (x, y, k) => { if ((x * 3 + y * 2) % 5 === 0 && k > 1) g.set(x, y, LOBO[k - 1], LOBO); });
     }
-    if (clase === "clerigo" && conArma && !extra) {
+    if (clase === "clerigo" && conArma && !extra && !P) {
       /* Símbolo sagrado colgando de la mano de atrás. */
       const [ax, ay] = t.manoAtras;
       surco(g, ORO, 2, ax, ay + 4, ax, ay + 7, null);
@@ -8286,14 +8831,17 @@ const FONDOS = (() => {
       pon(g, ORO, 4, [ax - 1, ay + 8]); pon(g, ORO, 3, [ax, ay + 6.5 | 0]);
       pon(g, ORO, 2, [ax - 3, ay + 9], [ax + 3, ay + 9], [ax, ay + 12]);
     }
-    if (Array.isArray(a.extras)) a.extras.forEach(fn => { if (typeof fn === "function") fn(g, t, { piel, pelo: ramPelo, tela }); });
+    if (Array.isArray(a.extras)) a.extras.forEach(fn => { if (typeof fn === "function") fn(g, tt, { piel, pelo: ramPelo, tela }); });
     /* La fila 63 queda libre para el contorno: los pies pisan la 62. */
     for (let x = 0; x < W; x++) g.quitar(x, H - 1);
+    /* En las poses, la fila de arriba y las columnas de los lados también quedan para el contorno. */
+    if (P) { for (let x = 0; x < W; x++) g.quitar(x, 0); for (let y = 0; y < H; y++) g.quitar(0, y).quitar(W - 1, y); }
     if (!a.sinContorno) contornoSel(g);
+    for (const fn of post) fn(g);
     return a.espejo ? g.espejo() : g;
   }
 
-  window.HEROES_64 = { W, H, RAZAS, TELA_CLASE, PEINADOS, TELAS, GESTOS, RAMPAS: R, plantilla, componer, matizar, OBJETOS_EXTRA };
+  window.HEROES_64 = { W, H, RAZAS, TELA_CLASE, PEINADOS, TELAS, GESTOS, RAMPAS: R, POSES, plantilla, componer, matizar, OBJETOS_EXTRA };
 })();
 
 /* Dados y Mazmorras · enemigos normales en alta definición (48×48), primera tanda.
