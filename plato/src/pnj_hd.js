@@ -21,7 +21,7 @@
   const ROSA = ["#5a1830", "#8e2c4c", "#c8506e", "#ef8aa0", "#ffd0da"];
   const SAVIA = ["#24331c", "#40582e", "#6a8a48", "#98b86a", "#c8e09a"];
   const FRONDA = ["#0c1c0e", "#183618", "#275a26", "#3f8438", "#6eb04e"];
-  const CUERNO = ["#120c14", "#241a28", "#3c2e40", "#5e4c60", "#8a7688"];
+  const CUERNO = ["#1a1220", "#33263a", "#4f3f58", "#76647e", "#a592a8"];
 
   /* ---------- Utilidades ---------- */
   const capa = () => new Capa(W, H);
@@ -476,33 +476,33 @@
   function fantasma() {
     const g = new Rejilla(W, H), t = plantilla("normal");
     const E = ESPECTRO, A = ALMA;
-    const x = t.cabX, sube = 3;
+    const x = t.cabX, sube = 1;
     t.cabY -= sube; t.ojoY -= sube; t.torTop -= sube; t.torBot -= sube;
     const y = t.ojoY;
     /* Manto real detrás, que ondea hacia atrás. */
     const manto = capa().poly([[t.torL + 2, t.torTop], [t.torR + 2, t.torTop], [t.torR + 8, t.torBot + 4], [t.torR + 5, t.torBot + 6], [t.torR + 2, t.torBot + 4]]);
-    manto.pintar(g, E, { relieve: 3, max: 2 });
+    manto.pintar(g, E, { relieve: 3, max: 1 });
     pliegues(g, E, [t.torR + 4], t.torTop + 6, t.torBot + 4, 0);
     brazo(g, [[t.torR - 2, t.torTop + 3], [t.torR + 1, t.torTop + 8], [t.torR, t.torTop + 12]], E, E, { atras: true, largo: true, grueso: 4 });
     /* Túnica que se estrecha en una cola curvada hacia atrás. */
     const tun = torso(t).unir(capa().poly([[t.torL - 1, t.torBot - 3], [t.torR + 1, t.torBot - 3], [t.torR + 2, t.torBot + 3], [t.cx + 3, t.torBot + 7], [t.torL, t.torBot + 3]]));
     tun.curva(t.cx, t.torBot + 3, t.cx + 1, t.suelo - 3, t.torR + 9, t.suelo - 4, 7.5, 1);
-    tun.pintar(g, E, { relieve: 4, max: 3 });
-    pliegues(g, E, [t.torL + 4, t.cx + 2], t.torTop + 7, t.torBot + 5, 1);
+    tun.pintar(g, E, { relieve: 4, min: 1, max: 2 });
+    pliegues(g, E, [t.torL + 5, t.cx + 3], t.torTop + 7, t.torBot + 5, 1);
     /* Cinturón con gema. */
     for (let i = t.torL; i <= t.torR + 1; i++) ponSi(g, E, E, 1, [i, t.torBot - 3]);
     pon(g, A, 3, [t.cx - 2, t.torBot - 3]); pon(g, A, 4, [t.cx - 3, t.torBot - 3]);
     /* Armiño: cuello y orla delantera, blancos con motas. */
-    const armino = capa().ell(t.cx, t.torTop + 1, 7.4, 2.6).rect(t.torL + 1, t.torTop + 1, 3, t.torBot - t.torTop + 3);
+    const armino = capa().ell(t.cx + 1, t.torTop + 1, 7.4, 2.6);
     armino.pintar(g, E, { relieve: 2, min: 3, separar: true });
-    for (const [i, j] of [[t.cx - 4, t.torTop + 1], [t.cx + 3, t.torTop + 1], [t.torL + 2, t.torTop + 6], [t.torL + 2, t.torTop + 10], [t.torL + 2, t.torTop + 14], [t.cx + 6, t.torTop + 2], [t.cx, t.torTop + 2]]) pon(g, E, 1, [i, j]);
+    for (const [i, j] of [[t.cx + 4, t.torTop + 1], [t.cx + 7, t.torTop + 2], [t.cx + 6, t.torTop - 1]]) ponSi(g, E, E, 1, [i, j]);
     /* Cabeza. */
-    capa().ell(x, t.cabY, t.cabRx, t.cabRy).rect(x - 8, y + 2, 2, 2).pintar(g, E, { relieve: 5, min: 2, max: 3 });
+    capa().ell(x, t.cabY, t.cabRx, t.cabRy).rect(x - 8, y + 2, 2, 2).pintar(g, E, { relieve: 5, min: 2, max: 2 });
+    pon(g, E, 4, [x - 4, t.cabY - 4], [x - 3, t.cabY - 4], [x - 5, t.cabY - 3]);
     /* Melena blanca detrás. */
-    const pelo = capa().ell(x + 1.4, t.cabY, t.cabRx + 1, t.cabRy + 0.6).poly([[x + 2, t.cabY], [x + 8, t.cabY + 1], [x + 8, t.torTop + 3], [x + 3, t.torTop + 2]]);
-    cada((i, j) => { if (i < x + 2 && j > t.cabY - 3) pelo.off(i, j); if (j < t.cabY - 3) pelo.off(i, j); });
-    pelo.pintar(g, E, { relieve: 2, min: 3, separar: 2 });
-    for (let j = t.cabY - 1; j < t.torTop + 3; j += 2) ponSi(g, E, E, 2, [x + 5, j], [x + 7, j + 1]);
+    const pelo = capa().ell(x + 1.4, t.cabY, t.cabRx + 1, t.cabRy + 0.6).poly([[x + 3, t.cabY], [x + 8, t.cabY + 1], [x + 7, t.cabY + 7], [x + 3, t.cabY + 6]]);
+    cada((i, j) => { if (i < x + 3 || j < t.cabY - 3) pelo.off(i, j); });
+    pelo.pintar(g, E, { relieve: 2, min: 2, max: 3, separar: 2 });
     /* Cuencas vacías y ojos de luz, cejas pobladas. */
     for (const ex of [x - 5, x - 1]) {
       pon(g, E, 0, [ex, y], [ex + 1, y], [ex, y + 1], [ex + 1, y + 1], [ex, y + 2], [ex + 1, y + 2]);
@@ -513,22 +513,21 @@
     /* Barba larga y bigote. */
     const barba = capa().poly([[x - 7, y + 3], [x + 3, y + 2], [x + 3, t.torTop + 3], [x + 1, t.torTop + 9], [x - 2, t.torTop + 13], [x - 4, t.torTop + 8], [x - 8, t.torTop + 2]]);
     barba.pintar(g, E, { relieve: 2.5, min: 3, separar: 2 });
-    for (let j = y + 6; j < t.torTop + 12; j += 2) ponSi(g, E, E, 2, [x - 4, j], [x - 1, j + 1], [x + 1, j]);
+    for (let j = y + 7; j < t.torTop + 12; j++) ponSi(g, E, E, 2, [x - 3 + (j % 3 === 0 ? 1 : 0), j]);
     capa().poly([[x - 8, y + 3], [x - 1, y + 3], [x + 1, y + 5.4], [x - 4, y + 4.6], [x - 9, y + 5.4]]).pintar(g, E, { relieve: 1.2, min: 3, separar: 2 });
     pon(g, E, 0, [x - 5, y + 6], [x - 4, y + 6]);
     /* Corona de puntas con gemas. */
     const cor = capa().rect(x - 5, t.cabY - 7, 12, 3);
-    for (const i of [x - 5, x - 1.5, x + 2, x + 5.5]) cor.poly([[i - 0.8, t.cabY - 6], [i + 0.6, t.cabY - 11], [i + 2, t.cabY - 6]]);
+    for (const i of [x - 5, x - 1.5, x + 2, x + 5.5]) cor.poly([[i - 0.8, t.cabY - 6], [i + 0.6, t.cabY - 10.5], [i + 2, t.cabY - 6]]);
     cor.pintar(g, E, { relieve: 1.5, min: 3, separar: true });
     for (let i = x - 5; i <= x + 6; i++) ponSi(g, E, E, 2, [i, t.cabY - 5]);
     pon(g, A, 4, [x - 3, t.cabY - 6], [x + 4, t.cabY - 6]); pon(g, A, 2, [x - 3, t.cabY - 5], [x + 4, t.cabY - 5]);
     pon(g, A, 3, [x, t.cabY - 6]);
     /* Brazo de delante extendido, con la manga ancha y la mano que llama. */
     const [mx, my] = [t.torL - 5, t.torTop + 10];
-    capa().poly([[t.torL + 3, t.torTop + 2], [t.torL, t.torTop + 2], [mx + 1, my - 2], [mx + 2, my + 4], [t.torL + 4, t.torTop + 9]]).pintar(g, E, { relieve: 2.5, max: 3, separar: true });
-    for (const j of [my - 1, my + 1, my + 3]) ponSi(g, E, E, 3, [mx + 2, j]);
-    capa().ell(mx, my + 1, 1.6, 1.4).linea(mx - 1, my, mx - 4, my - 1, 1).linea(mx - 1, my + 1, mx - 4, my + 1, 1).linea(mx, my + 2, mx - 3, my + 3, 1).pintar(g, E, { relieve: 1, min: 3, separar: true });
-    bordeLuz(g, E, 3);
+    capa().poly([[t.torL + 3, t.torTop + 2], [t.torL, t.torTop + 2], [mx + 1, my - 2], [mx + 2, my + 4], [t.torL + 4, t.torTop + 9]]).pintar(g, E, { relieve: 2.5, max: 2, separar: true });
+    capa().linea(mx + 1, my - 2, mx + 2, my + 4, 2).pintar(g, E, { relieve: 1, min: 3, max: 3 });
+    capa().ell(mx - 0.4, my + 1, 1.6, 1.4).linea(mx - 1, my, mx - 3, my - 1, 1).linea(mx - 1, my + 2, mx - 3, my + 2, 1).pintar(g, E, { relieve: 1, min: 3, separar: true });
     g.contorno(E[0]);
     /* Translucidez: la cola se deshace en tramado y deja ver el fondo. */
     cada((i, j) => {
@@ -536,7 +535,6 @@
       const f = (j - (t.torBot + 2)) / 13;
       if (PX.umbral(i, j) < f * 0.9) g.quitar(i, j);
     });
-    cada((i, j) => { if (g.get(i, j) && j > t.torBot - 2 && j < t.torBot + 6 && PX.umbral(i, j) > 0.8) { const k = E.indexOf(g.get(i, j)); if (k > 1) pon(g, E, k - 1, [i, j]); } });
     /* Resplandor en el suelo bajo el fantasma y motas de luz. */
     for (let i = t.cx - 8; i <= t.cx + 8; i++) if (PX.umbral(i, 46) < 0.95 - Math.abs(i - t.cx) / 9) mota(g, A, Math.abs(i - t.cx) < 4 ? 2 : 1, i, 46);
     for (let i = t.cx - 4; i <= t.cx + 4; i++) if (PX.umbral(i, 45) < 0.5) mota(g, A, 1, i, 45);
@@ -618,7 +616,8 @@
     tun.pintar(g, T, { relieve: 4 });
     pliegues(g, T, [t.cx + 4, t.cx + 7], t.pierTop, t.suelo - 3);
     for (let i = 0; i < W; i++) for (let j = t.torBot; j <= t.suelo; j++) if (g.rampa(i, j) === T && g.rampa(i, j + 1) !== T) pon(g, O, 3, [i, j], [i, j - 1]);
-    for (let j = t.torTop + 2; j <= t.suelo - 2; j++) if (g.rampa(t.torL + 3, j) === T) pon(g, O, j % 3 ? 3 : 4, [t.torL + 3, j]);
+    for (let j = t.torBot; j <= t.suelo - 2; j++) if (g.rampa(t.torL + 3, j) === T) pon(g, O, j % 3 ? 3 : 4, [t.torL + 3, j]);
+    for (let i = t.torL + 2; i <= t.torR - 2; i++) ponSi(g, T, O, i % 2 ? 3 : 4, [i, t.torTop]);
     for (const [i, j] of [[t.torL + 1, t.suelo - 6], [t.cx + 2, t.suelo - 5], [t.cx + 6, t.suelo - 7]]) { pon(g, O, 2, [i, j], [i + 1, j + 1], [i - 1, j + 1]); pon(g, O, 4, [i, j - 1]); }
     /* Fajín ocre anudado, con las puntas colgando. */
     capa().rect(t.torL - 1, t.torBot - 4, t.torR - t.torL + 3, 3).pintar(g, R.tela.ocre, { relieve: 1.5, separar: true });
@@ -635,9 +634,9 @@
     capa().ell(x + 3.5, y + 5, 1.2, 1.2).pintar(g, O, { relieve: 1, min: 2 });
     pon(g, O, 4, [x + 3, y + 4]);
     /* Cuernos: salen por detrás del turbante y se curvan hacia atrás y arriba. */
-    capa().curva(x + 4, t.cabY - 3, x + 10, t.cabY - 5, x + 10, t.cabY - 11, 3, 1).pintar(g, Cu, { relieve: 1.2, min: 1, separar: true });
-    capa().curva(x - 2, t.cabY - 7, x - 2, t.cabY - 12, x + 2, t.cabY - 14, 2.6, 1).pintar(g, Cu, { relieve: 1.2, min: 1 });
-    for (const [i, j] of [[x + 8, t.cabY - 4], [x + 9, t.cabY - 7], [x - 2, t.cabY - 10]]) pon(g, Cu, 1, [i, j]);
+    capa().curva(x - 1, t.cabY - 7, x - 1, t.cabY - 13, x + 4, t.cabY - 14, 3, 1).pintar(g, Cu, { relieve: 1.4, min: 1, max: 3 });
+    capa().curva(x + 4, t.cabY - 5, x + 8, t.cabY - 12, x + 12, t.cabY - 10, 3.8, 1.2).pintar(g, Cu, { relieve: 1.6, min: 1, separar: true });
+    for (const [i, j] of [[x + 6, t.cabY - 8], [x + 8, t.cabY - 10], [x + 1, t.cabY - 12]]) ponSi(g, Cu, Cu, 1, [i, j]);
     /* Turbante con gema. */
     const turb = capa().ell(x + 0.6, t.cabY - 3, t.cabRx + 0.8, 3.8).ell(x + 1.6, t.cabY - 6.4, 4.4, 2.6);
     turb.quitarRect(0, y - 1, W, H);

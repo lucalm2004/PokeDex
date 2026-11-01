@@ -1075,7 +1075,7 @@
   const CIELO_OCASO = ["#1c1230", "#2c1a44", "#452656", "#673366", "#8e3f68", "#b44f5c", "#d86a4a", "#f09a48", "#ffd27a", "#fff0b8"];
   const SILUETA = [SO[0], SO[1], "#24152e", "#3a1f40", "#56294e", "#7a3550", "#9a4450"];
   const SUELO_OCASO = [SO[1], "#1a1f16", PRADO[1], PRADO[2], PRADO[3], OL[3], OC[3]];
-  const SOL = [150, 70], HORIZONTE = 80;
+  const SOL = [150, 61], HORIZONTE = 80;
   /* El camino: centro y medio ancho a cada altura (se estrecha hacia el sol). */
   const caminoEn = y => {
     const t = lim((y - HORIZONTE) / (H - HORIZONTE));
@@ -1105,7 +1105,7 @@
       const top = Math.round(58 + Math.abs(Math.sin(x * 0.021 + 0.4)) * -12 + Math.sin(x * 0.07) * 3 + 10);
       for (let y = top; y < HORIZONTE + 4; y++) {
         const v = 4.2 + brilloSol(x, y) * 1.6 - (y - top) * 0.03 + (y === top ? 0.8 : 0) + (ruido(x / 7, y / 4, 8) - 0.5) * 0.8;
-        g.set(x, y, CIELO_OCASO[lim(tono(x, y, v, 0.6), 2, 7)], CIELO_OCASO);
+        g.set(x, y, CIELO_OCASO[lim(tono(x, y, v, 0.35), 2, 7)], CIELO_OCASO);
       }
     }
     // bosque lejano contra el sol
@@ -1132,8 +1132,6 @@
         g.set(x, y, SUELO_OCASO[lim(tono(x, y, v, 0.5), 0, 6)], SUELO_OCASO);
       }
     }
-    // bruma dorada sobre el horizonte
-    velo(g, 0, HORIZONTE - 14, W, 24, (x, y) => (1 - Math.abs(y - HORIZONTE + 2) / 9) * (0.08 + brilloSol(x, y) * 0.45), (x, y) => CIELO_OCASO[brilloSol(x, y) > 0.5 ? 7 : 6]);
     // árboles a ambos lados del camino, en tres filas, cada vez más cerca y más oscuros
     const fila = (lista, k, borde) => {
       for (const [x, by, alto] of lista) {
@@ -1239,11 +1237,157 @@
     hojas(ctx, t, 6, 0, 10, 90, 140, [SILUETA[3], CIELO_OCASO[5], OC[2]], 8, 0.06);
   }
 
+
+  /* ======================================================================
+     El Bosque de los Susurros
+     ====================================================================== */
+  const BOSQ = ["#070e0b", "#0b1510", "#10201a", "#14261a", "#1a3324", "#213d27", "#2a4a35", "#365c44", "#4a7458", "#6a9478"];
+  const CORTEZA = [MUSGO[0], "#1c140e", M[0], M[1], "#5a4a36", MUSGO[3]];
+  const SETAS_B = [[40, 104, 0], [18, 132, 1], [214, 106, 0], [240, 130, 1], [150, 97, 0], [96, 99, 1]];
+  const claroB = (x, y) => Math.max(0, 1 - Math.hypot((x - 128) / 150, (y - 72) / 46));
+  /* Haces de luz que bajan de las copas, inclinados hacia la derecha. */
+  const hazB = (x, y) => {
+    let r = 0;
+    for (const [x0, w, k] of [[62, 7, 1], [104, 11, 1.2], [146, 6, 0.9], [184, 9, 0.8]]) { const c = x0 + y * 0.34; r = Math.max(r, (1 - Math.abs(x - c) / w) * k); }
+    return Math.max(0, r) * lim(1 - y / 130);
+  };
+  const brilloSetas = (x, y) => SETAS_B.reduce((v, [sx, sy]) => v + Math.max(0, 1 - Math.hypot(x - sx, (y - sy) * 1.4) / 24) ** 1.5, 0);
+  function bosque(g) {
+    rellenar(g, 0, 0, W, 104, BOSQ, (x, y) => 2.2 + claroB(x, y) * 4.8 - Math.max(0, 30 - y) * 0.04, 0.6);
+    // tres hileras de troncos, cada vez más cerca y más oscuras, con bancos de niebla entre ellas
+    const az = azar(41);
+    const hilera = (n, w0, w1, dv, sueloY, niebla) => {
+      for (let i = 0; i < n; i++) {
+        const x = 20 + Math.floor(az() * 216), w = w0 + az() * (w1 - w0), incl = (az() - 0.5) * 0.06;
+        for (let y = 0; y < sueloY; y++) {
+          const xs = x + (y - sueloY) * incl, ancho = w + Math.max(0, y - sueloY + 6) * 0.9;
+          for (let k = Math.round(xs - ancho / 2); k < xs + ancho / 2; k++) {
+            const u = (k - (xs - ancho / 2)) / ancho;
+            const v = 2.2 + claroB(k, y) * 4.8 - dv + (u < 0.25 ? 0.8 : u > 0.75 ? -0.6 : 0) + (ruido(k * 0.7, y * 0.08, i) - 0.5) * 0.8;
+            g.set(k, y, BOSQ[lim(tono(k, y, v, 0.4), 0, 9)], BOSQ);
+          }
+        }
+      }
+      for (const [cx, cy, rx, ry] of niebla) velo(g, cx - rx, cy - ry, rx * 2, ry * 2, (x, y) => (1 - Math.hypot((x - cx) / rx, (y - cy) / ry)) * 1.1, (x, y) => BOSQ[lim(Math.round(4 + claroB(x, y) * 4.5), 0, 9)], BOSQ);
+    };
+    hilera(12, 3, 6, 1.4, 92, [[70, 74, 50, 7], [170, 78, 46, 6], [120, 66, 30, 4]]);
+    hilera(8, 7, 12, 3, 96, [[50, 88, 44, 5], [140, 90, 56, 5], [220, 84, 30, 4]]);
+    hilera(5, 13, 18, 4.6, 100, []);
+    // haces de luz entre las copas
+    iluminar(g, 0, 0, W, 104, (x, y) => hazB(x, y) * 2.6, 1);
+    iluminar(g, 0, 96, W, 48, (x, y) => hazB(x, 96) * 1.6 * lim(1 - Math.abs(y - 108) / 14), 1);
+    // las copas, con musgo colgando
+    const cp = copa(g, [[16, 2, 30, 12], [64, -4, 26, 10], [112, -2, 22, 8], [160, -4, 28, 11], [214, 0, 26, 12], [250, 8, 14, 10], [90, 6, 12, 5], [188, 10, 12, 5]], MUSGO, 13, { relieve: 5, max: 3 });
+    contraluz(g, cp, MUSGO[4], -1, -1);
+    for (let i = 0; i < 26; i++) {
+      const x = Math.floor(hash(i, 1, 51) * W);
+      let y = 0;
+      while (y < 30 && cp.tiene(x, y + 1)) y++;
+      const largo = 4 + Math.floor(hash(i, 2, 51) * 14);
+      for (let j = 0; j < largo; j++) g.set(x + Math.round(Math.sin(j * 0.5 + i) * 0.6), y + j, j % 3 ? MUSGO[2] : MUSGO[3], MUSGO);
+    }
+    // el suelo: musgo, hojarasca y una senda que se pierde entre los árboles
+    for (let y = 96; y < H; y++) for (let x = 0; x < W; x++) {
+      const t = (y - 96) / (H - 96);
+      const senda = Math.abs(x - (128 + (y - 96) * -0.35 + Math.sin(y * 0.08) * 6)) < 4 + t * 26 + (ruido(x * 0.2, y * 0.3, 52) - 0.5) * 6;
+      let v = 3.6 + claroB(x, y) * 2.4 - t * 0.8 + (fbm(x / 9, y / (2 + t * 5), 53) - 0.5) * 1.6;
+      if (y < 98) v -= 1.2;
+      if (senda) {
+        if (hash(x, y, 54) > 0.82) g.set(x, y, hash(x, y, 58) > 0.5 ? M[1] : TIERRA[1], M);
+        else g.set(x, y, BOSQ[lim(tono(x, y, v + 0.7, 0.5), 0, 9)], BOSQ);
+      } else if (hash(x >> 1, y, 55) > 0.985 - t * 0.01) g.set(x, y, [M[0], TE[1], OC[1], M[1]][Math.floor(hash(x, y, 56) * 4)], M);
+      else g.set(x, y, BOSQ[lim(tono(x, y, v, 0.4), 0, 9)], BOSQ);
+    }
+    // hojas caídas (dos píxeles) sobre el musgo
+    for (let i = 0; i < 34; i++) {
+      const x = Math.floor(hash(i, 1, 57) * W), y = 100 + Math.floor(hash(i, 2, 57) * 44);
+      const col = [TE[1], OC[1], M[2], TE[2]][i % 4];
+      g.set(x, y, col, null).set(x + 1, y, col, null).set(x + 1, y - 1, TE[3], null);
+    }
+    // los dos árboles enormes de los lados, con raíces que se clavan en el suelo
+    arbolViejo(g, [[4, -2], [16, 40], [12, 80], [8, 112]], [34, 30, 32], 1);
+    arbolViejo(g, [[246, -2], [236, 44], [242, 80], [250, 112]], [32, 30, 34], -1);
+    caraCorteza(g, 238, 60);
+    // raíces sueltas sobre el suelo
+    for (const [x0, y0, x1, y1, gr] of [[30, 108, 74, 114, 4], [30, 116, 52, 128, 3], [224, 108, 188, 112, 4], [226, 118, 206, 130, 3]]) capa().curva(x0, y0, (x0 + x1) / 2, y0 + 4, x1, y1, gr, 1.5).pintar(g, CORTEZA, { relieve: 1.5, max: 4, luz: [-0.5, -0.8, 0.6] });
+    SETAS_B.forEach(([x, y, k]) => setas(g, x, y, k ? MG : ESPECTRO));
+    // resplandor de las setas sobre lo que las rodea
+    iluminar(g, 0, 60, W, 84, (x, y) => brilloSetas(x, y) * 1.4, 1);
+    helecho(g, 0, 144, 1, 22);
+    helecho(g, 256, 144, -1, 22);
+    helecho(g, 58, 106, 1, 10);
+    helecho(g, 196, 104, -1, 10);
+  }
+  function arbolViejo(g, pts, grueso, lado) {
+    const c = tronco(g, pts, grueso, CORTEZA, { relieve: 6, max: 4, luz: [-0.7, -0.4, 0.6] });
+    // surcos verticales de la corteza
+    cada(c, (x, y) => { if (c.tiene(x - 2, y) && c.tiene(x + 2, y) && ruido(x * 0.45, y * 0.05, 60) > 0.66) desplazar(g, x, y, -2); });
+    // musgo por el lado iluminado
+    cada(c, (x, y) => { if (!c.tiene(x - 1, y) && hash(x, y, 9) > 0.25) g.set(x, y, MUSGO[4], MUSGO); else if (!c.tiene(x - 3, y) && fbm(x / 3, y / 5, 61) > 0.55) g.set(x, y, MUSGO[3], MUSGO); });
+    contraluz(g, c, CORTEZA[0], lado < 0 ? -1 : 1, 0);
+    const base = pts[pts.length - 2];
+    for (const [dx, dy, gr] of [[lado * 30, 2, 7], [lado * 42, -4, 5], [lado * -10, 6, 6], [lado * 16, 10, 5]]) {
+      const r = capa().curva(base[0], base[1] + 12, base[0] + dx * 0.5, base[1] + dy + 10, base[0] + dx, base[1] + dy + 22, gr, 2);
+      r.pintar(g, CORTEZA, { relieve: 2.5, max: 4, luz: [-0.6, -0.7, 0.6] });
+      cada(r, (x, y) => { if (!r.tiene(x, y - 1) && hash(x, y, 62) > 0.4) g.set(x, y, MUSGO[3], MUSGO); });
+    }
+  }
+  /* Una cara dormida en la corteza: los árboles que susurran. */
+  function caraCorteza(g, x, y) {
+    for (const dx of [-6, 4]) {
+      capa().ell(x + dx, y, 2.6, 1.4).pintar(g, CORTEZA, { plano: 0 });
+      for (let i = -3; i <= 3; i++) g.set(x + dx + i, y - 2 - (Math.abs(i) < 2 ? 1 : 0), CORTEZA[4], CORTEZA);
+    }
+    capa().ell(x - 1, y + 9, 3.2, 4.2).pintar(g, CORTEZA, { plano: 0 });
+    capa().ell(x - 1, y + 10, 1.8, 2.6).pintar(g, SO, { plano: 0 });
+    for (let j = -2; j < 6; j++) g.set(x - 1 + Math.round(Math.sin(j) * 0.5), y + j, CORTEZA[2], CORTEZA);
+  }
+  /* Setas que brillan con luz propia, con su halo. */
+  function setas(g, x, y, ram) {
+    for (let j = -12; j < 5; j++) for (let i = -14; i < 15; i++) {
+      const d = Math.hypot(i, j * 1.3);
+      if (d < 14 && umbral(x + i, y + j) < (1 - d / 14) * 0.55 && BOSQ.includes(g.get(x + i, y + j))) g.set(x + i, y + j, d < 6 ? ram[2] : ram[1], ram);
+    }
+    for (const [dx, h, r] of [[0, 7, 4], [-5, 4, 2.6], [5, 4, 3], [9, 2, 1.6], [-9, 2, 1.4]]) {
+      for (let j = 0; j < h; j++) { g.set(x + dx, y - j, HU[3], HU); if (r > 2.5) g.set(x + dx + 1, y - j, HU[2], HU); }
+      const c = capa().ell(x + dx + 0.5, y - h - 0.5, r + 0.6, r * 0.62).quitarRect(0, y - h + 1, W, 12);
+      c.pintar(g, ram, { relieve: 2, min: 2, max: 4 });
+      for (let i = Math.round(x + dx - r); i <= x + dx + r + 1; i++) if (c.tiene(i, y - h)) g.set(i, y - h + 1, ram[1], ram);
+      if (r > 2.5) g.set(x + dx - 1, y - h - 2, HU[4], HU).set(x + dx + 2, y - h - 1, HU[4], HU);
+    }
+  }
+  function helecho(g, x0, y0, lado, largo0 = 14) {
+    for (let k = 0; k < 7; k++) {
+      const a = -0.2 - k * 0.2, largo = largo0 + (k % 3) * (largo0 / 4);
+      let px = x0, py = y0;
+      for (let s = 0; s < largo; s++) {
+        const aa = a - s * (0.5 / largo);
+        px += Math.cos(aa) * lado; py += Math.sin(aa);
+        g.set(Math.round(px), Math.round(py), MUSGO[3], MUSGO);
+        if (s % 2 === 0 && s > 1) {
+          const hoja = Math.max(1, Math.round((largo - s) / 5));
+          for (let h = 1; h <= hoja; h++) { g.set(Math.round(px), Math.round(py) - h, MUSGO[4], MUSGO); g.set(Math.round(px) + lado, Math.round(py) + h, MUSGO[2], MUSGO); }
+        }
+      }
+    }
+  }
+  function bosqueAnim(ctx, t) {
+    jirones(ctx, t, 9, 0, 70, W, 26, [BOSQ[7], BOSQ[6]], 3, 4);
+    luciernagas(ctx, t, 12, 10, 40, 236, 70, [OL[3], HO[4], ESPECTRO[4]], 9);
+    // esporas que suben despacio desde las setas
+    SETAS_B.forEach(([x, y, k], i) => {
+      const p = ((t / 1000) * 0.22 + hash(i, 3, 63)) % 1;
+      ctx.fillStyle = (k ? MG : ESPECTRO)[p < 0.5 ? 4 : 3];
+      ctx.fillRect(Math.round(x + Math.sin(p * 8 + i) * 4), Math.round(y - 8 - p * 26), 1, 1);
+    });
+  }
+
   /* El resto de escenarios se añade más abajo. */
   window.FONDOS_HD = window.FONDOS_HD || {};
   Object.assign(window.FONDOS_HD, {
     taberna: { base: taberna, anim: tabernaAnim },
     aldea: { base: aldea, anim: aldeaAnim },
-    camino: { base: camino, anim: caminoAnim }
+    camino: { base: camino, anim: caminoAnim },
+    bosque: { base: bosque, anim: bosqueAnim }
   });
 })();

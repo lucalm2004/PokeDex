@@ -935,7 +935,7 @@
      ====================================================================== */
   const ROCA_NIDO = ["#08090c", "#121519", "#1c2125", "#283033", "#384443", "#52645c"];
   const SEDA = ["#3b3e47", "#6a6e78", "#9a9ea6", "#c8ccd0"];
-  const SETAS_N = [[20, 106, ESPECTRO, 1.2], [46, 103, MG, 0.8], [214, 104, ESPECTRO, 0.9], [240, 107, MG, 1.3], [12, 142, MG, 1.1], [246, 143, ESPECTRO, 1.1], [176, 68, ESPECTRO, 0.6], [70, 74, MG, 0.55]];
+  const SETAS_N = [[20, 106, ESPECTRO, 1.2], [46, 103, MG, 0.8], [214, 104, ESPECTRO, 0.9], [240, 107, MG, 1.3], [12, 142, MG, 1.1], [246, 143, ESPECTRO, 1.1], [176, 70, ESPECTRO, 0.75], [70, 76, MG, 0.7]];
   const TUNEL = [128, 66, 30, 26];
   const luzNido = (x, y) => lim(SETAS_N.reduce((v, [sx, sy, , k]) => v + Math.max(0, 1 - Math.hypot((x - sx) / (40 * k), (y - sy) / (30 * k))) ** 1.6, 0));
   const GOTA_N = [160, 18];
@@ -947,7 +947,7 @@
     g.rect(0, 0, W, H, ROCA_NIDO[0]);
     const [tx, ty, trx, try_] = TUNEL;
     const tes = teselas(140, 33, 0, 0, W, 102, 1.4, 24);
-    roca(g, tes, ROCA_NIDO, (x, y) => 1.4 + luzNido(x, y) * 3.2 - Math.max(0, 14 - y) * 0.06 - Math.max(0, 1 - Math.hypot((x - tx) / 50, (y - ty) / 40)) * 0.7, haciaArriba, { vari: 0.7, relieve: 1.4, bisel: 2.2, oscuro: 1.5 });
+    roca(g, tes, ROCA_NIDO, (x, y) => 0.9 + luzNido(x, y) * 4.4 - Math.max(0, 14 - y) * 0.06 - Math.max(0, 1 - Math.hypot((x - tx) / 50, (y - ty) / 40)) * 0.7, haciaArriba, { vari: 0.7, relieve: 1.4, bisel: 2.2, oscuro: 1.5 });
     // la boca del túnel por donde salen las arañas
     const tunel = capa().ell(tx, ty, trx, try_).quitarRect(0, 100, W, 50);
     cada(tunel, (x, y) => { const d = Math.hypot((x - tx) / trx, (y - ty) / try_); g.set(x, y, ROCA_NIDO[lim(tono(x, y, d * 2.6 - 0.9, 0.8), 0, 2)], ROCA_NIDO); });
@@ -1114,11 +1114,263 @@
     if ((t / 1000) % 5 < 0.15) { ctx.fillStyle = ROCA_NIDO[0]; ctx.fillRect(122, 75, 15, 2); }
   }
 
+
+  /* ======================================================================
+     Las ruinas del templo élfico, al caer la tarde.
+     ====================================================================== */
+  const ANOCHECER = [SO[1], AZ[1], VI[2], PV[2], PV[3], TE[3], F[3], F[4]];
+  const RUINA = ["#17121f", "#272030", "#3b3144", "#574958", "#7d6870", "#ad8f86", "#dcb898"];
+  const SOL_R = [128, 74];
+  const ARCO = [128, 96, 26, 36];   // centro del vano, pie, medio ancho del vano, grosor+vano exterior
+  const RAMAS_R = [];
+  const luzR = (x, y) => Math.max(0, 1 - Math.hypot((x - SOL_R[0]) / 100, (y - SOL_R[1]) / 70));
+  /* Enlosado en perspectiva: filas cada vez más altas hacia delante, juntas que convergen hacia (vx, yh). */
+  function losas(g, y0, filas, ancho, vx, yh, ram, tonoEn, sem, junta) {
+    const az = azar(sem), n = ram.length - 1;
+    let ya = y0;
+    filas.forEach(alto => {
+      const off = az() * ancho, vari = Array.from({ length: 40 }, () => (az() - 0.5) * 0.8), rota = Array.from({ length: 40 }, () => az());
+      for (let y = ya; y < ya + alto && y < H; y++) {
+        const esc = (y - yh) / (H - yh);
+        for (let x = 0; x < W; x++) {
+          const u = vx + (x - vx) / esc + off, k = Math.floor(u / ancho), k1 = Math.floor((vx + (x + 1 - vx) / esc + off) / ancho), kk = ((k % 40) + 40) % 40;
+          if (y === ya || k1 !== k) { g.set(x, y, junta(x, y), null); continue; }
+          let v = tonoEn(x, y) + vari[kk];
+          if (y === ya + 1) v += 0.5;
+          if (k1 === Math.floor((vx + (x + 2 - vx) / esc + off) / ancho) && false) v -= 0.3;
+          // grieta en diagonal en algunas losas
+          const lu = (u / ancho) - k, lv = (y - ya) / alto;
+          if (rota[kk] > 0.7 && Math.abs(lu - (0.2 + lv * 0.6 * (rota[kk] > 0.85 ? -1 : 1) + (rota[kk] > 0.85 ? 0.6 : 0))) < 0.03) v -= 1.6;
+          g.set(x, y, ram[lim(tono(x, y, v, 0.35), 0, n)], ram);
+        }
+      }
+      ya += alto;
+    });
+  }
+  function ruinas(g) {
+    RAMAS_R.length = 0;
+    const [sx, sy] = SOL_R;
+    // cielo del ocaso: de azul noche arriba a naranja junto al sol
+    rellenar(g, 0, 0, W, 100, ANOCHECER, (x, y) => Math.pow(y / 90, 1.3) * 6 + Math.max(0, 1 - Math.hypot(x - sx, (y - sy) * 1.5) / 90) * 2, 0.55);
+    for (let i = 0; i < 46; i++) {
+      const x = Math.floor(hash(i, 1, 61) * W), y = Math.floor(hash(i, 2, 61) * 30);
+      if (ANOCHECER.indexOf(g.get(x, y)) <= 1) g.set(x, y, hash(i, 3, 61) > 0.75 ? HU[4] : HU[2]);
+    }
+    // nubes alargadas con la panza encendida
+    const nube = (x, y) => fbm(x / 40, y / 6, 111, 4) * (Math.max(0, 1 - Math.abs(y - 30) / 9) + Math.max(0, 1 - Math.abs(y - 52) / 6) * 0.9 + Math.max(0, 1 - Math.abs(y - 14) / 6) * 0.7);
+    for (let y = 0; y < 72; y++) for (let x = 0; x < W; x++) {
+      const v = nube(x, y);
+      if (v < 0.42) continue;
+      const abajo = nube(x, y + 2), arriba = nube(x, y - 2), cerca = luzR(x, y);
+      let c = ANOCHECER[cerca > 0.5 ? 4 : 3];
+      if (abajo < 0.42) c = cerca > 0.45 ? F[4] : cerca > 0.2 ? F[3] : TE[3];
+      else if (arriba < 0.42) c = ANOCHECER[2];
+      g.set(x, y, c);
+    }
+    // el sol, grande y bajo, con su halo
+    velo(g, sx - 40, sy - 30, 80, 50, (x, y) => (1 - Math.hypot(x - sx, y - sy) / 26) * 0.7, F[4]);
+    capa().ell(sx, sy, 11.5, 11.5).pintar(g, [F[4]], { plano: 0 });
+    capa().ell(sx, sy, 8, 8).pintar(g, [HU[4]], { plano: 0 });
+    // montañas lejanas y bosque élfico en silueta
+    for (let x = 0; x < W; x++) {
+      const t0 = Math.round(66 - fbm(x / 44, 1, 113) * 26 - Math.max(0, Math.sin(x * 0.03 - 1)) * 8);
+      const t1 = Math.round(78 - Math.sin(x * 0.03 + 1) * 4 - fbm(x / 10, 2, 115) * 4);
+      const k = Math.floor(x / 7), lx = x - k * 7, pino = hash(k, 116) > 0.35 ? (1 - Math.abs(lx - 3) / 3.5) * (6 + hash(k, 117) * 10) : 0;
+      const t2 = Math.round(88 - Math.sin(x * 0.05 + 3) * 2 - pino);
+      for (let y = t0; y < 100; y++) g.set(x, y, y === t0 && Math.abs(x - sx) < 70 ? F[3] : y < t0 + 2 && Math.abs(x - sx) < 70 ? TE[3] : PV[3]);
+      for (let y = t1; y < 100; y++) g.set(x, y, y === t1 ? PV[3] : PV[2]);
+      for (let y = t2; y < 100; y++) g.set(x, y, y === t2 ? VI[2] : SO[2]);
+    }
+    // una torre élfica rota a lo lejos
+    for (let y = 44; y < 80; y++) for (let x = 200; x < 207; x++) if (y > 44 + Math.abs(x - 203) * 1.2 + (x > 204 ? 4 : 0)) g.set(x, y, y < 46 ? PV[4] : PV[2]);
+    for (let x = 198; x < 209; x++) g.set(x, 56, PV[3]);
+    // el gran arco apuntado del templo, con la clave y media rosca derrumbadas
+    arcoR(g);
+    // columnas: dos enteras en los bordes y dos partidas
+    columnaR(g, 6, 104, 86, 12, {});
+    columnaR(g, 54, 102, 40, 10, { roto: true });
+    columnaR(g, 196, 102, 30, 10, { roto: true, inclina: 0.5 });
+    columnaR(g, 236, 104, 90, 12, {});
+    // dintel caído apoyado entre la columna de la derecha y el suelo
+    conBorde(g, RUINA[0], tmp => {
+      capa().poly([[206, 104], [212, 94], [234, 84], [236, 92], [214, 104]]).pintar(tmp, RUINA, { relieve: 2.5, max: 5, luz: [-0.7, -0.5, 0.5] });
+      for (let k = 0; k < 4; k++) { const x = 214 + k * 5, y = 96 - k * 2.4; tmp.set(x, Math.round(y), RUINA[2], RUINA).set(x + 1, Math.round(y) - 1, RUINA[5], RUINA); }
+      // bloques del friso caídos a la izquierda
+      capa().poly([[22, 104], [24, 94], [44, 92], [46, 102], [44, 104]]).pintar(tmp, RUINA, { relieve: 2.5, max: 5, luz: [0.7, -0.4, 0.5] });
+      for (let x = 27; x < 43; x += 5) plantilla(tmp, [" a ", "aba", " c "], x, 96, { a: RUINA[4], b: RUINA[6], c: RUINA[2] });
+      capa().poly([[70, 104], [72, 99], [82, 98], [84, 104]]).pintar(tmp, RUINA, { relieve: 2, max: 5, luz: [0.6, -0.5, 0.5] });
+      capa().poly([[176, 104], [178, 100], [186, 99], [188, 104]]).pintar(tmp, RUINA, { relieve: 2, max: 5, luz: [-0.6, -0.5, 0.5] });
+    });
+    // estatua de una elfa sin cabeza sobre su pedestal, a la izquierda del arco
+    conBorde(g, RUINA[0], tmp => estatua(tmp, 80, 98));
+    // hiedra que trepa por las columnas y cuelga del arco
+    copa(g, [[12, 88, 7, 11], [9, 52, 5, 8], [14, 30, 4, 5], [58, 92, 6, 7], [200, 94, 6, 6], [240, 80, 6, 12], [244, 40, 5, 7], [96, 92, 5, 6], [160, 90, 5, 7]], MUSGO, 61, { relieve: 3, max: 4, luz: [0.4, -0.7, 0.5] });
+    for (const [x, y] of [[16, 18], [2, 30], [60, 62], [92, 40], [100, 26], [114, 18], [140, 16], [150, 22], [160, 40], [200, 72], [232, 20], [250, 26]]) RAMAS_R.push([x, y]);
+    RAMAS_R.forEach(([x, y], i) => enredadera(g, x, y, 14 + Math.floor(hash(i, 62) * 22), 70 + i));
+    // suelo de losas de mármol cuarteadas, con hierba en las juntas
+    const yS = 104;
+    losas(g, yS, [3, 4, 5, 5, 6, 7, 7, 8], 28, sx, -70, RUINA, (x, y) => 1.7 + luzR(x, y) * 2.2 + Math.max(0, 1 - Math.abs(x - sx) / (12 + (y - yS) * 1.1)) * 1.1, 29, (x, y) => (hash(x, y, 6) > 0.55 ? MUSGO[2] : RUINA[0]));
+    for (let x = 0; x < W; x++) g.set(x, yS, MUSGO[1], MUSGO);
+    // reflejo del sol en el mármol pulido
+    for (let y = yS + 2; y < yS + 22; y += 2) {
+      const f = 1 - (y - yS) / 22, a = Math.round((4 + hash(y, 1, 9) * 5) * f);
+      for (let x = sx - a; x <= sx + a; x++) if (RUINA.includes(g.get(x, y))) g.set(x, y, Math.abs(x - sx) < a * 0.5 ? RUINA[6] : RUINA[5], RUINA);
+    }
+    // calvas de hierba donde faltan losas, sobre todo en los bordes
+    for (const [cx, cy, rx, ry] of [[12, 118, 18, 7], [244, 124, 20, 8], [80, 142, 22, 4], [186, 108, 14, 3], [128, 140, 10, 3], [40, 106, 12, 2]]) {
+      for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) {
+        const d = Math.hypot((x - cx) / rx, (y - cy) / ry);
+        if (d < 1 && umbral(x, y) < (1 - d) * 1.6) g.set(x, y, MUSGO[d < 0.4 ? 3 : 2], MUSGO);
+      }
+    }
+    // matas de hierba y flores, más altas delante; el paso queda despejado
+    for (let i = 0; i < 70; i++) {
+      const x = Math.floor(hash(i, 64) * W), y = yS + 2 + Math.floor(hash(i, 65) * 40);
+      if (y > 114 && y < 141 && x > 22 && x < 232 && hash(i, 68) > 0.15) continue;
+      const al = 2 + Math.floor(((y - yS) / 40) * 4);
+      for (let j = 0; j < al; j++) { g.set(x, y - j, MUSGO[2], MUSGO); g.set(x + (j % 2 ? 1 : -1), y - j - 1, j === al - 1 ? OL[3] : MUSGO[3], MUSGO); }
+      if (hash(i, 66) > 0.6) { const c = hash(i, 67) > 0.5 ? PV[4] : HU[4]; g.set(x, y - al - 1, c).set(x + 1, y - al - 1, c).set(x, y - al - 2, c); }
+    }
+    // pétalos y hojas caídas sobre las losas
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor(hash(i, 74) * W), y = yS + 3 + Math.floor(hash(i, 75) * 38);
+      g.set(x, y, hash(i, 76) > 0.5 ? TE[3] : PV[4]).set(x + 1, y, hash(i, 76) > 0.5 ? TE[2] : PV[3]);
+    }
+  }
+  /* El gran arco apuntado sobre dos pilares, con la rosca derecha derrumbada. */
+  function arcoR(g) {
+    const [cx, pie, ri, gro] = ARCO, re = ri + 10, cR = cx + 12, cL = cx - 12, alto = 36;
+    const arco = capa();
+    for (let y = 0; y < pie; y++) for (let x = cx - re - 2; x <= cx + re + 2; x++) {
+      const ext = y >= alto ? Math.abs(x - cx) <= re : Math.hypot(x - (x < cx ? cR : cL), y - alto) < re + 12 && Math.abs(x - cx) <= re;
+      const int = y >= alto ? Math.abs(x - cx) < ri : Math.hypot(x - (x < cx ? cR : cL), y - alto) < ri + 12;
+      if (ext && !int) arco.on(x, y);
+    }
+    // derrumbe: falta la parte de arriba a la derecha
+    for (let x = cx - 2; x <= cx + re + 2; x++) for (let y = 0; y < 30 + (x - cx) * 0.5 + hash(x >> 1, 3) * 5; y++) arco.off(x, y);
+    const filas = Array(17).fill(6);
+    sillaresR(g, cx - re - 2, 0, cx + re + 3, filas, RUINA, x => (x < cx ? 2.6 : 2.2) + luzR(x, 60) * 0.6, arco);
+    cada(arco, (x, y) => {
+      if (!arco.tiene(x, y - 1)) g.set(x, y, RUINA[5], RUINA);
+      else if (!arco.tiene(x + 1, y) && x < cx) g.set(x, y, RUINA[6], RUINA);
+      else if (!arco.tiene(x - 1, y) && x > cx && y >= 20) g.set(x, y, RUINA[6], RUINA);
+      else if (!arco.tiene(x - 1, y) || !arco.tiene(x + 1, y)) g.set(x, y, RUINA[1], RUINA);
+    });
+    contraluz(g, arco, RUINA[0], 0, 1);
+    // impostas y moldura con hojas talladas
+    for (const x0 of [cx - re, cx + ri]) {
+      for (let x = x0 - 1; x < x0 + 11; x++) g.set(x, alto, RUINA[6], RUINA).set(x, alto + 1, RUINA[4], RUINA).set(x, alto + 2, RUINA[2], RUINA);
+      for (let x = x0 + 1; x < x0 + 10; x += 4) plantilla(g, [" a ", "aba", " c "], x, alto + 4, { a: RUINA[4], b: RUINA[6], c: RUINA[2] });
+    }
+    // runas élficas en la rosca de la izquierda
+    for (let k = 0; k < 5; k++) {
+      const a = Math.PI + 0.35 + k * 0.22, x = Math.round(cR + Math.cos(a) * (ri + 17)), y = Math.round(alto + Math.sin(a) * (ri + 17));
+      if (arco.tiene(x, y)) g.set(x, y, ESPECTRO[4]).set(x, y + 1, ESPECTRO[3]).set(x + 1, y, ESPECTRO[3]);
+    }
+    // escombros al pie del derrumbe
+    conBorde(g, RUINA[0], tmp => {
+      for (const [x, y, w, h] of [[cx + 14, 98, 8, 6], [cx + 22, 100, 6, 4], [cx + 30, 96, 9, 8], [cx + 6, 101, 5, 3]]) {
+        capa().poly([[x, y + h], [x + 1, y + 1], [x + w * 0.6, y], [x + w, y + h * 0.4], [x + w, y + h]]).pintar(tmp, RUINA, { relieve: 2, max: 5, luz: [-0.6, -0.6, 0.5] });
+      }
+    });
+  }
+  /* Sillería de bloques escalonados con bisel, dentro de una máscara. */
+  function sillaresR(g, x0, y0, x1, filas, ram, tonoEn, masc) {
+    const az = azar(81), n = ram.length - 1, an = 8;
+    let y = y0;
+    for (const alto of filas) {
+      let x = x0 - Math.floor(az() * an);
+      while (x < x1) {
+        const w = Math.max(4, Math.round(an * (0.65 + az() * 0.7))), vb = (az() - 0.5) * 0.5;
+        for (let j = 0; j < alto; j++) for (let i = 0; i < w; i++) {
+          const px = x + i, py = y + j;
+          if (px < x0 || px >= x1 || !masc.tiene(px, py)) continue;
+          let v = tonoEn(px, py);
+          if (j === alto - 1 || i === w - 1) v -= 1.3;
+          else { v += vb; if (j === 0) v += 0.6; else if (j === alto - 2) v -= 0.35; if (i === 0) v += 0.25; }
+          g.set(px, py, ram[lim(tono(px, py, v, 0.3), 0, n)], ram);
+        }
+        x += w;
+      }
+      y += alto;
+    }
+  }
+  /* Columna estriada con basa; si no está rota, con capitel y un trozo de arquitrabe. */
+  function columnaR(g, x, base, alto, ancho, op = {}) {
+    const lado = Math.sign(SOL_R[0] - (x + ancho / 2)), luz = [lado * 0.7, -0.35, 0.55];
+    conBorde(g, RUINA[0], tmp => {
+      const fuste = capa().rect(x, base - alto, ancho, alto);
+      if (op.roto) for (let i = 0; i < ancho; i++) {
+        const corte = Math.round(hash(i, x, 3) * 4 + (op.inclina ? i * op.inclina : 0) + (i % 3 === 0 ? 2 : 0));
+        for (let j = 0; j < corte; j++) fuste.off(x + i, base - alto + j);
+      }
+      fuste.pintar(tmp, RUINA, { relieve: ancho / 2, luz, max: 5 });
+      cada(fuste, (px, py) => { if ((px - x) % 3 === 1 && px < x + ancho - 1) matiz(tmp, px, py, -1); });
+      cada(fuste, (px, py) => { if (!fuste.tiene(px + lado, py)) tmp.set(px, py, RUINA[5], RUINA); });
+      // grietas y desconchones
+      for (let k = 0; k < 3; k++) { const py = base - alto + 6 + Math.floor(hash(k, x, 9) * (alto - 12)); trazo(tmp, x + 1, py, x + ancho - 2, py + 2, RUINA[1]); }
+      capa().rect(x - 1, base - 7, ancho + 2, 2).rect(x - 2, base - 5, ancho + 4, 5).pintar(tmp, RUINA, { relieve: 1.5, luz, max: 5 });
+      if (!op.roto) {
+        const top = base - alto;
+        capa().rect(x - 1, top - 2, ancho + 2, 2).rect(x - 3, top - 6, ancho + 6, 4).pintar(tmp, RUINA, { relieve: 1.2, luz, max: 5 });
+        for (const dx of [-3, ancho + 2]) tmp.set(x + dx, top - 2, RUINA[3], RUINA).set(x + dx, top - 1, RUINA[2], RUINA);
+        for (let i = 0; i < ancho + 4; i += 3) tmp.set(x - 2 + i, top - 4, RUINA[6], RUINA);
+        if (top - 6 > 0) capa().rect(x - 5, Math.max(0, top - 14), ancho + 10, Math.min(8, top - 6)).pintar(tmp, RUINA, { relieve: 1.5, luz, max: 4 });
+      }
+    });
+  }
+  /* Estatua de una elfa sin cabeza, con túnica y un arco a la espalda, sobre un pedestal. */
+  function estatua(tmp, x, pie) {
+    const luz = [0.7, -0.5, 0.5], M2 = RUINA;
+    capa().rect(x - 7, pie - 8, 15, 8).rect(x - 8, pie - 10, 17, 2).pintar(tmp, M2, { relieve: 2, luz, max: 5 });
+    for (let i = -5; i <= 5; i += 2) tmp.set(x + i, pie - 5, M2[2], M2);
+    const cuerpo = capa().poly([[x - 6, pie - 10], [x - 3, pie - 30], [x - 4, pie - 36], [x + 4, pie - 36], [x + 3, pie - 30], [x + 6, pie - 10]]);
+    cuerpo.pintar(tmp, M2, { relieve: 3, luz, max: 5 });
+    for (let k = -3; k <= 3; k += 2) trazo(tmp, x + k * 0.6, pie - 28, x + k, pie - 11, M2[2]);
+    capa().linea(x - 4, pie - 34, x - 8, pie - 24, 2).linea(x + 4, pie - 34, x + 6, pie - 26, 2).pintar(tmp, M2, { relieve: 1, luz, max: 5 });
+    capa().rect(x - 2, pie - 38, 4, 2).pintar(tmp, M2, { relieve: 1, luz, max: 4 });
+    // la cabeza rota a sus pies
+    capa().ell(x + 11, pie - 2, 2.5, 2).pintar(tmp, M2, { relieve: 1.5, luz, max: 5 });
+  }
+  /* Hiedra colgante: un tallo que baja serpenteando con hojas a los lados y alguna flor. */
+  function enredadera(g, x, y, largo, sem) {
+    const az = azar(sem);
+    let px = x;
+    for (let j = 0; j < largo; j++) {
+      px += (az() - 0.5) * 0.8 + Math.sin(j * 0.35 + sem) * 0.2;
+      const X = Math.round(px), Y = y + j;
+      g.set(X, Y, MUSGO[1], MUSGO);
+      if (j % 2 === 0) {
+        const s = az() < 0.5 ? -1 : 1;
+        g.set(X + s, Y, MUSGO[s < 0 ? 4 : 3], MUSGO).set(X + s, Y - 1, MUSGO[4], MUSGO).set(X + s * 2, Y, MUSGO[2], MUSGO);
+        if (az() < 0.12) g.set(X + s * 2, Y - 1, PV[4]).set(X + s * 2, Y, HU[4]);
+      }
+    }
+  }
+  function ruinasAnim(ctx, t) {
+    if (!RAMAS_R.length) ruinas(new Rejilla(W, H));
+    luciernagas(ctx, t, 22, 0, 50, W, 80, [OL[3], HO[4], OC[4]], 21);
+    // hojas y pétalos que se desprenden de la hiedra y caen meciéndose
+    RAMAS_R.forEach(([x0, y0], i) => {
+      const p = ((t / 1000) * (0.06 + hash(i, 71) * 0.05) + hash(i, 72)) % 1;
+      if (p > 0.92) return;
+      const x = Math.round(x0 + Math.sin(p * 11 + i) * 6 + p * 22 * (i % 2 ? 1 : -1)), y = Math.round(y0 + 12 + p * 120);
+      ctx.fillStyle = i % 3 === 0 ? TE[3] : i % 3 === 1 ? PV[4] : MUSGO[4];
+      ctx.fillRect(x, y, Math.sin(p * 22) > 0 ? 2 : 1, 1);
+    });
+    // pájaros que cruzan el cielo a lo lejos
+    for (let i = 0; i < 3; i++) {
+      const p = ((t / 1000) * 0.018 + i * 0.09) % 1, x = Math.round(-10 + p * (W + 20) + i * 6), y = Math.round(40 + i * 5 + Math.sin(p * 20 + i) * 2), ala = Math.floor(t / 220 + i) % 2;
+      ctx.fillStyle = SO[1]; ctx.fillRect(x - 2, y - ala, 2, 1); ctx.fillRect(x, y, 1, 1); ctx.fillRect(x + 1, y - ala, 2, 1);
+    }
+  }
+
   window.FONDOS_HD = window.FONDOS_HD || {};
   Object.assign(window.FONDOS_HD, {
     pico: { base: pico, anim: picoAnim },
     guarida: { base: guarida, anim: guaridaAnim },
     abismo: { base: abismo, anim: abismoAnim },
-    telarana: { base: nido, anim: nidoAnim }
+    telarana: { base: nido, anim: nidoAnim },
+    ruinas: { base: ruinas, anim: ruinasAnim }
   });
 })();

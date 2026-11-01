@@ -363,7 +363,7 @@
     pon(g, HUESO, 4, [14, 33], [14, 36], [14, 39]);
     bordeLuz(g, V, 3);
     bordeLuz(g, N, 2);
-    bordeReflejo(g, V, 1, E, (x, y) => y > 30);
+    bordeReflejo(g, V, 2, V, (x, y) => y > 30);
     g.contorno();
 
     /* La filacteria: una gema verde en una jaula de oro, flotando sobre la mano. */
@@ -391,7 +391,7 @@
       const f = ala.copia();
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
         if (!ala.tiene(x, y)) continue;
-        for (const [a, b] of [[3, 0], [-3, 0], [0, -3], [0, 3], [2, 2], [-2, 2], [2, -2], [-2, -2]]) if (!ala.tiene(x + a, y + b)) { f.off(x, y); break; }
+        for (const [a, b] of [[2, 0], [-2, 0], [0, -2], [0, 2], [2, 2], [-2, 2], [2, -2], [-2, -2]]) if (!ala.tiene(x + a, y + b)) { f.off(x, y); break; }
       }
       return f;
     };
@@ -608,6 +608,7 @@
     tono(g, C().ell(36, 38, 7, 4), 1, E);
     tono(g, C().ell(36, 38, 7, 4), 1, R.tela.ocre);
     trazo(g, craneo, E, 1, [24, 22, 27, 25]);
+    for (let x = 0; x < W; x++) g.quitar(x, H - 1);
     g.contorno();
 
     /* Chispas y humo, sin contorno. */
@@ -722,6 +723,7 @@
       else if (!g.get(x + 1, y) || !g.get(x, y + 1)) pon(g, Ci, 2, [x, y]);
       else if ((!g.get(x - 2, y) || !g.get(x, y - 2)) && umbral(x, y) < 0.5) pon(g, Mg, 1, [x, y]);
     }
+    for (let x = 0; x < W; x++) g.quitar(x, H - 1);
     g.contorno(V[0]);
 
     /* Polvo de estrellas alrededor, sin contorno. */

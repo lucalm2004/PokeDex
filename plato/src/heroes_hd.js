@@ -25,7 +25,7 @@
   const IRIS = "#4a3426";
   const CUERO = ["#26130a", "#462612", "#6e3f1f", "#9a6034", "#c4864e"];
   const ACERO = ["#1d1f24", "#3a3e46", "#646a75", "#9aa1ab", "#e4e8ee"];
-  const PELLIZA = R.pelo.castano;
+  const PELLIZA = ["#231d19", "#41372f", "#67594d", "#918172", "#bfb1a0"];
   const SUDOR = R.mar;
   const BARBAS = Object.values(R.pelo);
   const MEJILLA = R.piel.roja;
@@ -62,10 +62,9 @@
   /* Cota de malla: anillas de 2×2 con su brillo y su hueco. */
   function malla(g, ram, x0, y0, x1, y1) {
     cada(g, ram, x0, y0, x1, y1, (x, y, k) => {
-      if (k < 1 || k > 3) return;
-      const a = (x + (y >> 1) * 1) & 1, b = y & 1;
-      if (!a && !b) g.set(x, y, ram[Math.min(4, k + 1)], ram);
-      else if (a && b) g.set(x, y, ram[k - 1], ram);
+      if (k < 2) return;
+      if (((x + y) & 1) === 0) g.set(x, y, ram[k - 1], ram);
+      else if (k === 3 && (y & 1) === 0 && (x & 3) === 1) g.set(x, y, ram[4], ram);
     });
   }
 
@@ -103,11 +102,15 @@
     /* Mandíbula y barbilla hacia delante. */
     c.poly([[t.cabX - 1, t.cabY + 2], [t.cabX + t.cabRx + 0.6, t.ojoY + 1], [t.cabX + t.cabRx + 0.4, t.bocaY + 0.5], [t.cabX + 5, t.cabY + t.cabRy + 0.6], [t.cabX - 1, t.cabY + t.cabRy + 0.2]]);
     c.on(t.narizX, t.ojoY + 1).on(t.narizX, t.ojoY + 2).on(t.narizX - 1, t.ojoY + 3);
-    c.pintar(g, piel, { relieve: 5 });
-    /* Sombra bajo la barbilla y bajo la nariz. */
+    c.pintar(g, piel, { relieve: 5, min: 2 });
+    /* La nuca y el borde de abajo en sombra; la mejilla y la frente con luz. */
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!c.tiene(x, y)) continue;
+      if (!c.tiene(x, y + 1) && x < t.cabX + 2) pon(g, piel, 1, [x, y]);
+      else if (!c.tiene(x - 1, y) && y > t.cabY - 2) pon(g, piel, 1, [x, y]);
+    }
     pon(g, piel, 1, [t.narizX - 1, t.ojoY + 3]);
-    pon(g, piel, 3, [t.narizX, t.ojoY + 1]);
-    for (let x = t.cabX - 2; x <= t.cabX + 2; x++) if (g.rampa(x, t.cabY + 5) === piel) matiz(g, x, Math.round(t.cabY + t.cabRy) - 1, -1);
+    pon(g, piel, 4, [t.narizX, t.ojoY + 1]);
   }
   function oreja(g, t, piel, raza) {
     const x = t.cabX, y = t.cabY;
@@ -514,7 +517,7 @@
     const c = capa().ell(x - 0.8, y - 0.6, t.cabRx + 1.6, t.cabRy + 1.4);
     c.poly([[x - 8, y], [x - 1, y + 5], [t.torL + 3, t.torTop + 3], [t.torL - 3, t.torTop + 3], [x - 9.5, t.torTop - 1]]);
     c.poly([[x - 3, y + 4], [x + 6, y + 5.5], [t.torR - 1, t.torTop + 2.5], [t.torL + 1, t.torTop + 2.5]]);
-    if (punta) c.poly([[x - 3, y - 6], [x - 10, y - 9], [x - 8, y - 3]]);
+    if (punta) c.poly([[x - 2, y - 7.6], [x - 6, y - 7.4], [x - 12.5, y - 3], [x - 7, y - 1]]);
     const cara = capa().ell(x + 4.2, t.ojoY + 1.3, 4.8, 5.4).rect(x + 6, t.ojoY - 2, 4, 9);
     c.restar(cara);
     return c;
@@ -616,8 +619,6 @@
           if ((x * 5 + y * 3) % 7 === 0) g.set(x, y, PELLIZA[Math.max(1, k - 1)], PELLIZA);
           else if ((x * 3 + y * 5) % 11 === 0 && k < 4) g.set(x, y, PELLIZA[k + 1], PELLIZA);
         });
-        /* Correa del hombro. */
-        surco(g, CUERO, 2, torL + 2, torTop + 2, torR - 1, torBot - 4, piel);
         break;
       }
       case "picaro": {
@@ -727,11 +728,11 @@
         tr.pintar(g, tela, { relieve: 4 });
         ribete(g, tr, R.tela.granate, 3);
         /* Jubón acuchillado: aberturas con la tela de debajo, lazada y botones. */
-        for (let y = torTop + 2; y < torBot - 3; y += 3) for (const x of [torL + 2, cx - 1]) { pon(g, R.tela.granate, 3, [x, y], [x, y + 1]); pon(g, tela, 1, [x + 1, y], [x + 1, y + 1]); }
-        for (let y = torTop + 2; y <= torBot - 4; y += 2) { pon(g, R.hueso, 3, [cx + 1, y]); pon(g, R.hueso, 4, [cx + 3, y + 1]); pon(g, OJOS, null, [cx + 2, y]); }
+        /* Pechera con lazada en zigzag y botonadura en el costado. */
         for (let y = torTop + 2; y <= torBot - 3; y++) pon(g, tela, 1, [cx + 2, y]);
-        for (let y = torTop + 2; y <= torBot - 3; y += 2) pon(g, R.hueso, 3, [cx + 1, y]), pon(g, R.hueso, 3, [cx + 3, y + 1]);
-        for (let y = torTop + 3; y <= torBot - 3; y += 3) pon(g, R.bronce, 4, [torR - 1, y]);
+        for (let y = torTop + 2; y <= torBot - 4; y += 2) { pon(g, R.hueso, 4, [cx + 1, y]); pon(g, R.hueso, 3, [cx + 3, y + 1]); }
+        for (let y = torTop + 3; y <= torBot - 4; y += 3) { pon(g, R.bronce, 4, [torR - 1, y]); pon(g, R.bronce, 1, [torR - 1, y + 1]); }
+        pliegue(g, tela, cx - 2, torTop + 3, cx - 2, torBot - 3);
         /* Cuello de gorguera. */
         capa().ell(t.cabX - 0.5, torTop, 4, 1.4).pintar(g, R.hueso, { relieve: 1, min: 2, separar: true });
         cada(g, R.hueso, t.cabX - 5, torTop - 2, t.cabX + 4, torTop + 2, (x, y) => { if (x % 2) pon(g, R.hueso, 2, [x, y]); });
@@ -812,19 +813,23 @@
         break;
       }
       case "bardo": {
-        const by = y - 5;
-        const copa = capa().ell(x - 1, by - 0.5, t.cabRx - 0.5, 2.6);
-        const ala = capa().ell(x - 0.5, by + 1.5, t.cabRx + 1.8, 1.4);
-        copa.pintar(g, tela, { relieve: 2, separar: true });
-        ala.pintar(g, tela, { relieve: 1.5, separar: true });
-        for (let i = x - 8; i <= x + 6; i++) if (copa.tiene(i, Math.round(by + 0.5)) && !ala.tiene(i, Math.round(by + 0.5))) pon(g, R.tela.granate, 3, [i, Math.round(by + 0.5)]);
-        for (let i = x - 8; i <= x + 6; i++) if (copa.tiene(i, Math.round(by + 0.5))) pon(g, R.tela.granate, 2, [i, Math.round(by + 0.5)]);
-        /* Pluma larga con su raquis. */
-        const pl = capa().curva(x - 3, by - 1, x - 8, by - 9, x - 14, by - 6, 3, 1);
+        /* Sombrero de ala corta con la punta hacia delante, cinta y una pluma larga. */
+        const by = Math.round(y - 5);
+        const copa = capa().poly([[x - 7.5, by + 2], [x - 6.5, by - 1.5], [x - 3, by - 3.5], [x + 2, by - 3.2], [x + 5, by - 1], [x + 9.5, by + 1.6], [x + 5, by + 2.6], [x - 6, by + 3]]);
+        copa.pintar(g, tela, { relieve: 2.4, separar: true });
+        for (let i = x - 8; i <= x + 10; i++) {
+          if (copa.tiene(i, by + 2) && !copa.tiene(i, by + 3)) pon(g, tela, 1, [i, by + 2]);
+          if (copa.tiene(i, by) && i < x + 5) pon(g, R.tela.granate, 3, [i, by]);
+          if (copa.tiene(i, by + 1) && i < x + 4) pon(g, R.tela.granate, 1, [i, by + 1]);
+        }
+        surco(g, tela, 1, x - 1, by - 3, x + 1, by - 1, tela);
+        /* Pluma con su raquis. */
+        const pl = capa().curva(x - 4, by, x - 8, by - 8, x - 14, by - 6, 3, 1);
         pl.pintar(g, R.hueso, { relieve: 1.2, min: 2, separar: true });
-        surco(g, R.hueso, 1, x - 4, by - 2, x - 7, by - 6, R.hueso);
-        surco(g, R.hueso, 1, x - 8, by - 7, x - 12, by - 7, R.hueso);
+        surco(g, R.hueso, 1, x - 5, by - 1, x - 8, by - 5, R.hueso);
+        surco(g, R.hueso, 1, x - 9, by - 6, x - 12, by - 6, R.hueso);
         cada(g, R.hueso, x - 15, by - 9, x - 11, by - 4, (i, j) => { if (i <= x - 12) pon(g, R.tela.granate, (i + j) % 2 ? 3 : 2, [i, j]); });
+        pon(g, R.bronce, 4, [x - 4, by]); pon(g, R.bronce, 2, [x - 4, by + 1]);
         break;
       }
     }
@@ -842,15 +847,18 @@
     switch (clase) {
       case "guerrero": {
         /* Escudo de cometa: borde de hierro con remaches, campo de la tela y una cruz clara. */
-        const sx = t.torR + 2, sy = t.torTop + 6;
-        const borde = capa().poly([[sx - 6, sy - 6], [sx + 6, sy - 6], [sx + 6, sy + 2], [sx, sy + 10], [sx - 6, sy + 2]]);
+        const sx = t.torR - 0.5, sy = t.torTop + (t.bajo ? 4 : 6), hw = 5.5;
+        const borde = capa().poly([[sx - hw, sy - 6], [sx + hw, sy - 6], [sx + hw, sy + 2], [sx + 2, sy + 8], [sx, sy + 9.5], [sx - 2, sy + 8], [sx - hw, sy + 2]]);
         borde.pintar(g, R.hierro, { relieve: 2, separar: true });
-        const campo = capa().poly([[sx - 5, sy - 5], [sx + 5, sy - 5], [sx + 5, sy + 1.5], [sx, sy + 8.5], [sx - 5, sy + 1.5]]);
+        const campo = capa().poly([[sx - hw + 1, sy - 5], [sx + hw - 1, sy - 5], [sx + hw - 1, sy + 1.6], [sx + 1.5, sy + 7], [sx, sy + 8], [sx - 1.5, sy + 7], [sx - hw + 1, sy + 1.6]]);
         campo.pintar(g, tela, { relieve: 4 });
-        for (let j = sy - 4; j <= sy + 6; j++) { pon(g, R.hueso, 4, [sx - 1, j]); pon(g, R.hueso, 2, [sx, j]); }
-        for (let i = sx - 4; i <= sx + 4; i++) { pon(g, R.hueso, i < sx ? 4 : 3, [i, sy - 1]); pon(g, R.hueso, 2, [i, sy]); }
-        pon(g, R.hueso, 4, [sx - 1, sy]);
-        for (const [i, j] of [[sx - 5, sy - 5], [sx + 5, sy - 5], [sx - 5, sy + 1], [sx + 5, sy + 1], [sx, sy + 9]]) pon(g, R.hierro, 4, [i, j]);
+        const cxs = Math.round(sx);
+        for (let j = sy - 4; j <= sy + 6; j++) { pon(g, R.hueso, 4, [cxs - 1, j]); pon(g, R.hueso, 2, [cxs, j]); }
+        for (let i = cxs - 4; i <= cxs + 3; i++) { pon(g, R.hueso, i < cxs ? 4 : 3, [i, sy - 2]); pon(g, R.hueso, 2, [i, sy - 1]); }
+        pon(g, R.hueso, 4, [cxs - 1, sy - 1]);
+        /* Brillo del borde y remaches. */
+        for (let i = Math.round(sx - hw); i <= Math.round(sx + hw); i++) if (g.rampa(i, sy - 6) === R.hierro) pon(g, R.hierro, 3, [i, sy - 6]);
+        for (const [i, j] of [[sx - hw, sy - 6], [sx + hw, sy - 6], [sx - hw, sy + 2], [sx + hw, sy + 2], [sx, sy + 9]]) pon(g, R.hierro, 4, [Math.round(i), Math.round(j)]);
         /* Espada en alto. */
         const tope = Math.max(2, my - (t.bajo ? 15 : 18));
         hoja(g, mx - 1, my - 3, tope);
@@ -1046,7 +1054,7 @@
     } else if (raza === "mediano") piernas(g, t, piel, raza, ramPelo, { descalzo: true });
     else piernas(g, t, piel, raza, ramPelo, { ramPierna: tela, ramBota: R.madera, alto: 3 });
     vestir(g, t, clase, tela, piel);
-    if (clase === "clerigo" || clase === "guerrero") malla(g, R.hierro, t.cx - 6, t.pierTop, t.cx + 6, t.suelo - 6);
+    if (clase === "clerigo") malla(g, R.hierro, t.cx - 6, t.pierTop, t.cx + 6, t.suelo - 6);
     if (draco) cabezaDraconido(g, t, piel, gesto);
     else cabeza(g, t, piel);
     if (!draco) pelo(g, t, ramPelo, peinado, raza, tapaPelo);
@@ -1068,9 +1076,20 @@
       surco(g, tela, 1, t.cabX + 1, t.bocaY, t.cabX + 7, t.bocaY - 1, tela);
       surco(g, tela, 3, t.cabX + 1, t.ojoY + 2, t.cabX + 8, t.ojoY + 2, tela);
     }
-    if (a.objeto && OBJETOS_EXTRA[a.objeto]) OBJETOS_EXTRA[a.objeto](g, t);
-    else if (a.objeto !== "ninguno") objeto(g, t, clase, tela);
-    if (clase === "guerrero" || clase === "clerigo") {
+    const extra = a.objeto && OBJETOS_EXTRA[a.objeto];
+    const conArma = !extra && a.objeto !== "ninguno";
+    if (clase === "guerrero" && conArma) {
+      /* El escudo tapa el brazo; el puño asoma a su lado con la espada. */
+      t.mano = [t.torR + 6, t.torTop + (t.bajo ? 7 : 8)];
+      brazoDelante(g, t, piel, manga, false);
+      objeto(g, t, clase, tela);
+      puno(g, t.mano[0], t.mano[1], R.hierro);
+    } else {
+      if (extra) OBJETOS_EXTRA[a.objeto](g, t);
+      else if (conArma) objeto(g, t, clase, tela);
+    }
+    if (clase === "guerrero" && conArma) { /* ya está */ }
+    else if (clase === "guerrero" || clase === "clerigo") {
       brazoDelante(g, t, piel, manga);
       /* Hombrera de placas superpuestas. */
       const [hx, hy] = t.hombro;
@@ -1079,7 +1098,7 @@
       capa().ell(hx + 0.5, hy + 2.5, 2.6, 1.4).pintar(g, R.hierro, { relieve: 1.5, separar: true });
       pon(g, R.hierro, 4, [hx - 1, hy - 1]);
       if (clase === "clerigo") malla(g, R.hierro, hx - 4, hy - 3, hx + 4, hy + 4);
-    } else brazoDelante(g, t, piel, manga, a.objeto !== "ninguno" || true);
+    } else brazoDelante(g, t, piel, manga);
     if (clase === "bardo") {
       /* Manga abullonada con cuchilladas. */
       const [hx, hy] = t.hombro;
