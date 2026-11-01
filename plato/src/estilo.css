@@ -1001,3 +1001,5 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
   .equipo-btn { padding: 5px 10px; }
 }
 @media (max-height: 760px) { .juego .intencion { line-height: 1.4; padding: 5px 10px; min-height: 26px; } }
+/* La fila de Objetos/Concentrarse ya no es fija: tapaba la segunda fila de habilidades cuando el panel desbordaba. */
+.juego .panel .fila-extra { position: static; box-shadow: none; background: none; padding-top: 0; }

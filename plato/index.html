@@ -1012,6 +1012,8 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
   .equipo-btn { padding: 5px 10px; }
 }
 @media (max-height: 760px) { .juego .intencion { line-height: 1.4; padding: 5px 10px; min-height: 26px; } }
+/* La fila de Objetos/Concentrarse ya no es fija: tapaba la segunda fila de habilidades cuando el panel desbordaba. */
+.juego .panel .fila-extra { position: static; box-shadow: none; background: none; padding-top: 0; }
 
 </style>
 </head>
@@ -26024,9 +26026,9 @@ function tickEstados(obj, esHeroe, id) {
   return pierde;
 }
 const DIFICULTADES = {
-  facil: { nombre: "Aventurero", desc: "Para disfrutar de la historia.", hp: 0.8, dano: -1, atk: -1, runas: 0.5 },
-  normal: { nombre: "Héroe", desc: "El reto pensado para el juego.", hp: 1, dano: 0, atk: 0, runas: 1 },
-  dificil: { nombre: "Pesadilla", desc: "Enemigos más duros y acampar cuesta el doble de comida.", hp: 1.3, dano: 1, atk: 1, runas: 2 }
+  facil: { nombre: "Aventurero", desc: "Para disfrutar de la historia.", hp: 1.1, dano: 0, atk: 0, jefe: 1.2, runas: 0.5 },
+  normal: { nombre: "Héroe", desc: "El reto pensado para el juego.", hp: 1.45, dano: 2, atk: 1, jefe: 1.5, runas: 1 },
+  dificil: { nombre: "Pesadilla", desc: "Enemigos más duros y acampar cuesta el doble de comida.", hp: 1.8, dano: 3, atk: 2, jefe: 1.6, runas: 2 }
 };
 const dif = () => DIFICULTADES[S && S.dificultad] || DIFICULTADES.normal;
 /* Enemigos menores que acompañan al principal en cada acto. */
@@ -26163,12 +26165,15 @@ function crearRivalBase(clave, o = {}) {
   const e = ENEMIGOS[clave], n = S.players.length, D_ = dif();
   /* Crecen con el nivel medio del grupo por encima de lo esperado en cada acto. */
   const niv = Math.max(0, S.players.reduce((a, p) => a + p.nivel, 0) / n - 1 - 1.4 * Math.max(0, S.acto));
-  const hp = Math.max(4, Math.round(e.alma * (0.15 + 0.6 * n) * (1 + 0.18 * niv) * D_.hp * (o.factor || 1) * (o.elite ? 1.5 : 1) * (o.jefe && n >= 3 ? 1.4 : 1)));
-  const base = Math.floor(niv / 3) + (o.elite ? 1 : 0) + D_.atk;
+  /* En solitario y en el primer acto la dificultad pesa menos: es donde se aprende. */
+  const dhp = 1 + (D_.hp - 1) * (n === 1 ? 0.55 : 1) * (S.acto <= 0 ? 0.6 : 1);
+  const hp = Math.max(4, Math.round(e.alma * (0.15 + 0.6 * n) * (1 + 0.18 * niv) * dhp * (o.factor || 1) * (o.elite ? 1.5 : 1) * (o.jefe && n >= 3 ? 1.4 : 1) * (o.jefe ? D_.jefe || 1 : 1)));
+  const suave = n === 1 || S.acto <= 0;
+  const base = Math.floor(niv / 3) + (o.elite ? 1 : 0) + Math.max(0, D_.atk - (suave ? 1 : 0));
   return {
     clave, nombre: o.esbirro ? NOMBRE_ESBIRRO[clave] || e.nombre : e.nombre, hp, hpMax: hp,
     ataques: o.esbirro ? 1 : e.ataques + (n >= 4 ? 1 : 0), atk: e.atk, atkMod: base, atkBase: base,
-    danoExtra: Math.floor(niv / 2) + (o.elite ? 1 : 0) + D_.dano - (o.esbirro ? 1 : 0),
+    danoExtra: Math.floor(niv / 2) + (o.elite ? 1 : 0) + Math.max(0, D_.dano - (suave ? 1 : 0)) - (o.esbirro ? 1 : 0),
     regenera: o.esbirro ? 0 : e.regenera || 0, area: o.esbirro ? null : e.area || null, estado: o.esbirro ? null : e.estado || null,
     cura: o.esbirro ? null : e.cura || null, furia: !!e.furia, drena: !!e.drena, roba: e.roba || 0, nomuerto: !!e.nomuerto,
     resiste: e.resiste, debil: e.debil, est: {}, quemado: false, partido: false, areaEstado: ESTADO_AREA[clave] || null,
