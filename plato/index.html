@@ -1102,6 +1102,11 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 .juego.modo-combate .anuncio { top: 104px; }
 .hud-turnos { z-index: 4; }
 .juego.modo-combate .orden, .ocupado .juego.modo-combate .orden { display: none !important; }
+.camino .c-lugar { grid-column: 1 / -1; font-size: 10.5px; font-style: normal; color: var(--faint); letter-spacing: .02em; }
+.c-txt .c-lugar { display: block; }
+.camino .clima { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 6px; margin-left: 4px; background: rgba(127, 168, 255, .14); color: #a9c4ff; }
+.encargos-linea { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); }
+.encargos-linea b { color: var(--gold); font-weight: 600; }
 
 </style>
 </head>
@@ -22120,7 +22125,7 @@ const DATOS = (() => {
   }
 
   const OBJETOS = {
-    racion: { nombre: "Raciones de viaje", tipo: "consumible", precio: 6, desc: "Comida para acampar: descansar cura, levanta a los caídos y recarga el maná." },
+    racion: { nombre: "Raciones de viaje", tipo: "consumible", precio: 12, desc: "Comida para acampar: descansar cura, levanta a los caídos y recarga el maná." },
     pocion: { nombre: "Poción de curación", tipo: "consumible", precio: 10, desc: "Cura 8 PG al que más lo necesite." },
     superior: { nombre: "Poción de curación superior", tipo: "consumible", precio: 30, desc: "Cura todos los PG y levanta a un caído." },
     bendicion: { nombre: "Pergamino de bendición", tipo: "consumible", precio: 8, desc: "+2 a la próxima tirada del grupo." },
@@ -23848,6 +23853,7 @@ const ESCENARIO = (() => {
       b.translate(0, ext.arriba);
       if (temblor > ahora && !reducido) b.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
       pintarFondo(ahora);
+      pintarHora();
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
       const marcha = !!vista.marcha && !reducido;
@@ -24034,6 +24040,7 @@ const ESCENARIO = (() => {
       }
       pintarParticulas(ahora);
       if (!reducido) pintarAmbiente(ahora);
+      if (!reducido && vista.clima && FUERA.has(vista.fondo)) pintarClima(ahora);
       if (!ext.arriba && !ext.abajo) b.drawImage(capaVineta(), 0, 0);
       b.restore();
       if (transicion) pintarTransicion(ahora);
@@ -24050,6 +24057,38 @@ const ESCENARIO = (() => {
         }
       }
       ctx.drawImage(buf, zx, zy, zw, zh, 0, 0, lienzo.width, lienzo.height);
+    }
+    /* Al aire libre la luz cambia con el avance por el mapa y hay clima. */
+    const FUERA = new Set(["camino", "bosque", "aldea", "puente", "encrucijada", "pico", "ruinas"]);
+    function pintarHora() {
+      const h = vista.hora || 0;
+      if (!FUERA.has(vista.fondo) || h < 0.3) return;
+      /* Tarde dorada, atardecer anaranjado y noche azulada (se tiñe el fondo, no los personajes). */
+      const [col, a] = h < 0.55 ? ["#ffc27a", (h - 0.3) * 0.5] : h < 0.8 ? ["#ff8a50", 0.14 + (h - 0.55) * 0.3] : ["#3a4a9a", 0.2 + (h - 0.8) * 1.2];
+      b.save(); b.globalCompositeOperation = "multiply"; b.globalAlpha = Math.min(0.42, a * 1.6); b.fillStyle = col; b.fillRect(0, -ext.arriba, W, buf.height); b.restore();
+      if (h >= 0.8) { b.save(); b.globalAlpha = Math.min(0.3, (h - 0.8) * 1.2); b.fillStyle = "#0a0c20"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore(); }
+    }
+    const gotas = [];
+    let rayoHasta = 0, proximoRayo = 0;
+    function pintarClima(ahora) {
+      const tormenta = vista.clima === "tormenta";
+      if (vista.clima === "lluvia" || tormenta) {
+        const max = tormenta ? 90 : 55, y0 = -ext.arriba, y1 = H + ext.abajo;
+        while (gotas.length < max) gotas.push({ x: Math.random() * (W + 40), y: y0 + Math.random() * (y1 - y0), v: 2.2 + Math.random() * 1.6 });
+        b.save(); b.fillStyle = tormenta ? "rgba(190,205,240,0.55)" : "rgba(170,190,230,0.45)";
+        for (const g of gotas) {
+          g.y += g.v * 2.2; g.x -= g.v * 0.7;
+          if (g.y > y1 || g.x < -4) { g.y = y0 - Math.random() * 20; g.x = Math.random() * (W + 40); }
+          b.fillRect(Math.round(g.x), Math.round(g.y), 1, 3);
+        }
+        b.restore();
+        b.save(); b.globalAlpha = 0.12; b.fillStyle = "#1a2030"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore();
+      }
+      if (tormenta) {
+        if (!proximoRayo) proximoRayo = ahora + 2500 + Math.random() * 4000;
+        if (ahora > proximoRayo) { rayoHasta = ahora + 140; proximoRayo = ahora + 3000 + Math.random() * 5000; }
+        if (ahora < rayoHasta) { b.save(); b.globalAlpha = Math.floor(ahora / 40) % 2 ? 0.55 : 0.25; b.fillStyle = "#eef2ff"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore(); }
+      }
     }
     /* Ambiente según el lugar: brasas, polvo, luciérnagas, nieve o motas del vacío. */
     const TIPO_AMB = { pico: "brasas", forja: "brasas", guarida: "brasas", bosque: "luciernagas", camino: "hojas", aldea: "luciernagas", sotano: "polvo", cripta: "polvo", mina: "polvo", castillo: "polvo", trono: "polvo", puente: "nieve", abismo: "vacio", telarana: "esporas", ruinas: "hojas", taberna: "polvo", encrucijada: "hojas" };
@@ -25014,7 +25053,7 @@ const MEJORAS = {
   linaje: { nombre: "Linaje fuerte", desc: "+2 PG máximos por héroe.", coste: 10, max: 3 },
   favor: { nombre: "Favor divino", desc: "Empezáis con una bendición al azar.", coste: 20, max: 1 },
   abanico: { nombre: "Más donde elegir", desc: "Las bendiciones ofrecen 4 opciones.", coste: 15, max: 1 },
-  provisiones: { nombre: "Provisiones", desc: "+2 raciones al empezar.", coste: 6, max: 2 },
+  provisiones: { nombre: "Provisiones", desc: "+1 ración al empezar.", coste: 6, max: 2 },
   companero: { nombre: "Compañero fiel", desc: "Empezáis con una mascota al azar.", coste: 20, max: 1 },
   veterania: { nombre: "Veteranía", desc: "Los héroes empiezan a nivel 2 con un talento.", coste: 30, max: 1 },
   satiro: { nombre: "Raza: sátiro", desc: "Desbloquea al sátiro (+2 CAR, +1 SAB; el grupo recupera maná al ganar).", coste: 25, max: 1 }
@@ -26119,9 +26158,11 @@ function aplicarFx(f = {}, actor) {
   if (f.quita) delete S.memoria[f.quita];
   if (f.botin) { S.botin.push(sacarBotin(true)); anunciarBotin(); out.push("¡Un objeto!"); }
   if (f.bendicionB) { ofrecerBendiciones(); out.push("¡Bendición!"); }
-  if (f.comida) { S.zurron.racion = Math.max(0, (S.zurron.racion || 0) + f.comida); out.push(`${fmt(f.comida)} comida`); }
+  if (f.comida) { const n = f.comida > 0 ? Math.max(1, Math.floor(f.comida / 2)) : f.comida; S.zurron.racion = Math.max(0, (S.zurron.racion || 0) + n); out.push(`${fmt(n)} comida`); }
   if (f.pm) { S.players.forEach(p => { p.pm = Math.max(0, Math.min(pmMax(p), (p.pm || 0) + f.pm)); }); out.push(`${fmt(f.pm)} PM`); }
   if (f.curaPct) S.players.forEach(p => { p.pm = pmMax(p); });
+  if (f.combate && ENEMIGOS[f.combate]) { S.siguiente = S.siguiente || []; S.siguiente.unshift({ pelea: f.combate }); out.push(`¡Pelea contra ${ENEMIGOS[f.combate].nombre}!`); }
+  if (f.encargo) aceptarEncargo(f.encargo, out);
   if (f.mejora) { S.players.forEach(p => { p.mejora = Math.min(5, (p.mejora || 0) + f.mejora); }); out.push(`+${f.mejora} al daño de las armas`); }
   if (f.talento && actor) { const i = idx(actor); for (let k = 0; k < f.talento; k++) S.aprender.push({ i, talento: true }); out.push(`${actor.nombre}: talento extra`); }
   if (f.mascota) { adoptarMascota(f.mascota); out.push(`Mascota: ${MASCOTAS_DEF[f.mascota] ? MASCOTAS_DEF[f.mascota].nombre : f.mascota}`); }
@@ -26257,6 +26298,7 @@ function lineaTirada(quien, accion, r, mod, bono, total, contra, crit) {
 
 /* ---------- Mapa de caminos ---------- */
 function generarMapa() {
+  const lugaresUsados = new Set();
   /* 6 filas de caminos entre la salida y el jefe, de 2 a 4 nodos cada una. */
   const filas = [[{ tipo: "inicio", sig: [] }]];
   let elites = 0;
@@ -26276,6 +26318,19 @@ function generarMapa() {
     fila.forEach(x => { if (Math.random() < 0.32) x.rasgo = azarDe(Object.keys(RASGOS)); });
     const usadas = new Set();
     fila.forEach(x => { for (let k = 0; k < 6; k++) { x.pista = pistaDe(x.tipo); if (!usadas.has(x.pista)) break; } usadas.add(x.pista); });
+    /* Cada camino lleva a un lugar con nombre del acto, distinto en la misma fila y a ser posible sin repetir. */
+    const LUG = lugaresActo();
+    if (LUG.length) fila.forEach(x => {
+      const enFila = new Set(fila.map(y => y.lugar).filter(Boolean));
+      const valen = LUG.filter(l => !enFila.has(l.id) && (!l.tipos || l.tipos.includes(x.tipo)));
+      const nuevos = valen.filter(l => !lugaresUsados.has(l.id));
+      const l = azarDe(nuevos.length ? nuevos : valen.length ? valen : LUG.filter(l2 => !enFila.has(l2.id)));
+      if (!l) return;
+      x.lugar = l.id; lugaresUsados.add(l.id);
+      if (l.pistas && l.pistas.length && Math.random() < 0.85) x.pista = azarDe(l.pistas);
+    });
+    /* Clima de cada camino (solo se nota al aire libre). */
+    fila.forEach(x => { const r = Math.random(); x.clima = r < 0.14 ? "lluvia" : r < 0.22 ? "tormenta" : r < 0.3 ? "niebla" : null; });
     filas.push(fila);
   }
   filas.push([{ tipo: "jefe", sig: [] }]);
@@ -26292,7 +26347,7 @@ function generarMapa() {
   const A = ACTOS[Math.max(0, S ? S.acto : 0)];
   filas.forEach((fila, f) => {
     const fs = A.fondos.slice().sort(() => Math.random() - 0.5);
-    fila.forEach((x, j) => { x.fondo = x.tipo === "jefe" ? A.fondoJefe : fs[j % fs.length]; });
+    fila.forEach((x, j) => { const l = lugarDe(x); x.fondo = x.tipo === "jefe" ? A.fondoJefe : l && l.fondo ? l.fondo : fs[j % fs.length]; });
   });
   return { filas, fila: 0, col: 0 };
 }
@@ -26405,7 +26460,10 @@ function crearEscena(tipo) {
       { txt: "Destrozar el altar", stat: "ani", cd: 13, ok: { t: "La piedra estalla y libera la luz atrapada.", fx: { xp: 6, almaTodos: 4, moral: 1 } }, ko: { t: "La piedra se defiende con fuego negro.", fx: { almaTodos: -4 } } }] };
   if (tipo === "evento") {
     const mem = S.memoria || {};
-    const pool = EVENTOS.filter(e => !S.vistosEv.includes(e.id) && (e.requiere ? !!mem[e.requiere] && e.actos.includes(S.acto) : e.acto === S.acto || e.acto === null));
+    const lugar = (nodoActual() || {}).lugar;
+    const base = EVENTOS.filter(e => !S.vistosEv.includes(e.id) && (e.requiere ? !!mem[e.requiere] && e.actos.includes(S.acto) : (e.acto === S.acto || e.acto === null) && !e.lugar));
+    const propios = lugar ? EVENTOS.filter(e => e.lugar === lugar && !S.vistosEv.includes(e.id)) : [];
+    const pool = propios.length && Math.random() < 0.8 ? propios.concat(base.filter(e => e.requiere)) : base;
     const consecuencias = pool.filter(e => e.requiere);
     if (pool.length) {
       const ev = consecuencias.length && Math.random() < 0.5 ? azarDe(consecuencias) : azarDe(pool);
@@ -26422,13 +26480,14 @@ function crearEscena(tipo) {
     tipo = "combate";
   }
   if (tipo === "combate") {
-    const k = azarDe(A.enemigos.filter(x => x !== S.ultimoEnemigo));
+    const L = lugarDe(nodoActual()), lista = L && L.enemigos && L.enemigos.length ? L.enemigos.filter(x => ENEMIGOS[x]) : A.enemigos;
+    const k = azarDe(lista.filter(x => x !== S.ultimoEnemigo).length ? lista.filter(x => x !== S.ultimoEnemigo) : lista);
     S.ultimoEnemigo = k;
     return { tipo: "combate", enemigo: k, fondo: azarDe(A.fondos), titulo: ENEMIGOS[k].nombre,
       victoria: { t: azarDe(VICTORIAS), fx: { xp: 5 + S.acto * 2, oro: 8 + S.acto * 4, pocion: Math.random() < 0.35 ? 1 : 0 } } };
   }
   if (tipo === "elite") {
-    const k = azarDe(A.enemigos);
+    const L = lugarDe(nodoActual()), k = azarDe(L && L.enemigos && L.enemigos.length ? L.enemigos.filter(x => ENEMIGOS[x]) : A.enemigos);
     return { tipo: "combate", esElite: true, enemigo: k, fondo: azarDe(A.fondos), titulo: `Élite: ${ENEMIGOS[k].nombre}`,
       victoria: { t: "Una victoria difícil. El enemigo guardaba algo valioso.", fx: { xp: 9 + S.acto * 3, oro: 15 + S.acto * 5 } } };
   }
@@ -26505,7 +26564,7 @@ function nuevaPartida(defs, codigo, dificultad = "normal") {
   S = {
     v: 5, online: codigo ? { codigo } : null, rev: 0, dado: null, efectos: codigo ? { seq: 0, lista: [] } : null,
     players: defs.slice(0, MAX_HEROES).map(nuevoHeroe),
-    zurron: { racion: 3, pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
+    zurron: { racion: 1, pocion: 2, superior: 0, bendicion: 0, fuego: 0, sueno: 0 }, olivoActivo: false, anillo: false,
     acto: -1, mapa: null, modo: "escena", esc: null, turno: 0, fase: "elegir", resultado: null, combate: null, tienda: null,
     derrota: false, final: null, guardadoActo: null, aprender: [], botin: [], bendiciones: [], ofertaB: null, log: [], vistos: { bestias: [], lugares: [] }, vistosEv: [], ultimoEnemigo: null,
     dificultad: DIFICULTADES[dificultad] ? dificultad : "normal", memoria: {}, opcionesB: 3, bloqueo: null, votacion: null,
@@ -26518,7 +26577,7 @@ function nuevaPartida(defs, codigo, dificultad = "normal") {
   S.players.forEach(p => { p.oro += 10 * (mj.herencia || 0); p.almaBase += 2 * (mj.linaje || 0); p.alma = p.almaBase; });
   if (mj.abanico) S.opcionesB = 4;
   if (mj.favor) S.bendiciones.push(azarDe(Object.keys(BENDICIONES).filter(k => k !== "vigor")));
-  S.zurron.racion += 2 * (mj.provisiones || 0);
+  S.zurron.racion += mj.provisiones || 0;
   if (mj.companero && typeof MASCOTAS_DEF !== "undefined") adoptarMascota(azarDe(Object.keys(MASCOTAS_DEF)));
   if (mj.veterania) S.players.forEach(p => { p.xp = Math.max(p.xp, NIVELES[1]); subirNivel(p, []); p.alma = maxAlma(p); p.pm = pmMax(p); });
   log(`Comienza la aventura (${DIFICULTADES[S.dificultad].nombre}): ${S.players.map(p => `${p.nombre} (${nombreRazaClase(p)})`).join(", ")}.`);
@@ -26551,16 +26610,18 @@ function siguienteActo() {
   guardar(); render();
 }
 /* Acampar: gasta comida; cura la mitad, levanta a los caídos, quita estados y recarga el maná. Una vez por tramo. */
-const costeAcampar = () => (S.dificultad === "dificil" ? 2 : 1);
-const puedeAcampar = () => !!S && S.modo === "mapa" && !S.combate && S.descanso !== S.mapa.fila && (S.zurron.racion || 0) >= costeAcampar();
+/* La comida escasea: acampar cuesta raciones y hay que dejar pasar tres tramos entre descansos. */
+const costeAcampar = () => (S.dificultad === "dificil" ? 3 : S.dificultad === "facil" ? 1 : 2);
+const tramosParaAcampar = () => (S.descanso === null || S.descanso === undefined ? 0 : Math.max(0, 3 - (S.mapa.fila - S.descanso)));
+const puedeAcampar = () => !!S && S.modo === "mapa" && !S.combate && tramosParaAcampar() === 0 && (S.zurron.racion || 0) >= costeAcampar();
 function acampar() {
   if (ocupado || !puedeAcampar()) return;
   S.zurron.racion -= costeAcampar();
   S.descanso = S.mapa.fila;
   const levantados = S.players.filter(p => p.alma <= 0).map(p => p.nombre);
-  S.players.forEach(p => { curar(p, Math.ceil(maxAlma(p) * 0.5)); p.pm = pmMax(p); p.est = {}; });
+  S.players.forEach(p => { curar(p, Math.ceil(maxAlma(p) * 0.4)); p.pm = Math.min(pmMax(p), (p.pm || 0) + Math.ceil(pmMax(p) * 0.7)); p.est = {}; });
   log(`Acampáis y coméis algo caliente${levantados.length ? `. ${levantados.join(" y ")} vuelve${levantados.length > 1 ? "n" : ""} en sí` : ""}.`, "ok");
-  fx({ tipo: "descanso", texto: "Acampáis", sub: levantados.length ? `${levantados.join(" y ")} se levanta${levantados.length > 1 ? "n" : ""}` : "+50 % PG · maná lleno" });
+  fx({ tipo: "descanso", texto: "Acampáis", sub: levantados.length ? `${levantados.join(" y ")} se levanta${levantados.length > 1 ? "n" : ""}` : "+40 % PG · +70 % maná" });
   S.players.forEach((p, i) => fx({ tipo: "cura", objetivo: "h" + i }));
   guardar(); render();
 }
@@ -26587,6 +26648,7 @@ function elegirNodo(j) {
   S.siguiente = cola;
   log(`${S.players[S.turno].nombre} elige el camino: «${nodo.pista || NOMBRE_NODO[nodo.tipo]}».`, "esc");
   if (nodo.rasgo) aplicarRasgo(nodo);
+  avanzarEncargo("visitar", nodo.tipo);
   sonar("pasos");
   procesarSiguiente();
 }
@@ -26604,6 +26666,35 @@ function escenaViaje() {
   S.vistosEv.push(ev.id);
   return Object.assign({ tipo: "prueba", viaje: true, fondo: azarDe(ACTOS[S.acto].fondos) }, JSON.parse(JSON.stringify(ev)));
 }
+/* ---------- Encargos: misiones que se aceptan en los sucesos y se cumplen jugando ---------- */
+const ENCARGOS_ = () => D.ENCARGOS || [];
+function aceptarEncargo(id, out = []) {
+  const E = ENCARGOS_().find(e => e.id === id);
+  S.encargos = S.encargos || [];
+  if (!E || S.encargos.some(e => e.id === id)) return;
+  S.encargos.push({ id, n: 0, hecho: false });
+  out.push(`Encargo: ${E.titulo}`);
+  log(`Nuevo encargo · ${E.titulo}: ${E.desc}`, "esc");
+  fx({ tipo: "anuncio", texto: "Nuevo encargo", sub: E.titulo, tono: "turno" });
+}
+function avanzarEncargo(tipo, objetivo) {
+  if (!S || !S.encargos) return;
+  for (const a of S.encargos) {
+    const E = ENCARGOS_().find(e => e.id === a.id);
+    if (!E || a.hecho || E.tipo !== tipo || (E.objetivo && E.objetivo !== objetivo) || (E.actos && !E.actos.includes(S.acto))) continue;
+    a.n++;
+    if (a.n >= (E.n || 1)) {
+      a.hecho = true;
+      const efectos = aplicarFx(E.recompensa || {}, S.players[S.turno]);
+      log(`¡Encargo cumplido! ${E.titulo}${E.texto ? ` · ${E.texto}` : ""} (${efectos.join(", ")})`, "nivel");
+      fx({ tipo: "nivel", texto: "¡Encargo cumplido!", sub: E.titulo });
+    } else fx({ tipo: "anuncio", texto: E.titulo, sub: `${a.n}/${E.n}`, tono: "turno" });
+  }
+}
+/* Lugar con nombre de cada camino (lugares.js): su paisaje, sus pistas y sus sucesos casan entre sí. */
+const lugaresActo = () => ((D.LUGARES || {})[Math.max(0, S ? S.acto : 0)] || []);
+const lugarDe = n => (n && n.lugar ? lugaresActo().find(l => l.id === n.lugar) : null);
+const nodoActual = () => (S && S.mapa && S.mapa.filas[S.mapa.fila] ? S.mapa.filas[S.mapa.fila][S.mapa.col] : null);
 function fondoNodo(f, j) {
   const A = ACTOS[Math.max(0, S.acto)], n = S.mapa && S.mapa.filas[f] && S.mapa.filas[f][j];
   if (n && n.tipo === "jefe") return A.fondoJefe;
@@ -26614,6 +26705,12 @@ function procesarSiguiente() {
   if (!sig) return volverAlMapa();
   S.modo = "escena"; S.fase = "elegir"; S.resultado = null; S.botin = [];
   const paisaje = fondoNodo(S.mapa.fila, S.mapa.col);
+  if (sig.pelea) {
+    const k = sig.pelea;
+    S.esc = { tipo: "combate", enemigo: k, fondo: paisaje, titulo: ENEMIGOS[k].nombre, victoria: { t: azarDe(VICTORIAS), fx: { xp: 5 + S.acto * 2, oro: 6 + S.acto * 3 } } };
+    log(`¡Pelea! · ${ENEMIGOS[k].nombre}`, "ko");
+    return iniciarCombate(S.esc);
+  }
   if (sig.historia) { S.esc = escenaHistoria(sig.historia); S.esc.fondo = paisaje; log(`Historia · ${S.esc.titulo}`, "esc"); }
   else if (sig.viaje) { const e = escenaViaje(); if (!e) return procesarSiguiente(); S.esc = opcionDeClase(e); e.fondo = paisaje; log(`Por el camino · ${e.titulo}`, "esc"); }
   else {
@@ -27305,6 +27402,7 @@ function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   if (combo) fx({ tipo: "numero", objetivo: o, texto: "COMBO", color: RP.bronce[4], fila: 2 });
   if (r.hp <= 0) {
     fx({ tipo: "muerte", objetivo: o });
+    avanzarEncargo("matar", r.clave);
     const ph = porHeroe >= 0 && S.players[porHeroe], vamp = ph ? pasivas(ph).vampiro : 0;
     if (vamp && ph.alma > 0) { const cu = curar(ph, vamp); if (cu) { fx({ tipo: "cura", objetivo: "h" + porHeroe }); fx({ tipo: "numero", objetivo: "h" + porHeroe, texto: "+" + cu, color: RP.hoja[4], fila: 1 }); } }
   }
@@ -27443,6 +27541,7 @@ function accion(tipo, arg) {
           if (q === 2 && rr.hp > 0 && !rr.jefe && rr.hp <= Math.ceil(rr.hpMax * Math.max(0.22, pasivas(p).remate))) {
             const quedaba = rr.hp;
             rr.hp = 0;
+            avanzarEncargo("matar", rr.clave);
             if (S.stats && S.stats[S.turno]) { S.stats[S.turno].dano += quedaba; S.stats[S.turno].bajas++; }
             fx({ tipo: "numero", objetivo: "e" + k, texto: "¡REMATE!", color: RP.bronce[4], grande: true, fila: 1 });
             fx({ tipo: "muerte", objetivo: "e" + k }); fx({ tipo: "destello", color: "rgba(255,201,92,0.3)" });
@@ -27819,6 +27918,7 @@ function victoria() {
   S.players.forEach(p => { if (p.clase === "brujo" && p.alma > 0) { curar(p, 4); extra.push(`Pacto: +4 PG ${p.nombre}`); } });
   if (tiene("respiro")) { S.players.forEach(p => { if (p.alma > 0) curar(p, Math.ceil(maxAlma(p) * 0.3)); }); extra.push("Segundo respiro: +30 % PG"); }
   if (c.combos) extra.push(`${c.combos} combo${c.combos > 1 ? "s" : ""}`);
+  avanzarEncargo("sobrevivir", c.jefe ? "jefe" : c.elite ? "elite" : "combate");
   if (S.players.some(p => p.raza === "satiro" && p.alma > 0)) { S.players.forEach(p => { if (p.alma > 0) p.pm = Math.min(pmMax(p), (p.pm || 0) + 2); }); extra.push("Alegría salvaje: +2 PM al grupo"); }
   const oroT = S.players.reduce((a, p) => a + pasivas(p).oro, 0);
   if (oroT) { S.players.forEach(p => { p.oro += oroT; }); extra.push(`Bolsillos hondos: +${oroT} po c/u`); }
@@ -28182,8 +28282,10 @@ function sincronizarEscenario() {
       niebla = 0.35;
     }
   }
+  const nodoClima = S.modo === "mapa" && S.mapa ? (S.mapa.filas[S.mapa.fila + 1] || [])[caminoMirado()] : nodoActual();
+  const clima = (nodoClima && nodoClima.clima) || null, hora = S.mapa ? Math.min(1, (S.mapa.fila + (S.modo === "mapa" ? 0.5 : 0)) / 7) : 0;
   escJuego.mostrar({
-    fondo, rivales, niebla, marcha, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
+    fondo, rivales, niebla: Math.max(niebla, clima === "niebla" ? 0.55 : 0), marcha, clima, hora, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
     heroes: S.players.map((p, i) => ({ look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
 }
@@ -28266,13 +28368,14 @@ function renderMapa() {
     const accion = sel ? (mio ? `data-juego="nodo" data-v="${j}"` : "disabled") : `data-ui="ver-camino" data-v="${j}"`;
     return `<button type="button" class="camino${jefe ? " jefe" : ""}${vt.mio ? " votado" : ""}${sel ? " visto" : ""}" ${accion}>
       <canvas data-icono="${jefe ? "jefe" : n.hecho || sabe ? n.tipo : "huellas"}" data-tam="22" aria-hidden="true"></canvas>
-      <span class="c-txt"><b>${jefe ? `${ENEMIGOS[ACTOS[S.acto].jefe].nombre}` : nombres[k] || "Camino"}${sabe ? ` <em class="c-tipo">${NOMBRE_NODO[n.tipo]}</em>` : ""}${n.rasgo && RASGOS[n.rasgo] ? ` <em class="rasgo r-${n.rasgo}">${RASGOS[n.rasgo].nombre}</em>` : ""}</b><span>${jefe ? "El final del acto. Preparaos." : `«${esc(n.pista || "Un sendero cualquiera")}»`}</span></span>
+      <span class="c-txt"><b>${jefe ? `${ENEMIGOS[ACTOS[S.acto].jefe].nombre}` : nombres[k] || "Camino"}${sabe ? ` <em class="c-tipo">${NOMBRE_NODO[n.tipo]}</em>` : ""}${n.rasgo && RASGOS[n.rasgo] ? ` <em class="rasgo r-${n.rasgo}">${RASGOS[n.rasgo].nombre}</em>` : ""}${n.clima ? ` <em class="clima">${{ lluvia: "Lluvia", tormenta: "Tormenta", niebla: "Niebla" }[n.clima]}</em>` : ""}</b>${lugarDe(n) && !jefe ? `<span class="c-lugar">Hacia ${esc(lugarDe(n).nombre.replace(/^El /, "el ").replace(/^La /, "la ").replace(/^Los /, "los ").replace(/^Las /, "las "))}</span>` : ""}<span>${jefe ? "El final del acto. Preparaos." : `«${esc(n.pista || "Un sendero cualquiera")}»`}</span></span>
       ${vt.n ? `<i>${vt.n} voto${vt.n > 1 ? "s" : ""}</i>` : sel && mio ? `<i class="ir">${hayVotacion() ? "Votar" : "Ir"} ▸</i>` : ""}</button>`;
   }).join("");
   const comida = S.zurron.racion || 0, coste = costeAcampar(), caidos = S.players.filter(x => x.alma <= 0).length;
-  const motivo = S.descanso === m.fila ? "ya habéis descansado aquí" : comida < coste ? "no queda comida" : caidos ? `levanta a ${caidos} caído${caidos > 1 ? "s" : ""}` : "cura y recarga el maná";
+  const motivo = tramosParaAcampar() ? `descansad dentro de ${tramosParaAcampar()} tramo${tramosParaAcampar() > 1 ? "s" : ""}` : comida < coste ? "no queda comida" : caidos ? `levanta a ${caidos} caído${caidos > 1 ? "s" : ""}` : "cura y recarga el maná";
   $("#panel").innerHTML = `<div class="mapa-cab">${hayVotacion() ? lineaVotacion() : quienLinea(p, visto === null ? "Toca un camino para verlo" : "Toca otra vez para ir")}
       <button type="button" class="boton sec mini" data-ui="grafo">${verGrafo ? "Ver camino" : "Mapa"}</button></div>
+    ${(S.encargos || []).some(a => !a.hecho) ? `<p class="encargos-linea">${S.encargos.filter(a => !a.hecho).map(a => { const E = ENCARGOS_().find(e => e.id === a.id); return E ? `<span><b>${esc(E.titulo)}</b> ${a.n}/${E.n || 1}</span>` : ""; }).join("")}</p>` : ""}
     <div class="caminos">${caminos}</div>${(() => {
       const v = [];
       const ex = hayClase("explorador"), pi = hayClase("picaro", "explorador"), cl = hayClase("clerigo", "explorador");
@@ -28579,7 +28682,8 @@ function htmlFicha(p) {
 function htmlMochila() {
   const libre = turnoMio() && !S.combate && !ocupado && !esperandoHost;
   const M = S.mascota && MASCOTAS_DEF[S.mascota.clave];
-  return `<h2>Mochila</h2>${M ? `<h3>Mascota</h3><ul class="lista-habs"><li><p><b>${M.nombre}</b><span>${M.ataque}</span></p><small>${M.desc} Actúa sola una vez por ronda y hace ataques en equipo contigo si vas solo.</small></li></ul>` : ""}${S.bendiciones.length ? `<h3>Bendiciones del grupo</h3><ul class="lista-habs">${S.bendiciones.map(k => `<li><p><b>${BENDICIONES[k].nombre}</b></p><small>${BENDICIONES[k].desc}</small></li>`).join("")}</ul><h3>Consumibles</h3>` : ""}<ul class="mochila">${CONSUMIBLES.map(k => {
+  const encs = (S.encargos || []).map(a => { const E = ENCARGOS_().find(e => e.id === a.id); return E ? `<li><p><b>${a.hecho ? "✓ " : ""}${esc(E.titulo)}</b><span>${a.hecho ? "Cumplido" : `${a.n}/${E.n || 1}`}</span></p><small>${esc(E.desc)}</small></li>` : ""; }).join("");
+  return `<h2>Mochila</h2>${encs ? `<h3>Encargos</h3><ul class="lista-habs">${encs}</ul>` : ""}${M ? `<h3>Mascota</h3><ul class="lista-habs"><li><p><b>${M.nombre}</b><span>${M.ataque}</span></p><small>${M.desc} Actúa sola una vez por ronda y hace ataques en equipo contigo si vas solo.</small></li></ul>` : ""}${S.bendiciones.length ? `<h3>Bendiciones del grupo</h3><ul class="lista-habs">${S.bendiciones.map(k => `<li><p><b>${BENDICIONES[k].nombre}</b></p><small>${BENDICIONES[k].desc}</small></li>`).join("")}</ul><h3>Consumibles</h3>` : ""}<ul class="mochila">${CONSUMIBLES.map(k => {
     const n = S.zurron[k];
     let acc = "";
     if (libre && n > 0 && (k === "pocion" || k === "superior")) acc = S.players.map((p, i) => p.alma < maxAlma(p) && (p.alma > 0 || k === "superior") ? `<button type="button" class="boton sec mini" data-juego="usar" data-v="${k}:${i}">${esc(p.nombre)}</button>` : "").join("");

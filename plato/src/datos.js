@@ -262,7 +262,7 @@ const DATOS = (() => {
   }
 
   const OBJETOS = {
-    racion: { nombre: "Raciones de viaje", tipo: "consumible", precio: 6, desc: "Comida para acampar: descansar cura, levanta a los caídos y recarga el maná." },
+    racion: { nombre: "Raciones de viaje", tipo: "consumible", precio: 12, desc: "Comida para acampar: descansar cura, levanta a los caídos y recarga el maná." },
     pocion: { nombre: "Poción de curación", tipo: "consumible", precio: 10, desc: "Cura 8 PG al que más lo necesite." },
     superior: { nombre: "Poción de curación superior", tipo: "consumible", precio: 30, desc: "Cura todos los PG y levanta a un caído." },
     bendicion: { nombre: "Pergamino de bendición", tipo: "consumible", precio: 8, desc: "+2 a la próxima tirada del grupo." },

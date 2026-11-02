@@ -423,6 +423,7 @@ const ESCENARIO = (() => {
       b.translate(0, ext.arriba);
       if (temblor > ahora && !reducido) b.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
       pintarFondo(ahora);
+      pintarHora();
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
       const marcha = !!vista.marcha && !reducido;
@@ -609,6 +610,7 @@ const ESCENARIO = (() => {
       }
       pintarParticulas(ahora);
       if (!reducido) pintarAmbiente(ahora);
+      if (!reducido && vista.clima && FUERA.has(vista.fondo)) pintarClima(ahora);
       if (!ext.arriba && !ext.abajo) b.drawImage(capaVineta(), 0, 0);
       b.restore();
       if (transicion) pintarTransicion(ahora);
@@ -625,6 +627,38 @@ const ESCENARIO = (() => {
         }
       }
       ctx.drawImage(buf, zx, zy, zw, zh, 0, 0, lienzo.width, lienzo.height);
+    }
+    /* Al aire libre la luz cambia con el avance por el mapa y hay clima. */
+    const FUERA = new Set(["camino", "bosque", "aldea", "puente", "encrucijada", "pico", "ruinas"]);
+    function pintarHora() {
+      const h = vista.hora || 0;
+      if (!FUERA.has(vista.fondo) || h < 0.3) return;
+      /* Tarde dorada, atardecer anaranjado y noche azulada (se tiñe el fondo, no los personajes). */
+      const [col, a] = h < 0.55 ? ["#ffc27a", (h - 0.3) * 0.5] : h < 0.8 ? ["#ff8a50", 0.14 + (h - 0.55) * 0.3] : ["#3a4a9a", 0.2 + (h - 0.8) * 1.2];
+      b.save(); b.globalCompositeOperation = "multiply"; b.globalAlpha = Math.min(0.42, a * 1.6); b.fillStyle = col; b.fillRect(0, -ext.arriba, W, buf.height); b.restore();
+      if (h >= 0.8) { b.save(); b.globalAlpha = Math.min(0.3, (h - 0.8) * 1.2); b.fillStyle = "#0a0c20"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore(); }
+    }
+    const gotas = [];
+    let rayoHasta = 0, proximoRayo = 0;
+    function pintarClima(ahora) {
+      const tormenta = vista.clima === "tormenta";
+      if (vista.clima === "lluvia" || tormenta) {
+        const max = tormenta ? 90 : 55, y0 = -ext.arriba, y1 = H + ext.abajo;
+        while (gotas.length < max) gotas.push({ x: Math.random() * (W + 40), y: y0 + Math.random() * (y1 - y0), v: 2.2 + Math.random() * 1.6 });
+        b.save(); b.fillStyle = tormenta ? "rgba(190,205,240,0.55)" : "rgba(170,190,230,0.45)";
+        for (const g of gotas) {
+          g.y += g.v * 2.2; g.x -= g.v * 0.7;
+          if (g.y > y1 || g.x < -4) { g.y = y0 - Math.random() * 20; g.x = Math.random() * (W + 40); }
+          b.fillRect(Math.round(g.x), Math.round(g.y), 1, 3);
+        }
+        b.restore();
+        b.save(); b.globalAlpha = 0.12; b.fillStyle = "#1a2030"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore();
+      }
+      if (tormenta) {
+        if (!proximoRayo) proximoRayo = ahora + 2500 + Math.random() * 4000;
+        if (ahora > proximoRayo) { rayoHasta = ahora + 140; proximoRayo = ahora + 3000 + Math.random() * 5000; }
+        if (ahora < rayoHasta) { b.save(); b.globalAlpha = Math.floor(ahora / 40) % 2 ? 0.55 : 0.25; b.fillStyle = "#eef2ff"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore(); }
+      }
     }
     /* Ambiente según el lugar: brasas, polvo, luciérnagas, nieve o motas del vacío. */
     const TIPO_AMB = { pico: "brasas", forja: "brasas", guarida: "brasas", bosque: "luciernagas", camino: "hojas", aldea: "luciernagas", sotano: "polvo", cripta: "polvo", mina: "polvo", castillo: "polvo", trono: "polvo", puente: "nieve", abismo: "vacio", telarana: "esporas", ruinas: "hojas", taberna: "polvo", encrucijada: "hojas" };
