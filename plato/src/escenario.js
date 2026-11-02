@@ -77,6 +77,7 @@ const ESCENARIO = (() => {
     return v;
   }
   const spriteHeroe = look => sprite("h:" + JSON.stringify(look), [
+    tabla("HEROES_BG") && tabla("HEROES_BG").componer ? () => { const g = tabla("HEROES_BG").componer(look); if (g) g.escala = 0.5; return g; } : null,
     tabla("HEROES_128") && tabla("HEROES_128").componer ? () => { const g = tabla("HEROES_128").componer(look); if (g) g.escala = 0.5; return g; } : null,
     tabla("HEROES_64") && tabla("HEROES_64").componer ? () => tabla("HEROES_64").componer(look) : null,
     tabla("HEROES_HD") && tabla("HEROES_HD").componer ? () => tabla("HEROES_HD").componer(look) : null,
