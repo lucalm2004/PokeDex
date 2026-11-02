@@ -3,6 +3,7 @@
 const ESCENARIO = (() => {
   "use strict";
   const W = 256, H = 144;
+  const SS = 2; /* el búfer trabaja al doble de resolución: los sprites de 128 caben con todo su detalle */
   const W0 = 192, H0 = 108; /* tamaño de los fondos antiguos */
   const R = PX.RAMPAS;
   const reducido = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -60,6 +61,7 @@ const ESCENARIO = (() => {
       if (rej) break;
     }
     if (!rej) rej = provisional();
+    const k = rej.escala || 1;
     const tum = rej.tumbada().tenida(R.piedra);
     const m = medir(rej), mt = medir(tum);
     const v = {
@@ -68,13 +70,14 @@ const ESCENARIO = (() => {
       tumbado: lienzoDe(tum),
       piedra: lienzoDe(rej.tenida(R.marmol)),
       oscuro: lienzoDe(rej.tenida(R.sombra)),
-      w: rej.w, h: rej.h, cima: m.y0, pie: m.y1, ancho: m.x1 - m.x0 + 1, cx: (m.x0 + m.x1 + 1) / 2,
+      k, w: rej.w, h: rej.h, cima: m.y0, pie: m.y1, ancho: m.x1 - m.x0 + 1, cx: (m.x0 + m.x1 + 1) / 2,
       tw: tum.w, tpie: mt.y1, tcx: (mt.x0 + mt.x1 + 1) / 2
     };
     cacheSprite.set(clave, v);
     return v;
   }
   const spriteHeroe = look => sprite("h:" + JSON.stringify(look), [
+    tabla("HEROES_128") && tabla("HEROES_128").componer ? () => { const g = tabla("HEROES_128").componer(look); if (g) g.escala = 0.5; return g; } : null,
     tabla("HEROES_64") && tabla("HEROES_64").componer ? () => tabla("HEROES_64").componer(look) : null,
     tabla("HEROES_HD") && tabla("HEROES_HD").componer ? () => tabla("HEROES_HD").componer(look) : null,
     () => HEROES.componer(look)
@@ -192,7 +195,7 @@ const ESCENARIO = (() => {
 
   /* opciones.limites() devuelve el ancho y alto máximos (px CSS) que puede ocupar el escenario. */
   function crear(lienzo, opciones = {}) {
-    const buf = Object.assign(document.createElement("canvas"), { width: W, height: H });
+    const buf = Object.assign(document.createElement("canvas"), { width: W * SS, height: H * SS });
     const b = buf.getContext("2d");
     const viejoBuf = Object.assign(document.createElement("canvas"), { width: W0, height: H0 });
     const vb = viejoBuf.getContext("2d");
@@ -221,7 +224,7 @@ const ESCENARIO = (() => {
         const arriba = Math.max(0, Math.round(completa.fin / sc - H)), total = Math.max(H, Math.ceil(ah / sc));
         ext = { arriba, abajo: Math.max(0, total - H - arriba) };
         escCss = sc;
-        if (buf.height !== total) buf.height = total;
+        if (buf.height !== total * SS) buf.height = total * SS;
         const pw = Math.round(aw * dpr), ph = Math.round(total * sc * dpr);
         if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
         const cw = aw + "px", ch = total * sc + "px";
@@ -230,7 +233,7 @@ const ESCENARIO = (() => {
         return;
       }
       ext = { arriba: 0, abajo: 0 }; offX = 0;
-      if (buf.height !== H) buf.height = H;
+      if (buf.height !== H * SS) buf.height = H * SS;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
       let s = Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H);
@@ -423,7 +426,8 @@ const ESCENARIO = (() => {
       }
     }
     function pintar(ahora) {
-      b.clearRect(0, 0, W, buf.height);
+      b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, buf.width, buf.height);
+      b.setTransform(SS, 0, 0, SS, 0, 0); b.imageSmoothingEnabled = false;
       if (ext.arriba || ext.abajo) b.drawImage(extension(vista.fondo, ext.arriba, ext.abajo), 0, 0);
       b.save();
       b.translate(0, ext.arriba);
@@ -446,10 +450,10 @@ const ESCENARIO = (() => {
         if (a.mascota) {
           const v = spriteMascota(a.mascota);
           const bob = reducido ? 0 : marcha ? -Math.abs(Math.round(Math.sin(ahora / 120) * 2)) : Math.floor((ahora / 420) % 2);
-          const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
-          sombraSuelo(a.fx, a.fy, Math.max(12, v.ancho * 0.7));
-          b.drawImage(blanco ? v.blanco : v.normal, x, y);
-          marcas.m = { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: y + v.cima, y1: a.fy, cx: a.fx };
+          const x = Math.round(a.fx - (v.w * v.k) / 2 + dx), y = Math.round(a.fy - (v.pie * v.k) + bob + dy);
+          sombraSuelo(a.fx, a.fy, Math.max(12, (v.ancho * v.k) * 0.7));
+          b.drawImage(blanco ? v.blanco : v.normal, x, y, v.w * v.k, v.h * v.k);
+          marcas.m = { alto: (v.pie * v.k) - (v.cima * v.k), x0: a.fx - (v.ancho * v.k) / 2, x1: a.fx + (v.ancho * v.k) / 2, y0: y + (v.cima * v.k), y1: a.fy, cx: a.fx };
           continue;
         }
         if (a.h) {
@@ -464,8 +468,8 @@ const ESCENARIO = (() => {
           }
           const v = spriteHeroe(pose === "normal" ? a.h.look : Object.assign({}, a.h.look, { pose }));
           if (a.h.caido) {
-            sombraSuelo(a.fx, a.fy, v.ancho * 0.9);
-            b.drawImage(v.tumbado, Math.round(a.fx - v.tcx), Math.round(a.fy - v.tpie));
+            sombraSuelo(a.fx, a.fy, (v.ancho * v.k) * 0.9);
+            b.drawImage(v.tumbado, Math.round(a.fx - (v.tcx * v.k)), Math.round(a.fy - (v.tpie * v.k)), v.tw * v.k, v.w * v.k);
             marcas[a.id] = { alto: 12 };
             continue;
           }
@@ -473,21 +477,21 @@ const ESCENARIO = (() => {
           if (reducido) bob = 0;
           else if (marcha) bob = -Math.abs(Math.round(Math.sin(ahora / 160 + a.i * 1.3) * 2));
           else bob = Math.floor((ahora / 520 + a.i * 0.37) % 2);
-          sombraSuelo(a.fx, a.fy, Math.max(16, v.ancho * 0.8));
+          sombraSuelo(a.fx, a.fy, Math.max(16, (v.ancho * v.k) * 0.8));
           const img = blanco ? v.blanco : a.h.piedra ? v.piedra : v.normal;
-          const x = Math.round(a.fx - v.w / 2 + dx), y = Math.round(a.fy - v.pie + bob + dy);
-          if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = 0.25; b.drawImage(img, x - Math.sign(dx) * 6, y); b.globalAlpha = 1; }
-          b.drawImage(img, x, y);
-          const cima = y + v.cima;
-          marcas[a.id] = { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: cima, y1: a.fy, cx: a.fx };
+          const x = Math.round(a.fx - (v.w * v.k) / 2 + dx), y = Math.round(a.fy - (v.pie * v.k) + bob + dy);
+          if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = 0.25; b.drawImage(img, x - Math.sign(dx) * 6, y, v.w * v.k, v.h * v.k); b.globalAlpha = 1; }
+          b.drawImage(img, x, y, v.w * v.k, v.h * v.k);
+          const cima = y + (v.cima * v.k);
+          marcas[a.id] = { alto: (v.pie * v.k) - (v.cima * v.k), x0: a.fx - (v.ancho * v.k) / 2, x1: a.fx + (v.ancho * v.k) / 2, y0: cima, y1: a.fy, cx: a.fx };
           if (vista.activo === a.i && !vista.esperaRival) flecha(a.fx + 1, cima - 10 + (reducido ? 0 : Math.floor(ahora / 260) % 2), R.bronce[4]);
           if (a.h.aturdido) zz(a.fx + 8, cima - 2, ahora);
           puntos(a.fx + 1, cima - (vista.activo === a.i ? 17 : 8), a.h.estados);
         } else {
           const r = a.rival;
           const v = spriteRival(r.tipo, r.clave);
-          const ix = Math.round(a.fx - v.w / 2 + dx);
-          let iy = Math.round(a.fy - v.pie + dy);
+          const ix = Math.round(a.fx - (v.w * v.k) / 2 + dx);
+          let iy = Math.round(a.fy - (v.pie * v.k) + dy);
           if (!reducido && r.flota) iy += Math.round(Math.sin(ahora / 400) * 2) - 4;
           else if (!reducido) iy += Math.floor((ahora / 640) % 2);
           const muerte = efectos.find(e => e.tipo === "muerte" && e.objetivo === a.id);
@@ -500,15 +504,15 @@ const ESCENARIO = (() => {
             alfa = p < 0.25 ? 1 : Math.max(0, 1 - (p - 0.25) / 0.75);
             iy += Math.round(Math.max(0, p - 0.25) * 10);
           }
-          if (r.tipo === "enemigo" && !r.silueta) sombraSuelo(a.fx, a.fy, Math.max(18, v.ancho * 0.8));
+          if (r.tipo === "enemigo" && !r.silueta) sombraSuelo(a.fx, a.fy, Math.max(18, (v.ancho * v.k) * 0.8));
           b.globalAlpha = alfa;
-          if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = alfa * 0.25; b.drawImage(v.normal, ix - Math.sign(dx) * 6, iy); b.globalAlpha = alfa; }
-          b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy);
+          if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = alfa * 0.25; b.drawImage(v.normal, ix - Math.sign(dx) * 6, iy, v.w * v.k, v.h * v.k); b.globalAlpha = alfa; }
+          b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy, v.w * v.k, v.h * v.k);
           b.globalAlpha = 1;
-          const cima = iy + v.cima;
-          marcas[a.id] = r.derrotado ? null : { alto: v.pie - v.cima, x0: a.fx - v.ancho / 2, x1: a.fx + v.ancho / 2, y0: cima, y1: a.fy, cx: a.fx };
+          const cima = iy + (v.cima * v.k);
+          marcas[a.id] = r.derrotado ? null : { alto: (v.pie * v.k) - (v.cima * v.k), x0: a.fx - (v.ancho * v.k) / 2, x1: a.fx + (v.ancho * v.k) / 2, y0: cima, y1: a.fy, cx: a.fx };
           if (r.tipo === "enemigo" && r.max) {
-            const ancho = v.h > 60 ? 46 : 32;
+            const ancho = (v.h * v.k) > 60 ? 46 : 32;
             const by = Math.max(4, cima - 7);
             barra(a.fx - ancho / 2, by, ancho, r.hp, r.max, R.sangre[4]);
             if (r.aturdido) zz(a.fx - ancho / 2 - 9, by - 2, ahora);
@@ -621,18 +625,19 @@ const ESCENARIO = (() => {
       b.restore();
       if (transicion) pintarTransicion(ahora);
       ctx.imageSmoothingEnabled = false;
-      let zx = Math.round(offX), zy = 0, zw = Math.round(buf.width - 2 * offX), zh = buf.height;
+      const BH = buf.height / SS;
+      let zx = offX, zy = 0, zw = W - 2 * offX, zh = BH;
       if (zum && !reducido) {
         const p = (ahora - zum.t0) / zum.dur;
         if (p > 1) zum = null;
         else {
           const f = 1 + 0.07 * Math.sin(Math.min(1, p) * Math.PI), [cx, cy] = posicion(zum.id);
-          const bw = buf.width - 2 * offX;
-          zw = Math.round(bw / f); zh = Math.round(buf.height / f);
-          zx = Math.max(Math.round(offX), Math.min(Math.round(offX + bw - zw), Math.round(cx - zw / 2))); zy = Math.max(0, Math.min(buf.height - zh, Math.round(cy + ext.arriba - alto(zum.id) / 2 - zh / 2)));
+          const bw = W - 2 * offX;
+          zw = bw / f; zh = BH / f;
+          zx = Math.max(offX, Math.min(offX + bw - zw, cx - zw / 2)); zy = Math.max(0, Math.min(BH - zh, cy + ext.arriba - alto(zum.id) / 2 - zh / 2));
         }
       }
-      ctx.drawImage(buf, zx, zy, zw, zh, 0, 0, lienzo.width, lienzo.height);
+      ctx.drawImage(buf, Math.round(zx * SS), Math.round(zy * SS), Math.round(zw * SS), Math.round(zh * SS), 0, 0, lienzo.width, lienzo.height);
     }
     /* Al aire libre la luz cambia con el avance por el mapa y hay clima. */
     const FUERA = new Set(["camino", "bosque", "aldea", "puente", "encrucijada", "pico", "ruinas"]);
@@ -641,8 +646,8 @@ const ESCENARIO = (() => {
       if (!FUERA.has(vista.fondo) || h < 0.3) return;
       /* Tarde dorada, atardecer anaranjado y noche azulada (se tiñe el fondo, no los personajes). */
       const [col, a] = h < 0.55 ? ["#ffc27a", (h - 0.3) * 0.5] : h < 0.8 ? ["#ff8a50", 0.14 + (h - 0.55) * 0.3] : ["#3a4a9a", 0.2 + (h - 0.8) * 1.2];
-      b.save(); b.globalCompositeOperation = "multiply"; b.globalAlpha = Math.min(0.42, a * 1.6); b.fillStyle = col; b.fillRect(0, -ext.arriba, W, buf.height); b.restore();
-      if (h >= 0.8) { b.save(); b.globalAlpha = Math.min(0.3, (h - 0.8) * 1.2); b.fillStyle = "#0a0c20"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore(); }
+      b.save(); b.globalCompositeOperation = "multiply"; b.globalAlpha = Math.min(0.42, a * 1.6); b.fillStyle = col; b.fillRect(0, -ext.arriba, W, buf.height / SS); b.restore();
+      if (h >= 0.8) { b.save(); b.globalAlpha = Math.min(0.3, (h - 0.8) * 1.2); b.fillStyle = "#0a0c20"; b.fillRect(0, -ext.arriba, W, buf.height / SS); b.restore(); }
     }
     const gotas = [];
     let rayoHasta = 0, proximoRayo = 0;
@@ -658,12 +663,12 @@ const ESCENARIO = (() => {
           b.fillRect(Math.round(g.x), Math.round(g.y), 1, 3);
         }
         b.restore();
-        b.save(); b.globalAlpha = 0.12; b.fillStyle = "#1a2030"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore();
+        b.save(); b.globalAlpha = 0.12; b.fillStyle = "#1a2030"; b.fillRect(0, -ext.arriba, W, buf.height / SS); b.restore();
       }
       if (tormenta) {
         if (!proximoRayo) proximoRayo = ahora + 2500 + Math.random() * 4000;
         if (ahora > proximoRayo) { rayoHasta = ahora + 140; proximoRayo = ahora + 3000 + Math.random() * 5000; }
-        if (ahora < rayoHasta) { b.save(); b.globalAlpha = Math.floor(ahora / 40) % 2 ? 0.55 : 0.25; b.fillStyle = "#eef2ff"; b.fillRect(0, -ext.arriba, W, buf.height); b.restore(); }
+        if (ahora < rayoHasta) { b.save(); b.globalAlpha = Math.floor(ahora / 40) % 2 ? 0.55 : 0.25; b.fillStyle = "#eef2ff"; b.fillRect(0, -ext.arriba, W, buf.height / SS); b.restore(); }
       }
     }
     /* Ambiente según el lugar: brasas, polvo, luciérnagas, nieve o motas del vacío. */
@@ -706,9 +711,9 @@ const ESCENARIO = (() => {
       const c = m.getContext("2d");
       c.globalCompositeOperation = "source-over"; c.clearRect(0, 0, m.width, m.height); c.drawImage(transicion.cv, 0, 0);
       c.globalCompositeOperation = "destination-out"; c.fillStyle = "#000";
-      const B = 4;
+      const B = 4 * SS;
       for (let y = 0; y < m.height; y += B) for (let x = 0; x < m.width; x += B) if (PX.umbral(x / B, y / B) < p * 1.05) c.fillRect(x, y, B, B);
-      b.drawImage(m, 0, 0);
+      b.setTransform(1, 0, 0, 1, 0, 0); b.drawImage(m, 0, 0); b.setTransform(SS, 0, 0, SS, 0, 0);
     }
 
     /* Qué actor hay en un punto del lienzo (px CSS) y dónde está la cabeza de un actor en pantalla. */

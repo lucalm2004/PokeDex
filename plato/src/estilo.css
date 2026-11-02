@@ -1009,7 +1009,7 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
    flotando encima con marcos translúcidos.
    ===================================================================== */
 .juego.modo-combate #caja-juego { position: fixed; inset: 0; z-index: 0; display: block !important; height: auto !important; overflow: hidden; pointer-events: auto; }
-.juego.modo-combate #caja-juego canvas { border-image: none !important; box-shadow: none !important; position: absolute; left: 0; top: 0; cursor: crosshair; }
+.juego.modo-combate #caja-juego > canvas { border-image: none !important; box-shadow: none !important; position: absolute; left: 0; top: 0; cursor: crosshair; }
 .juego.modo-combate > :not(#caja-juego) { position: relative; z-index: 2; }
 .juego.modo-combate .barra { margin: -10px -16px 0; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 14px; background: linear-gradient(180deg, rgba(6, 4, 8, .82), rgba(6, 4, 8, .45) 70%, transparent); }
 .juego.modo-combate #grupo { margin-top: auto; }
