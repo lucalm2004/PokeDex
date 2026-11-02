@@ -2016,7 +2016,7 @@ function tickEstados(obj, esHeroe, id) {
 }
 const DIFICULTADES = {
   facil: { nombre: "Aventurero", desc: "Para disfrutar de la historia.", hp: 1.1, dano: 0, atk: 0, jefe: 1.2, runas: 0.5 },
-  normal: { nombre: "Héroe", desc: "El reto pensado para el juego.", hp: 1.45, dano: 2, atk: 1, jefe: 1.5, runas: 1 },
+  normal: { nombre: "Héroe", desc: "El reto pensado para el juego.", hp: 1.35, dano: 2, atk: 1, jefe: 1.45, runas: 1 },
   dificil: { nombre: "Pesadilla", desc: "Enemigos más duros y acampar cuesta el doble de comida.", hp: 1.8, dano: 3, atk: 2, jefe: 1.6, runas: 2 }
 };
 const dif = () => DIFICULTADES[S && S.dificultad] || DIFICULTADES.normal;
@@ -2155,7 +2155,7 @@ function crearRivalBase(clave, o = {}) {
   /* Crecen con el nivel medio del grupo por encima de lo esperado en cada acto. */
   const niv = Math.max(0, S.players.reduce((a, p) => a + p.nivel, 0) / n - 1 - 1.4 * Math.max(0, S.acto));
   /* En solitario y en el primer acto la dificultad pesa menos: es donde se aprende. */
-  const dhp = 1 + (D_.hp - 1) * (n === 1 ? 0.55 : 1) * (S.acto <= 0 ? 0.6 : 1);
+  const dhp = (1 + (D_.hp - 1) * (n === 1 ? 0.4 : 1) * (S.acto <= 0 ? 0.6 : 1)) * (n === 1 ? 0.9 : 1);
   const hp = Math.max(4, Math.round(e.alma * (0.15 + 0.6 * n) * (1 + 0.18 * niv) * dhp * (o.factor || 1) * (o.elite ? 1.5 : 1) * (o.jefe && n >= 3 ? 1.4 : 1) * (o.jefe ? D_.jefe || 1 : 1)));
   const suave = n === 1 || S.acto <= 0;
   const base = Math.floor(niv / 3) + (o.elite ? 1 : 0) + Math.max(0, D_.atk - (suave ? 1 : 0));
