@@ -484,45 +484,95 @@ const ESCENARIO = (() => {
       const { e } = E;
       b.drawImage(E.cv, 0, 0);
       try { tabla("CENITAL").anim(b, ahora, v.acto); } catch (er) { /* sin animación */ }
-      /* Rama elegida: sendero punteado que brilla y flecha que bota al final. */
+      /* Rama elegida: sendero punteado de 2 px que avanza y brilla. */
       const sel = v.sel;
-      if (sel !== null && sel !== undefined && e.ramas[sel]) {
-        const pts = e.ramas[sel], fase = Math.floor(ahora / 120);
+      const haySel = sel !== null && sel !== undefined && !!e.ramas[sel];
+      if (haySel) {
+        const pts = e.ramas[sel], fase = Math.floor(ahora / 90);
         let tot = 0;
+        b.save(); b.globalCompositeOperation = "lighter";
         for (let k = 0; k < pts.length - 1; k++) {
           const [x0, y0] = pts[k], [x1, y1] = pts[k + 1], l = Math.hypot(x1 - x0, y1 - y0);
-          for (let t = 0; t < l; t += 1) { if ((Math.floor(tot + t) + fase) % 6 < 3) { b.fillStyle = "rgba(255,215,106,0.9)"; b.fillRect(Math.round(x0 + (x1 - x0) * t / l), Math.round(y0 + (y1 - y0) * t / l), 1, 1); } }
+          for (let t = 0; t < l; t += 1) {
+            const q = (Math.floor(tot + t) - fase) % 8;
+            if (q >= 0 && q < 4) { b.fillStyle = q === 1 || q === 2 ? "rgba(255,226,130,0.95)" : "rgba(255,190,80,0.6)"; b.fillRect(Math.round(x0 + (x1 - x0) * t / l) - 1, Math.round(y0 + (y1 - y0) * t / l) - 1, 2, 2); }
+          }
           tot += l;
         }
+        b.restore();
       }
-      /* Carteles al final de cada rama. */
-      (e.salidas || []).forEach((pt, k) => {
-        const c = cartelCen((v.carteles || [])[k] || "huellas"), bote = k === sel ? Math.round(Math.abs(Math.sin(ahora / 180)) * 3) : 0;
-        const x = Math.max(1, Math.min(W - 17, Math.round(pt[0] - 8))), y = Math.max(1, Math.min(H - 17, Math.round(pt[1] - 8))) - bote;
-        if (k === sel) { b.save(); b.globalCompositeOperation = "lighter"; b.drawImage(brillo("#ffd76a", 11), x - 3, y - 3); b.restore(); }
-        b.drawImage(c.normal, x, y);
+      /* Carteles a media rama (a ~50 px del cruce), a 1,5× (entero en el búfer) para que se lean en el móvil. */
+      const visX0 = offX + 4, visX1 = W - offX - 4;
+      const posCartel = k => {
+        const pts = [e.cruce].concat(e.ramas[k] || [e.salidas[k]]);
+        const p = sobreCamino(pts, 50);
+        return [Math.max(visX0 + 12, Math.min(visX1 - 12, p.x)), Math.max(34, Math.min(H - 6, p.y))];
+      };
+      E.posCarteles = (e.salidas || []).map((_, k) => posCartel(k));
+      E.posCarteles.forEach((pt, k) => {
+        const c = cartelCen((v.carteles || [])[k] || "huellas");
+        const es = k === sel, bote = es ? Math.round(Math.abs(Math.sin(ahora / 160)) * 4) : Math.round(Math.sin(ahora / 700 + k * 2) * 0.7 + 0.5);
+        const x = Math.round(pt[0] - 12), y = Math.round(pt[1] - 22) - bote;
+        b.fillStyle = "rgba(0,0,0,0.35)"; b.fillRect(x + 6, Math.round(pt[1]) + 1, 12, 2);
+        if (es) { b.save(); b.globalCompositeOperation = "lighter"; b.globalAlpha = 0.7 + 0.3 * Math.sin(ahora / 200); b.drawImage(brillo("#ffd76a", 16), x - 4, y - 4); b.restore(); }
+        /* Placa redonda tras el icono para que destaque sobre la hierba. */
+        const px = x - 2, py = y - 2, R2 = (cx, cy, w, h, col) => { b.fillStyle = col; b.fillRect(cx + 2, cy, w - 4, h); b.fillRect(cx + 1, cy + 1, w - 2, h - 2); b.fillRect(cx, cy + 2, w, h - 4); };
+        R2(px - 1, py - 1, 30, 30, "#140c06");
+        R2(px, py, 28, 28, es ? "#ffd76a" : "#8a6a3a");
+        R2(px + 1, py + 1, 26, 26, es ? "#5a3c14" : "#2e2418");
+        b.fillStyle = "rgba(255,255,255,0.12)"; b.fillRect(px + 3, py + 2, 22, 1);
+        b.drawImage(c.normal, x, y, 24, 24);
+        if (es) { /* flecha que bota encima */
+          const fy = y - 6 - (Math.floor(ahora / 250) % 2);
+          b.fillStyle = "#2a1a08"; b.fillRect(x + 8, fy - 1, 9, 3); b.fillRect(x + 10, fy + 2, 5, 2); b.fillRect(x + 11, fy + 4, 3, 1);
+          b.fillStyle = "#ffd76a"; b.fillRect(x + 9, fy, 7, 1); b.fillRect(x + 11, fy + 1, 3, 2); b.fillRect(x + 12, fy + 3, 1, 1);
+        }
       });
-      /* El grupo: entra por abajo hasta el cruce, espera y, al elegir, se va por la rama. */
+      /* El grupo: entra por abajo, se abre en corrillo en el cruce y, al elegir, se va en fila por la rama. */
       const hs = vista.heroes || [];
-      const entrada = [e.entrada, e.cruce];
       const ir = efectos.find(x => x.tipo === "ir");
       const vel = 0.055; /* px de arte por ms */
-      const lEntrada = Math.hypot(e.cruce[0] - e.entrada[0], e.cruce[1] - e.entrada[1]);
-      hs.slice().reverse().forEach((h, rk) => {
-        const i = hs.length - 1 - rk, sep = 11 * i;
-        let pos, mueve = false;
-        const dEnt = (ahora - cen0) * vel - sep;
+      const FORM = [[0, 0], [-14, 8], [14, 8], [0, 15], [-14, 22], [14, 22]];
+      const pintados = [];
+      hs.forEach((h, i) => {
+        const sep = 13 * i, F = [e.cruce[0] + FORM[i % 6][0], e.cruce[1] + FORM[i % 6][1] + 4];
+        const llegada = [e.entrada, F];
+        const lLleg = Math.hypot(F[0] - e.entrada[0], F[1] - e.entrada[1]);
+        let pos, mueve = false, salto = 0;
         if (ir && e.ramas[ir.rama]) {
-          const dRam = (ahora - ir.t0) * vel * 1.4 - sep;
-          if (dRam > 0) { pos = sobreCamino([e.cruce].concat(e.ramas[ir.rama]), dRam); mueve = !pos.fin; }
-          else { pos = sobreCamino(entrada, lEntrada + dRam); mueve = true; }
-        } else { pos = sobreCamino(entrada, Math.min(dEnt, lEntrada - sep)); mueve = dEnt < lEntrada - sep; if (!mueve) pos.dx = 0, pos.dy = -1; }
-        let dir = dirDe(pos.dx, pos.dy);
-        if (!mueve && sel !== null && sel !== undefined && e.salidas[sel] && i === 0) dir = dirDe(e.salidas[sel][0] - pos.x, e.salidas[sel][1] - pos.y);
-        const paso = mueve ? 1 + (Math.floor(ahora / 140) % 2) : 0;
-        const spr = spriteCen(h.look, dir, paso), bob = !mueve && Math.floor((ahora / 500 + i * 0.4) % 2);
-        b.fillStyle = "rgba(0,0,0,0.3)"; b.fillRect(Math.round(pos.x - 6), Math.round(pos.y - 1), 12, 2);
-        b.drawImage(spr.normal, Math.round(pos.x - spr.w / 2), Math.round(pos.y - 30 - bob));
+          const tIr = ahora - ir.t0;
+          /* Saltito de ánimo antes de salir, escalonado. */
+          const tSalto = tIr - i * 70;
+          if (tSalto > 0 && tSalto < 220) salto = Math.round(Math.sin(tSalto / 220 * Math.PI) * 5);
+          const dRam = (tIr - 180) * vel * 1.5 - sep;
+          if (dRam > 0) { pos = sobreCamino([F, e.cruce].concat(e.ramas[ir.rama]), dRam); mueve = !pos.fin; }
+          else { pos = { x: F[0], y: F[1], dx: e.salidas[ir.rama][0] - F[0], dy: e.salidas[ir.rama][1] - F[1] }; }
+        } else {
+          const dEnt = (ahora - cen0) * vel - sep;
+          pos = sobreCamino(llegada, Math.min(Math.max(0, dEnt), lLleg)); mueve = dEnt > 0 && dEnt < lLleg;
+          if (dEnt <= 0) pos = { x: e.entrada[0], y: e.entrada[1] + 30, dx: 0, dy: -1 };
+          if (!mueve && dEnt > 0) {
+            /* En reposo: el líder mira la salida elegida; los demás miran alrededor de vez en cuando. */
+            const ciclo = Math.floor((ahora / 1300) + i * 1.7) % 5;
+            const mira = haySel ? E.posCarteles[sel] : null;
+            if (mira && (i === 0 || ciclo < 3)) { pos.dx = mira[0] - pos.x; pos.dy = mira[1] - pos.y; }
+            else { pos.dx = ciclo === 3 ? -1 : ciclo === 4 ? 1 : 0; pos.dy = ciclo >= 3 ? 0 : -1; }
+          }
+        }
+        pintados.push({ h, i, pos, mueve, salto });
+      });
+      pintados.sort((p, q) => p.pos.y - q.pos.y).forEach(({ h, i, pos, mueve, salto }) => {
+        const dir = dirDe(pos.dx, pos.dy);
+        const paso = mueve ? 1 + (Math.floor(ahora / 140 + i) % 2) : 0;
+        const spr = spriteCen(h.look, dir, paso), bob = !mueve && !salto ? Math.floor((ahora / 500 + i * 0.4) % 2) : 0;
+        /* Polvo al andar. */
+        if (mueve && !reducido) {
+          const f = Math.floor(ahora / 140 + i) % 3;
+          b.fillStyle = "rgba(220,200,160,0.55)";
+          b.fillRect(Math.round(pos.x - 4 - f), Math.round(pos.y + 1 + f), 2, 1); b.fillRect(Math.round(pos.x + 3 + f), Math.round(pos.y + f), 1, 1);
+        }
+        b.fillStyle = "rgba(0,0,0,0.3)"; b.fillRect(Math.round(pos.x - 6 + salto / 3), Math.round(pos.y - 1), 12 - Math.round(salto / 2), 2);
+        b.drawImage(spr.normal, Math.round(pos.x - spr.w / 2), Math.round(pos.y - 30 - bob - salto));
       });
       return true;
     }
@@ -859,7 +909,9 @@ const ESCENARIO = (() => {
       if (!E) return null;
       const ax = x / escCss + offX, ay = y / escCss - ext.arriba;
       let mejor = null, d = 26;
-      (E.e.salidas || []).forEach((p, k) => { const dd = Math.hypot(p[0] - ax, p[1] - ay); if (dd < d) { d = dd; mejor = k; } });
+      (E.posCarteles || E.e.salidas || []).forEach((p, k) => { const dd = Math.hypot(p[0] - ax, p[1] - 10 - ay); if (dd < d) { d = dd; mejor = k; } });
+      /* Tocar en cualquier punto de una rama también la elige. */
+      if (mejor === null) (E.e.ramas || []).forEach((r, k) => r.forEach(p => { const dd = Math.hypot(p[0] - ax, p[1] - ay); if (dd < 14 && dd < d) { d = dd; mejor = k; } }));
       return mejor;
     }
     function pantalla(id) {
