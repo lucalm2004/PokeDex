@@ -1096,3 +1096,6 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 .camino .clima { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 6px; margin-left: 4px; background: rgba(127, 168, 255, .14); color: #a9c4ff; }
 .encargos-linea { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); }
 .encargos-linea b { color: var(--gold); font-weight: 600; }
+.t-tag.esp { background: rgba(255, 106, 85, .16); color: #ff9a85; }
+.arbol-sub { margin-top: 6px; display: grid; gap: 4px; }
+.sub-nodos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }

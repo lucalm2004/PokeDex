@@ -264,9 +264,24 @@ function critMin(p) { const t = obj(p.equipo.talisman); return (t && t.critico ?
 /* ---------- Árbol de talentos ---------- */
 /* Los nodos se nombran «rama.posición» (p. ej. "1.2"); "e" es un entrenamiento cuando no queda nada a tu nivel. */
 const nivelNodo = k => 2 + 2 * k;
-function nodoTal(clase, id) {
+/* Especializaciones (especialidades.js): a nivel 3 se elige una de dos; su rama propia es la 3 (niveles 4, 6, 8 y 10). */
+const SUBC = clase => ((D.SUBCLASES || {})[clase] || []);
+const nivelSub = k => 4 + 2 * k;
+function nodoTal(clase, id, p) {
   if (id === "e") return Object.assign({ id, rama: -1, k: 0, nivel: 1 }, ENTRENAMIENTO);
-  const [r, k] = String(id).split(".").map(Number), ramas = TALENTOS[clase];
+  if (String(id).startsWith("sub:")) {
+    const i = +String(id).slice(4), sc = SUBC(clase)[i];
+    return sc ? { id, rama: 3, k: -1, nivel: 3, sub: i, nombre: sc.nombre, desc: `${sc.lema ? sc.lema + " " : ""}${sc.desc || ""}`.trim(), pas: sc.pas || {} } : null;
+  }
+  const [r, k] = String(id).split(".").map(Number);
+  if (r === 3) {
+    const sub = p && p.subclase !== undefined ? p.subclase : (p && (p.talentos || []).find(x => String(x).startsWith("sub:")) ? +p.talentos.find(x => String(x).startsWith("sub:")).slice(4) : null);
+    const sc = sub === null || sub === undefined ? null : SUBC(clase)[sub], n = sc && sc.nodos[k];
+    if (!n) return null;
+    const h = n.hab && H(n.hab);
+    return Object.assign({ id, rama: 3, k, nivel: nivelSub(k), nombre: h ? h.nombre : n.nombre, desc: h ? h.desc : n.desc }, n);
+  }
+  const ramas = TALENTOS[clase];
   const n = ramas && ramas[r] && ramas[r].nodos[k];
   if (!n) return null;
   const h = n.hab && H(n.hab);
@@ -280,7 +295,7 @@ function pasivas(p) {
     if (objEspecial(p, "rey_loco")) { t.racha += 2; t.ataqueMini *= 1.25; t.defensa *= 1.25; }
   }
   for (const id of (p && p.talentos) || []) {
-    const n = nodoTal(p.clase, id);
+    const n = nodoTal(p.clase, id, p);
     if (!n || !n.pas) continue;
     for (const [k, v] of Object.entries(n.pas)) {
       if (k === "dano") for (const [tp, x] of Object.entries(v)) t.dano[tp] = (t.dano[tp] || 0) + x;
@@ -295,27 +310,37 @@ function pasivas(p) {
 function opcionesTalento(p) {
   const ramas = TALENTOS[p.clase] || [], tom = new Set(p.talentos || []), out = [];
   ramas.forEach((r, ri) => { const k = r.nodos.findIndex((_, j) => !tom.has(`${ri}.${j}`)); if (k >= 0 && nivelNodo(k) <= p.nivel) out.push(`${ri}.${k}`); });
+  const subs = SUBC(p.clase);
+  if (subs.length) {
+    if (p.subclase === undefined || p.subclase === null) { if (p.nivel >= 3) out.unshift(...subs.map((_, i) => `sub:${i}`)); }
+    else { const k = subs[p.subclase].nodos.findIndex((_, j) => !tom.has(`3.${j}`)); if (k >= 0 && nivelSub(k) <= p.nivel) out.push(`3.${k}`); }
+  }
   return out.length ? out : ["e"];
+}
+function nombreRama(p, r) {
+  if (r === 3) { const sc = SUBC(p.clase)[p.subclase]; return sc ? sc.nombre : "Especialización"; }
+  return r >= 0 && TALENTOS[p.clase] && TALENTOS[p.clase][r] ? TALENTOS[p.clase][r].nombre : "Entrenamiento";
 }
 function elegirTalento(id) {
   const a = S.aprender[0];
   if (!a || !a.talento) return;
   const p = S.players[a.i];
   if (!opcionesTalento(p).includes(id)) return;
-  const n = nodoTal(p.clase, id);
+  const n = nodoTal(p.clase, id, p);
   p.talentos = p.talentos || [];
+  if (n.sub !== undefined) { p.subclase = n.sub; p.talentos = p.talentos.filter(x => !String(x).startsWith("sub:")); }
   p.talentos.push(id);
   S.aprender.shift();
   if (n.hab) {
     if (p.habs.includes(n.hab)) log(`${p.nombre} perfecciona ${H(n.hab).nombre}.`, "nivel");
-    else if (p.habs.length < 4) { p.habs.push(n.hab); log(`${p.nombre} aprende ${H(n.hab).nombre} (${TALENTOS[p.clase][n.rama].nombre}).`, "nivel"); }
+    else if (p.habs.length < 4) { p.habs.push(n.hab); log(`${p.nombre} aprende ${H(n.hab).nombre} (${nombreRama(p, n.rama)}).`, "nivel"); }
     else S.aprender.unshift({ i: a.i, hab: n.hab });
   } else {
     log(`${p.nombre} gana el talento ${n.nombre}: ${n.desc}`, "nivel");
     if (n.pas.alma && p.alma > 0) p.alma = Math.min(maxAlma(p), p.alma + n.pas.alma);
     if (n.pas.pm) p.pm = Math.min(pmMax(p), (p.pm || 0) + n.pas.pm);
   }
-  fx({ tipo: "nivel", texto: n.nombre, sub: `${p.nombre} · ${n.rama >= 0 ? TALENTOS[p.clase][n.rama].nombre : "Entrenamiento"}` });
+  fx({ tipo: "nivel", texto: n.nombre, sub: `${p.nombre} · ${n.sub !== undefined ? "¡Especialización!" : nombreRama(p, n.rama)}` });
   guardar(); render();
 }
 const H = id => HABILIDADES[id];
@@ -1114,7 +1139,7 @@ function efectoLocal(e) {
   if (escJuego && (EFECTOS_ESCENA.has(e.tipo) || e.tipo === "salto")) escJuego.efecto(e);
   if (e.tipo === "anuncio") anunciar(e);
   if (e.tipo === "dano") mostrarDano(e);
-  if (e.tipo === "tiradaEnemigo") animarTirada(e.n, Object.assign({ enemigo: true }, e.det), 420);
+  if (e.tipo === "tiradaEnemigo") animarTirada(e.n, Object.assign({ enemigo: true }, e.det), Math.round(420 / VEL));
   if (e.tipo === "golpe" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-herido");
   if (e.tipo === "cura" && String(e.objetivo)[0] === "h") gesto(+String(e.objetivo).slice(1), "g-curado");
   if (e.tipo === "salto" || e.tipo === "victoria") gesto("*", "g-victoria");
@@ -1304,7 +1329,7 @@ function tirarDado(final, caras, cb, det) {
     if (!resolviendo) { ocupado = false; document.body.classList.remove("ocupado"); }
     cb();
   };
-  if (!reducido && !RAPIDO && det && vista === "juego" && $("#tirada")) return animarTirada(final, det, 760, terminar);
+  if (!reducido && !RAPIDO && det && vista === "juego" && $("#tirada")) return animarTirada(final, det, Math.round(760 / VEL), terminar);
   if (reducido || RAPIDO || !cv || cv.offsetParent === null) return terminar();
   let k = 0;
   const iv = setInterval(() => { k++; if (k % 2) sonar("dado"); ESCENARIO.dibujarDado(cv, d(caras), k % 2, (k % 3) - 1, k % 2 ? -1 : 0); }, 70);
@@ -2596,7 +2621,7 @@ function accion(tipo, arg) {
         if (crit && tiene("vampiro")) { const cu = curar(p, 4); if (cu) partes.push(`sed de sangre +${cu}`); }
         return partes.join(" · ");
       };
-      fx({ tipo: "ataque", actor: yo, conjuro: h.tipo !== "fisica" });
+      fx({ tipo: "ataque", actor: yo, conjuro: h.tipo !== "fisica", objetivo: "e" + t, corre: h.tipo === "fisica" && formaAtaque(p, h)[0] === "tajo" });
       if (!h.tirada) {
         const tx = `${p.nombre} usa ${h.nombre}${ritmo} → ${golpes(q === 2, q === 2 ? 1 : q === 0 ? 0.75 : 1)}`;
         log(tx, "ok"); mostrarTirada(tx, true);
@@ -2771,7 +2796,10 @@ function heroeAlAzarVivo() {
   if (prov.length && Math.random() < 0.8) l = prov;
   return l.length ? l[Math.floor(Math.random() * l.length)] : -1;
 }
-const esperar = ms => new Promise(res => setTimeout(res, RAPIDO ? 10 : reducido ? Math.min(ms, 150) : ms));
+/* Velocidad del combate (menú): las esperas se acortan sin quitar nada. */
+const VELOCIDADES = { normal: 1, rapida: 1.6, turbo: 2.4 };
+let VEL = VELOCIDADES[leer("dym-vel", "rapida")] || 1.6;
+const esperar = ms => new Promise(res => setTimeout(res, RAPIDO ? 10 : reducido ? Math.min(ms, 150) : ms / VEL));
 /* Defensa activa: cuando un ataque va a dar, el dueño del héroe juega un minijuego de defensa en su móvil.
    El anfitrión espera el resultado (0, 1 o 2) un tiempo y, si no llega, cuenta como 0. */
 let ventana = null;
@@ -2861,7 +2889,7 @@ async function turnoEnemigo(ri, enRonda = false) {
         if (ti < 0) break;
         const t = S.players[ti];
         const especial = usaEsp && !sp.todos && k === 0;
-        fx({ tipo: "ataque", actor: o });
+        fx({ tipo: "ataque", actor: o, objetivo: "h" + ti, corre: !MAGICOS.has(r.clave) });
         if (t.clase === "barbaro" && !t.fl.reflejos) { t.fl.reflejos = true; log(`${t.nombre} esquiva sin mirar (sentido del peligro).`, "ok"); fx({ tipo: "numero", objetivo: "h" + ti, texto: "FALLO", color: RP.hueso[3] }); await esperar(300); if (!sigue()) return; continue; }
         const rr = d(20), def = ca(t);
         const esquiva = rr !== 20 && Math.random() < pasivas(t).esquivar;
@@ -3482,10 +3510,10 @@ function renderEscena() {
     el.innerHTML = `<p class="sello ok">¡Nivel ${q.nivel}!</p><h2>${esc(q.nombre)} elige un talento</h2>
       <p class="quien${mia ? "" : " espera"}">${mia ? "Cada rama se abre paso a paso. Elige con cabeza: no llegarás a todo." : `${esc(q.nombre)} está eligiendo en su móvil…`}</p>
       <div class="talentos-op">${ops.map(id => {
-        const n = nodoTal(q.clase, id), R_ = n.rama >= 0 ? TALENTOS[q.clase][n.rama] : null;
+        const n = nodoTal(q.clase, id, q), R_ = n.rama >= 0 ? { nombre: n.sub !== undefined ? "Especialización" : nombreRama(q, n.rama) } : null;
         return `<button type="button" class="talento-op ${n.hab ? "t-hab" : "t-pas"}" data-juego="talento" data-v="${id}" ${mia ? "" : "disabled"}>
-          <span class="t-rama">${R_ ? `${esc(R_.nombre)} · ${n.k + 1}/4` : "Entrenamiento"}</span><b>${esc(n.nombre)}</b>
-          <small>${n.hab ? `<i class="t-tag">Habilidad</i> ${resumenHab(n.hab, q)}` : `<i class="t-tag pas">Pasiva</i> ${esc(n.desc)}`}</small>
+          <span class="t-rama">${n.sub !== undefined ? "Especialización · elige una para siempre" : R_ ? `${esc(R_.nombre)} · ${n.k + 1}/4` : "Entrenamiento"}</span><b>${esc(n.nombre)}</b>
+          <small>${n.sub !== undefined ? `<i class="t-tag esp">Especialización</i> ${esc(n.desc)}${(() => { const sc = SUBC(q.clase)[n.sub]; return sc ? ` · Abre: ${sc.nodos.map(x => esc(x.hab ? H(x.hab).nombre : x.nombre)).join(", ")}` : ""; })()}` : n.hab ? `<i class="t-tag">Habilidad</i> ${resumenHab(n.hab, q)}` : `<i class="t-tag pas">Pasiva</i> ${esc(n.desc)}`}</small>
           ${n.hab ? `<small class="t-desc">${esc(n.desc)}</small>` : ""}</button>`;
       }).join("")}</div>
       <p class="quien">${(TALENTOS[q.clase] || []).map((r, ri) => `${esc(r.nombre)} ${(q.talentos || []).filter(x => x.startsWith(ri + ".")).length}/4`).join(" · ")}</p>`;
@@ -3688,6 +3716,7 @@ function renderModal() {
       ${S ? boton('data-ui="modal" data-m="cronica"', "Crónica", "", "Todo lo que ha pasado", false) : ""}
       ${boton('data-ui="modal" data-m="compendio"', "Compendio", "", "Bestiario, razas, clases y el mundo", false)}
       ${boton('data-ui="modal" data-m="ayuda"', "Cómo se juega", "", "", false)}
+      ${boton('data-ui="velocidad"', `Velocidad del combate: ${{ 1: "normal", 1.6: "rápida", 2.4: "turbo" }[VEL] || "rápida"}`, "", "Menos espera entre acciones", false)}
       ${boton('data-ui="sonido"', `Sonido y vibración: ${SONIDO.on ? "sí" : "no"}`, "", "", false)}
       ${boton('data-ui="musica"', `Música: ${MUSICA.on ? "sí" : "no"}`, "", "", false)}
       ${boton('data-ui="altar"', "Altar de runas y logros", `${meta().runas} ᚱ`, "", false)}
@@ -3701,15 +3730,21 @@ function htmlArbol(p, compacto = false) {
   const entrenos = (p.talentos || []).filter(x => x === "e").length;
   return `<div class="arbol${compacto ? " compacto" : ""}">${ramas.map((r, ri) => `<div class="rama"><p class="r-cab"><b>${esc(r.nombre)}</b>${compacto ? "" : `<small>${esc(r.desc)}</small>`}</p>
     ${r.nodos.map((_, k) => {
-      const id = `${ri}.${k}`, n = nodoTal(p.clase, id), cogido = tom.has(id), siguiente = !cogido && (k === 0 || tom.has(`${ri}.${k - 1}`));
+      const id = `${ri}.${k}`, n = nodoTal(p.clase, id, p), cogido = tom.has(id), siguiente = !cogido && (k === 0 || tom.has(`${ri}.${k - 1}`));
       return `<span class="nodo-t${cogido ? " cogido" : siguiente ? " siguiente" : ""}${n.hab ? "" : " pas"}" title="${esc(n.nombre)}: ${esc(n.desc)}"><i>Nv ${n.nivel}</i>${esc(n.nombre)}</span>`;
-    }).join("")}</div>`).join("")}</div>${entrenos ? `<p class="quien">Entrenamientos: ${entrenos} (+${3 * entrenos} PG, +${entrenos} PM)</p>` : ""}`;
+    }).join("")}</div>`).join("")}</div>${(() => {
+      const subs = SUBC(p.clase);
+      if (!subs.length) return "";
+      if (p.subclase === undefined || p.subclase === null) return `<p class="quien">Especialización a nivel 3: <b>${subs.map(x => esc(x.nombre)).join("</b> o <b>")}</b></p>`;
+      const sc = subs[p.subclase];
+      return `<div class="arbol-sub"><p class="r-cab"><b>${esc(sc.nombre)}</b>${compacto ? "" : `<small>${esc(sc.lema || sc.desc || "")}</small>`}</p><div class="sub-nodos">${sc.nodos.map((_, k) => { const id = `3.${k}`, n = nodoTal(p.clase, id, p), cogido = tom.has(id), sig = !cogido && (k === 0 || tom.has(`3.${k - 1}`)); return `<span class="nodo-t${cogido ? " cogido" : sig ? " siguiente" : ""}${n.hab ? "" : " pas"}" title="${esc(n.nombre)}: ${esc(n.desc)}"><i>Nv ${n.nivel}</i>${esc(n.nombre)}</span>`; }).join("")}</div></div>`;
+    })()}${entrenos ? `<p class="quien">Entrenamientos: ${entrenos} (+${3 * entrenos} PG, +${entrenos} PM)</p>` : ""}`;
 }
 function htmlFicha(p) {
   if (!p) return "";
   const rz = RAZAS[p.raza], cl = CLASES[p.clase], max = maxAlma(p), sig = NIVELES[p.nivel];
   return `<div class="ficha"><canvas class="retrato-grande" data-tam="84" data-look='${esc(JSON.stringify(lookDe(p)))}'></canvas>
-    <div><h2>${esc(p.nombre)}</h2><p>${rz.nombre} · ${cl.nombre} · ${ALINEAMIENTOS[p.alin]}</p>
+    <div><h2>${esc(p.nombre)}</h2><p>${rz.nombre} · ${cl.nombre}${SUBC(p.clase)[p.subclase] ? ` (${SUBC(p.clase)[p.subclase].nombre})` : ""} · ${ALINEAMIENTOS[p.alin]}</p>
     <p class="cifras">Nv ${p.nivel} · PX ${p.xp}${sig !== undefined ? `/${sig}` : ""} · PG ${p.alma}/${max} · PM ${p.pm || 0}/${pmMax(p)} · CA ${ca(p)} · ${p.oro} po</p>
     <p class="stats">${Object.keys(STATS).map(k => `<span><b>${fmt(stat(p, k))}</b>${ABREV[k]}</span>`).join("")}</p></div></div>
     <span class="barra-xp grande"><i style="width:${pctXp(p)}%"></i></span>
@@ -3879,6 +3914,7 @@ document.addEventListener("click", ev => {
     case "aspecto": return abrirModal({ tipo: "aspecto" });
     case "mejora": return comprarMejora(ds.k);
     case "dif": sel.dif = ds.k; escribir("dym-dif", ds.k); if (sel.online) publicarPresencia(); return renderSeleccion();
+    case "velocidad": { const ks = Object.keys(VELOCIDADES), act = ks.find(k => VELOCIDADES[k] === VEL) || "rapida", sig = ks[(ks.indexOf(act) + 1) % ks.length]; VEL = VELOCIDADES[sig]; escribir("dym-vel", sig); return renderModal(); }
     case "musica": MUSICA.on = !MUSICA.on; escribir("dym-musica", MUSICA.on ? "1" : "0"); musica(pistaActual()); return renderModal();
     case "volver-menu": submenu = null; return renderEscena();
     case "cerrar": return cerrarModal();

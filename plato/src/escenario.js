@@ -275,13 +275,21 @@ const ESCENARIO = (() => {
       if (reducido && e.tipo !== "numero") return;
       if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
       if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
+      const t = performance.now();
+      if (e.tipo === "ataque" && e.corre) e = Object.assign({ dur: 720 }, e);
+      /* El golpe llega cuando el atacante ha corrido hasta su objetivo. */
+      if (["golpe", "tajo", "numero", "muerte", "magia"].includes(e.tipo)) {
+        const carrera = efectos.find(x => x.tipo === "ataque" && x.corre && x.objetivo === e.objetivo && t - x.t0 < 200);
+        if (carrera) e = Object.assign({ t0: carrera.t0 + carrera.dur * 0.42 }, e);
+      }
       efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900, conjuro: 650, viaje: 1300 }[e.tipo] || 500 }, e));
+      if (e.tipo === "golpe" && !e.fuerte && !reducido) zum = { t0: e.t0 || t, dur: 260, id: e.objetivo, f: 0.025 };
       if (e.tipo === "golpe" && e.fuerte) {
-        const t = performance.now();
-        temblor = t + 300;
+        const t0 = e.t0 || t;
+        temblor = t0 + 300;
         /* Pausa de impacto: todo se congela un instante; y la cámara se acerca al golpeado. */
         efectos.forEach(x => { if (x !== efectos[efectos.length - 1]) x.t0 += 90; });
-        zum = { t0: t, dur: 420, id: e.objetivo };
+        zum = { t0: t0, dur: 420, id: e.objetivo, f: 0.07 };
       }
     }
     function desplazamiento(id, ahora) {
@@ -289,6 +297,16 @@ const ESCENARIO = (() => {
       for (const e of efectos) {
         const p = (ahora - e.t0) / e.dur;
         if (p < 0 || p > 1) continue;
+        if (e.tipo === "ataque" && e.actor === id && e.corre && e.objetivo) {
+          /* Corre hasta su objetivo, golpea y vuelve a su sitio. */
+          const dir = id[0] === "e" ? -1 : 1, [ox] = posicion(id), [tx] = posicion(e.objetivo);
+          const dist = (tx - ox) - dir * 26;
+          const ida = p < 0.12 ? -3 * dir * (p / 0.12) / dist * dist : p < 0.4 ? ((p - 0.12) / 0.28) : p < 0.58 ? 1 : 1 - (p - 0.58) / 0.42;
+          const f = p < 0.12 ? 0 : Math.max(0, Math.min(1, p < 0.4 ? 1 - Math.pow(1 - ida, 2) : p < 0.58 ? 1 : 1 - Math.pow((p - 0.58) / 0.42, 1.6)));
+          dx += Math.round(p < 0.12 ? -3 * dir * (p / 0.12) : dist * f);
+          if ((p > 0.12 && p < 0.4) || p > 0.58) dy -= Math.floor((ahora / 70) % 2) * 2;
+          continue;
+        }
         if (e.tipo === "ataque" && e.actor === id) {
           /* Coge impulso hacia atrás, embiste rápido y vuelve. */
           const dir = id[0] === "e" ? -1 : 1;
@@ -461,7 +479,7 @@ const ESCENARIO = (() => {
           if (!reducido) for (const e of efectos) {
             const p = (ahora - e.t0) / e.dur;
             if (p < 0 || p > 1) continue;
-            if (e.tipo === "ataque" && e.actor === a.id && p > 0.18 && p < 0.78) pose = e.conjuro ? "conjuro" : "ataque";
+            if (e.tipo === "ataque" && e.actor === a.id && (e.corre ? p > 0.36 && p < 0.62 : p > 0.18 && p < 0.78)) pose = e.conjuro ? "conjuro" : "ataque";
             else if (e.tipo === "conjuro" && e.actor === a.id) pose = "conjuro";
             else if (e.tipo === "golpe" && e.objetivo === a.id && p < 0.7 && pose === "normal") pose = "herido";
             else if (e.tipo === "salto" && (e.actor === a.id || e.actor === "h*") && pose === "normal") pose = "victoria";
@@ -631,7 +649,7 @@ const ESCENARIO = (() => {
         const p = (ahora - zum.t0) / zum.dur;
         if (p > 1) zum = null;
         else {
-          const f = 1 + 0.07 * Math.sin(Math.min(1, p) * Math.PI), [cx, cy] = posicion(zum.id);
+          const f = 1 + (zum.f || 0.07) * Math.sin(Math.max(0, Math.min(1, p)) * Math.PI), [cx, cy] = posicion(zum.id);
           const bw = W - 2 * offX;
           zw = bw / f; zh = BH / f;
           zx = Math.max(offX, Math.min(offX + bw - zw, cx - zw / 2)); zy = Math.max(0, Math.min(BH - zh, cy + ext.arriba - alto(zum.id) / 2 - zh / 2));

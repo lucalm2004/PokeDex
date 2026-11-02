@@ -274,9 +274,9 @@
   function malla(g, ram, x0, y0, x1, y1) {
     cada(g, ram, x0, y0, x1, y1, (x, y, k) => {
       const fila = Math.floor(y / 3), col = ((x + (fila & 1) * 2) % 4 + 4) % 4, f = ((y % 3) + 3) % 3;
-      if (f === 0 && col !== 3) g.set(x, y, ram[Math.min(4, k + 1)], ram);
-      else if (f === 1 && col === 1) g.set(x, y, ram[Math.max(0, k - 1)], ram);
-      else if (f === 2 || col === 3) g.set(x, y, ram[Math.max(0, k - 1)], ram);
+      if (f === 0 && (col === 1 || col === 2)) g.set(x, y, ram[Math.min(4, k + 1)], ram);
+      else if (f === 1 && col === 0) g.set(x, y, ram[Math.max(0, k - 1)], ram);
+      else if (f === 2 && (col === 1 || col === 2) && k > 1) g.set(x, y, ram[k - 1], ram);
     });
   }
   /* Ribete en el borde inferior de una capa. */
@@ -406,8 +406,10 @@
   function cabeza(g, t, piel) {
     const x = t.cabX, y = t.cabY;
     /* Cuello con la sombra que deja la mandíbula. */
-    capa().rect(x - 5, y + 8, 11, t.torTop - y - 6).pintar(g, piel, { relieve: 3, max: 2 });
-    for (let i = x - 5; i <= x + 5; i++) pon(g, piel, 1, [i, Math.round(y + t.cabRy + 2)]);
+    const cu = capa().rect(x - 5, y + 8, 11, t.torTop - y - 6);
+    cu.pintar(g, piel, { plano: 2 });
+    for (let j = y + 8; j < t.torTop + 2; j++) pon(g, piel, 1, [x - 5, j], [x - 4, j]);
+    for (let i = x - 5; i <= x + 5; i++) pon(g, piel, 1, [i, Math.round(y + t.cabRy + 1)], [i, Math.round(y + t.cabRy + 2)]);
     const c = capaCabeza(t);
     c.pintar(g, piel, { relieve: 11, min: 1, luz: LUZ_CARA, umbrales: [0.985, 0.8, 0.42, 0.02] });
     /* Banda de sombra limpia en la nuca y bajo la barbilla. */
@@ -1503,8 +1505,8 @@
         pl.pintar(g, PLUMA, { relieve: 2.8, min: 2, separar: true });
         surco(g, PLUMA, 1, x - 12, by - 2, x - 20, by - 16, PLUMA);
         surco(g, PLUMA, 1, x - 21, by - 18, x - 34, by - 18, PLUMA);
-        cada(g, PLUMA, x - 42, by - 26, x - 30, by - 10, (i, j) => { if (i <= x - 32) pon(g, R.tela.granate, (i + j) % 2 ? 3 : 2, [i, j]); });
-        cada(g, PLUMA, x - 30, by - 26, x - 8, by, (i, j, k) => { if (((i + j) % 3 + 3) % 3 === 0 && k > 1) pon(g, PLUMA, k - 1, [i, j]); });
+        cada(g, PLUMA, x - 42, by - 26, x - 30, by - 10, (i, j, k) => { if (i <= x - 32) pon(g, R.tela.granate, k >= 3 ? 3 : 2, [i, j]); });
+        cada(g, PLUMA, x - 30, by - 26, x - 8, by, (i, j, k) => { if (((i - j) % 4 + 4) % 4 === 0 && k > 1) pon(g, PLUMA, k - 1, [i, j]); });
         capa().ell(x - 10, by + 1, 2.8, 2.8).pintar(g, ORO, { relieve: 2, min: 2 });
         pon(g, ORO, 4, [x - 11, by]); g.set(x - 11, by - 1, BRILLO, ORO);
         break;
@@ -2259,7 +2261,7 @@
     if (clase === "picaro" && !draco) {
       /* Embozo que tapa nariz y boca, con sus pliegues y el borde iluminado. */
       const em = capa().rect(t.cabX - 2, t.ojoY + 4, 24, 12).poly([[t.cabX - 2, t.bocaY + 4], [t.cabX + 18, t.bocaY + 2], [t.cabX + 12, t.bocaY + 10], [t.cabX, t.bocaY + 10]]);
-      em.recortar(capa().ell(t.cabX + 2, t.cabY + 2, t.cabRx + 5.2, t.cabRy + 2.4).rect(t.cabX, t.ojoY + 4, 22, 10));
+      em.recortar(capa().ell(t.cabX + 1, t.cabY + 1, t.cabRx + 2.6, t.cabRy + 2.2));
       em.pintar(g, tela, { relieve: 4, separar: true });
       surco(g, tela, 1, t.cabX + 2, t.bocaY, t.cabX + 16, t.bocaY - 2, tela);
       surco(g, tela, 3, t.cabX + 2, t.bocaY - 1, t.cabX + 16, t.bocaY - 3, tela);
