@@ -10,7 +10,7 @@ RAIZ = pathlib.Path(__file__).resolve().parent
 SRC = RAIZ / "src"
 ORDEN = ["pixel.js", "interfaz.js", "heroes.js", "monstruos.js", "fondos.js",
          "heroes_hd.js", "heroes_64.js", "heroes_128.js", "heroes_bg.js", "heroes_fr.js", "monstruos_hd_a.js", "monstruos_hd_b.js", "monstruos_64_a.js", "monstruos_64_b.js", "jefes_hd.js", "jefes_96.js", "pnj_hd.js", "pnj_64.js",
-         "fondos_hd_a.js", "fondos_hd_b.js", "fondos_hd_c.js", "mundo.js", "iconos_hd.js",
+         "fondos_hd_a.js", "fondos_hd_b.js", "fondos_hd_c.js", "mundo.js", "cenital.js", "iconos_hd.js",
          "datos.js", "contenido.js", "historia.js", "lugares.js", "epilogos.js", "especialidades.js", "escenario.js", "sonido.js", "juego.js"]
 
 

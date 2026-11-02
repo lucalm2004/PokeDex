@@ -294,7 +294,7 @@ const ESCENARIO = (() => {
         const carrera = efectos.find(x => x.tipo === "ataque" && x.corre && x.objetivo === e.objetivo && t - x.t0 < 200);
         if (carrera) e = Object.assign({ t0: carrera.t0 + carrera.dur * 0.42 }, e);
       }
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900, conjuro: 650, viaje: 1300 }[e.tipo] || 500 }, e));
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900, conjuro: 650, viaje: 1300, ir: 1600 }[e.tipo] || 500 }, e));
       if (e.tipo === "golpe" && !e.fuerte && !reducido) zum = { t0: e.t0 || t, dur: 260, id: e.objetivo, f: 0.025 };
       if (e.tipo === "golpe" && e.fuerte) {
         const t0 = e.t0 || t;
@@ -455,9 +455,88 @@ const ESCENARIO = (() => {
         else b.fillRect(x, y, q.tam, q.tam);
       }
     }
+    /* ---------- Cruce de caminos en vista cenital (16 bits) al elegir camino ---------- */
+    const cacheCen = new Map();
+    let cen0 = 0, cenClave = "";
+    function escenaCen(v) {
+      const k = `${v.acto}|${v.n}|${v.semilla}`;
+      if (!cacheCen.has(k)) { try { const e = tabla("CENITAL").escena(v.acto, v.n, v.semilla); cacheCen.set(k, { cv: lienzoDe(e.g), e }); } catch (er) { console.error("cenital", er); cacheCen.set(k, null); } }
+      return cacheCen.get(k);
+    }
+    const spriteCen = (look, dir, paso) => sprite("cen:" + JSON.stringify(look) + dir + paso, [() => tabla("CENITAL").heroe(look, dir, paso)]);
+    const cartelCen = tipo => sprite("cart:" + tipo, [() => tabla("CENITAL").cartel(tipo)]);
+    function sobreCamino(pts, d) {
+      let resto = Math.max(0, d);
+      for (let k = 0; k < pts.length - 1; k++) {
+        const [x0, y0] = pts[k], [x1, y1] = pts[k + 1], l = Math.hypot(x1 - x0, y1 - y0) || 1;
+        if (resto <= l) { const f = resto / l; return { x: x0 + (x1 - x0) * f, y: y0 + (y1 - y0) * f, dx: x1 - x0, dy: y1 - y0, fin: false }; }
+        resto -= l;
+      }
+      const a = pts[pts.length - 2] || pts[0], z = pts[pts.length - 1];
+      return { x: z[0], y: z[1], dx: z[0] - a[0], dy: z[1] - a[1], fin: true };
+    }
+    const dirDe = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "derecha" : "izquierda") : dy > 0 ? "abajo" : "arriba");
+    function pintarCenital(ahora, v) {
+      const E = escenaCen(v);
+      if (!E) return false;
+      const clave = `${v.acto}|${v.n}|${v.semilla}`;
+      if (clave !== cenClave) { cenClave = clave; cen0 = ahora; }
+      const { e } = E;
+      b.drawImage(E.cv, 0, 0);
+      try { tabla("CENITAL").anim(b, ahora, v.acto); } catch (er) { /* sin animación */ }
+      /* Rama elegida: sendero punteado que brilla y flecha que bota al final. */
+      const sel = v.sel;
+      if (sel !== null && sel !== undefined && e.ramas[sel]) {
+        const pts = e.ramas[sel], fase = Math.floor(ahora / 120);
+        let tot = 0;
+        for (let k = 0; k < pts.length - 1; k++) {
+          const [x0, y0] = pts[k], [x1, y1] = pts[k + 1], l = Math.hypot(x1 - x0, y1 - y0);
+          for (let t = 0; t < l; t += 1) { if ((Math.floor(tot + t) + fase) % 6 < 3) { b.fillStyle = "rgba(255,215,106,0.9)"; b.fillRect(Math.round(x0 + (x1 - x0) * t / l), Math.round(y0 + (y1 - y0) * t / l), 1, 1); } }
+          tot += l;
+        }
+      }
+      /* Carteles al final de cada rama. */
+      (e.salidas || []).forEach((pt, k) => {
+        const c = cartelCen((v.carteles || [])[k] || "huellas"), bote = k === sel ? Math.round(Math.abs(Math.sin(ahora / 180)) * 3) : 0;
+        const x = Math.max(1, Math.min(W - 17, Math.round(pt[0] - 8))), y = Math.max(1, Math.min(H - 17, Math.round(pt[1] - 8))) - bote;
+        if (k === sel) { b.save(); b.globalCompositeOperation = "lighter"; b.drawImage(brillo("#ffd76a", 11), x - 3, y - 3); b.restore(); }
+        b.drawImage(c.normal, x, y);
+      });
+      /* El grupo: entra por abajo hasta el cruce, espera y, al elegir, se va por la rama. */
+      const hs = vista.heroes || [];
+      const entrada = [e.entrada, e.cruce];
+      const ir = efectos.find(x => x.tipo === "ir");
+      const vel = 0.055; /* px de arte por ms */
+      const lEntrada = Math.hypot(e.cruce[0] - e.entrada[0], e.cruce[1] - e.entrada[1]);
+      hs.slice().reverse().forEach((h, rk) => {
+        const i = hs.length - 1 - rk, sep = 11 * i;
+        let pos, mueve = false;
+        const dEnt = (ahora - cen0) * vel - sep;
+        if (ir && e.ramas[ir.rama]) {
+          const dRam = (ahora - ir.t0) * vel * 1.4 - sep;
+          if (dRam > 0) { pos = sobreCamino([e.cruce].concat(e.ramas[ir.rama]), dRam); mueve = !pos.fin; }
+          else { pos = sobreCamino(entrada, lEntrada + dRam); mueve = true; }
+        } else { pos = sobreCamino(entrada, Math.min(dEnt, lEntrada - sep)); mueve = dEnt < lEntrada - sep; if (!mueve) pos.dx = 0, pos.dy = -1; }
+        let dir = dirDe(pos.dx, pos.dy);
+        if (!mueve && sel !== null && sel !== undefined && e.salidas[sel] && i === 0) dir = dirDe(e.salidas[sel][0] - pos.x, e.salidas[sel][1] - pos.y);
+        const paso = mueve ? 1 + (Math.floor(ahora / 140) % 2) : 0;
+        const spr = spriteCen(h.look, dir, paso), bob = !mueve && Math.floor((ahora / 500 + i * 0.4) % 2);
+        b.fillStyle = "rgba(0,0,0,0.3)"; b.fillRect(Math.round(pos.x - 6), Math.round(pos.y - 1), 12, 2);
+        b.drawImage(spr.normal, Math.round(pos.x - spr.w / 2), Math.round(pos.y - 30 - bob));
+      });
+      return true;
+    }
     function pintar(ahora) {
       b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, buf.width, buf.height);
       b.setTransform(SS, 0, 0, SS, 0, 0); b.imageSmoothingEnabled = false;
+      if (vista.cenital && tabla("CENITAL")) {
+        b.save(); b.translate(0, ext.arriba);
+        const ok = pintarCenital(ahora, vista.cenital);
+        if (!reducido) pintarParticulas(ahora);
+        b.restore();
+        for (let k = efectos.length - 1; k >= 0; k--) if ((ahora - efectos[k].t0) / efectos[k].dur > 1) efectos.splice(k, 1);
+        if (ok) { if (transicion) pintarTransicion(ahora); ctx.imageSmoothingEnabled = false; ctx.drawImage(buf, Math.round(offX * SS), 0, Math.round((W - 2 * offX) * SS), buf.height, 0, 0, lienzo.width, lienzo.height); return; }
+      }
       if (ext.arriba || ext.abajo) b.drawImage(extension(vista.fondo, ext.arriba, ext.abajo), 0, 0);
       b.save();
       b.translate(0, ext.arriba);
@@ -774,6 +853,15 @@ const ESCENARIO = (() => {
       }
       return mejor;
     }
+    /* En el cruce cenital: ¿qué cartel de salida hay bajo el dedo? */
+    function salidaEn(x, y) {
+      const v = vista.cenital, E = v && tabla("CENITAL") ? escenaCen(v) : null;
+      if (!E) return null;
+      const ax = x / escCss + offX, ay = y / escCss - ext.arriba;
+      let mejor = null, d = 26;
+      (E.e.salidas || []).forEach((p, k) => { const dd = Math.hypot(p[0] - ax, p[1] - ay); if (dd < d) { d = dd; mejor = k; } });
+      return mejor;
+    }
     function pantalla(id) {
       const m = marcas[id];
       if (!m || m.x0 === undefined) return null;
@@ -784,7 +872,7 @@ const ESCENARIO = (() => {
       if (JSON.stringify(nuevo) === JSON.stringify(completa)) return;
       completa = nuevo; ajustar();
     }
-    const inst = { mostrar, efecto, ajustar, pintar, lienzo, actorEn, pantalla, completa: ponerCompleta, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
+    const inst = { mostrar, efecto, ajustar, pintar, lienzo, actorEn, salidaEn, pantalla, completa: ponerCompleta, get vista() { return vista; }, destruir() { instancias.delete(inst); if (ro) ro.disconnect(); } };
     instancias.add(inst);
     return inst;
   }

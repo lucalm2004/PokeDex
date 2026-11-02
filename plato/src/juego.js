@@ -1100,7 +1100,7 @@ function festejar(titulo, sub, clase = "") {
   clearTimeout(festejar.t);
   festejar.t = setTimeout(() => { el.hidden = true; }, 1900);
 }
-const EFECTOS_ESCENA = new Set(["viaje", "conjuro", "numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
+const EFECTOS_ESCENA = new Set(["ir", "viaje", "conjuro", "numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
 /* Un efecto se ve en el escenario y además suena y, si toca, se celebra (también en los móviles de los demás). */
 /* Rótulo sobre el escenario con el nombre del ataque y quién lo hace. */
 function anunciar(e) {
@@ -1701,6 +1701,13 @@ function elegirNodo(j) {
   if (ocupado || S.modo !== "mapa") return;
   const m = S.mapa, actual = m.filas[m.fila][m.col];
   if (!actual.sig.includes(j)) return;
+  if (typeof CENITAL !== "undefined" && !RAPIDO && !reducido && !elegirNodo.yendo) {
+    const rama = actual.sig.slice().sort((a, b) => a - b).indexOf(j);
+    elegirNodo.yendo = true; ocupado = true; document.body.classList.add("ocupado");
+    fx({ tipo: "ir", rama }); sonar("pasos"); guardar();
+    setTimeout(() => { ocupado = false; document.body.classList.remove("ocupado"); try { elegirNodo(j); } finally { elegirNodo.yendo = false; } }, Math.round(1100 / Math.min(VEL, 1.6)));
+    return;
+  }
   m.fila++; m.col = j;
   const nodo = m.filas[m.fila][j];
   nodo.hecho = true;
@@ -3413,6 +3420,15 @@ setInterval(posicionarHud, 200);
 /* En combate, tocar a un enemigo en el escenario le apunta; tocar a un héroe abre su ficha. */
 document.addEventListener("click", ev => {
   const cv = ev.target.closest && ev.target.closest("#lienzo");
+  if (cv && S && S.modo === "mapa" && escJuego && escJuego.salidaEn) {
+    const r = cv.getBoundingClientRect(), k = escJuego.salidaEn(ev.clientX - r.left, ev.clientY - r.top);
+    if (k === null) return;
+    const m = S.mapa, libres = m.filas[m.fila][m.col].sig.slice().sort((a, b) => a - b), j = libres[k];
+    if (j === undefined) return;
+    const boton = document.querySelector(caminoMirado() === j ? `.camino[data-juego="nodo"][data-v="${j}"]` : `.camino[data-ui="ver-camino"][data-v="${j}"]`);
+    if (boton && !boton.disabled) boton.click();
+    return;
+  }
   if (!cv || !S || !S.combate || !escJuego || !$("#p-juego").classList.contains("modo-combate")) return;
   const r = cv.getBoundingClientRect(), id = escJuego.actorEn(ev.clientX - r.left, ev.clientY - r.top);
   if (!id) return;
@@ -3446,11 +3462,18 @@ function sincronizarEscenario() {
       niebla = 0.35;
     }
   }
+  /* Al escoger camino: cruce en vista cenital con el grupo y un cartel por salida. */
+  let cenital = null;
+  if (S.modo === "mapa" && S.mapa && !S.final && !S.derrota && typeof CENITAL !== "undefined") {
+    const m = S.mapa, libres = m.filas[m.fila][m.col].sig.slice().sort((a, b) => a - b), mir = caminoMirado(), explora = hayClase("explorador");
+    cenital = { acto: Math.max(0, S.acto), n: libres.length, semilla: S.acto * 97 + m.fila * 13 + m.col, sel: mir === null ? null : libres.indexOf(mir),
+      carteles: libres.map(j => { const n = m.filas[m.fila + 1][j]; return n.tipo === "jefe" ? "jefe" : n.hecho || explora ? n.tipo : "huellas"; }) };
+  }
   const nodoClima = S.modo === "mapa" && S.mapa ? (S.mapa.filas[S.mapa.fila + 1] || [])[caminoMirado()] : nodoActual();
   const clima = (nodoClima && nodoClima.clima) || null, hora = S.mapa ? Math.min(1, (S.mapa.fila + (S.modo === "mapa" ? 0.5 : 0)) / 7) : 0;
   escJuego.mostrar({
     fondo, rivales, niebla: Math.max(niebla, clima === "niebla" ? 0.55 : 0), marcha, clima, hora,
-    ruta: Math.max(0, S.acto),
+    ruta: Math.max(0, S.acto), cenital,
     companero: S.companero && COMPANEROS[S.companero.clave] ? { clave: COMPANEROS[S.companero.clave].sprite } : null, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
     heroes: S.players.map((p, i) => ({ fila: filaDe(i), look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
