@@ -261,7 +261,8 @@ const ESCENARIO = (() => {
     function alto(obj) { const m = marcas[normalizar(obj)]; return m ? Math.max(14, m.alto) : 36; }
     function mostrar(v) {
       if (v.fondo && v.fondo !== vista.fondo) {
-        efectos.length = 0; amb.length = 0;
+        for (let k = efectos.length - 1; k >= 0; k--) if (efectos[k].tipo !== "viaje") efectos.splice(k, 1);
+        amb.length = 0;
         if (!reducido && buf.width) { const cp = Object.assign(document.createElement("canvas"), { width: buf.width, height: buf.height }); cp.getContext("2d").drawImage(buf, 0, 0); transicion = { cv: cp, t0: performance.now(), dur: 520 }; }
       }
       if ("rival" in v && !("rivales" in v)) v = Object.assign({}, v, { rivales: v.rival ? [v.rival] : [] });
@@ -271,7 +272,7 @@ const ESCENARIO = (() => {
       if (reducido && e.tipo !== "numero") return;
       if (e.objetivo === "e") e = Object.assign({}, e, { objetivo: "e0" });
       if (e.actor === "e") e = Object.assign({}, e, { actor: "e0" });
-      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900, conjuro: 650 }[e.tipo] || 500 }, e));
+      efectos.push(Object.assign({ t0: performance.now(), dur: { numero: 1100, golpe: 320, ataque: 420, magia: 700, cura: 800, muerte: 950, proyectil: 300, tajo: 260, destello: 380, salto: 900, conjuro: 650, viaje: 1300 }[e.tipo] || 500 }, e));
       if (e.tipo === "golpe" && e.fuerte) {
         const t = performance.now();
         temblor = t + 300;
@@ -374,8 +375,13 @@ const ESCENARIO = (() => {
         b.imageSmoothingEnabled = false;
         b.drawImage(viejoBuf, 0, 0, W, H);
       } else {
-        b.drawImage(fd.cv, 0, 0);
-        if (fd.anim && !reducido) { try { fd.anim(b, ahora); } catch (e) { /* idem */ } }
+        /* De viaje: el paisaje se desliza hacia la izquierda mientras el grupo camina. */
+        const v = !reducido && efectos.find(e => e.tipo === "viaje");
+        if (v) {
+          const p = Math.min(1, (ahora - v.t0) / v.dur), off = Math.round((1 - Math.pow(1 - p, 2)) * 96);
+          b.drawImage(fd.cv, -off, 0); b.drawImage(fd.cv, W - off, 0);
+        } else b.drawImage(fd.cv, 0, 0);
+        if (fd.anim && !reducido && !v) { try { fd.anim(b, ahora); } catch (e) { /* idem */ } }
       }
     }
     function pintarNiebla(ahora, fuerza) {
@@ -426,7 +432,7 @@ const ESCENARIO = (() => {
       pintarHora();
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
-      const marcha = !!vista.marcha && !reducido;
+      const marcha = (!!vista.marcha || efectos.some(e => e.tipo === "viaje")) && !reducido;
       vista.heroes.forEach((h, i) => {
         const [fx, fy] = HUECOS[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });

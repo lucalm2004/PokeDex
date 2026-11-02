@@ -1075,7 +1075,7 @@ function festejar(titulo, sub, clase = "") {
   clearTimeout(festejar.t);
   festejar.t = setTimeout(() => { el.hidden = true; }, 1900);
 }
-const EFECTOS_ESCENA = new Set(["conjuro", "numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
+const EFECTOS_ESCENA = new Set(["viaje", "conjuro", "numero", "golpe", "ataque", "magia", "cura", "muerte", "proyectil", "tajo", "destello"]);
 /* Un efecto se ve en el escenario y además suena y, si toca, se celebra (también en los móviles de los demás). */
 /* Rótulo sobre el escenario con el nombre del ataque y quién lo hace. */
 function anunciar(e) {
@@ -1689,6 +1689,7 @@ function elegirNodo(j) {
   if (nodo.rasgo) aplicarRasgo(nodo);
   avanzarEncargo("visitar", nodo.tipo);
   sonar("pasos");
+  fx({ tipo: "viaje" });
   procesarSiguiente();
 }
 function escenaHistoria(parte) {
