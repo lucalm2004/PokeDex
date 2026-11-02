@@ -23,7 +23,7 @@ const ESCENARIO = (() => {
   /* Un fondo es { cv, anim, viejo }: los antiguos (192×108) se pintan en su tamaño y se escalan al dibujar. */
   function fondo(clave) {
     if (cacheFondo.has(clave)) return cacheFondo.get(clave);
-    const hd = tabla("FONDOS_HD"), viejo = typeof FONDOS !== "undefined" ? FONDOS : {};
+    const hd = Object.assign({}, tabla("FONDOS_HD"), tabla("MUNDO") ? { mundo: tabla("MUNDO") } : {}), viejo = typeof FONDOS !== "undefined" ? FONDOS : {};
     let res = null;
     if (hd && hd[clave] && hd[clave].base) {
       try { const g = new PX.Rejilla(W, H); hd[clave].base(g); res = { cv: lienzoDe(g), anim: hd[clave].anim, viejo: false }; }
@@ -464,11 +464,12 @@ const ESCENARIO = (() => {
       if (temblor > ahora && !reducido) b.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
       pintarFondo(ahora);
       pintarHora();
+      if (vista.fondo === "mundo" && tabla("MUNDO")) pintarRuta(ahora);
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
       const marcha = (!!vista.marcha || efectos.some(e => e.tipo === "viaje")) && !reducido;
       const huecosH = huecosHeroes();
-      vista.heroes.forEach((h, i) => {
+      if (vista.fondo !== "mundo") vista.heroes.forEach((h, i) => {
         const [fx, fy] = huecosH[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });
       });
@@ -672,6 +673,19 @@ const ESCENARIO = (() => {
         }
       }
       ctx.drawImage(buf, Math.round(zx * SS), Math.round(zy * SS), Math.round(zw * SS), Math.round(zh * SS), 0, 0, lienzo.width, lienzo.height);
+    }
+    /* Mapa del mundo: trayecto recorrido hasta el acto actual y marcador del grupo. */
+    function pintarRuta(ahora) {
+      const M = tabla("MUNDO"), a = Math.max(0, Math.min(4, vista.ruta || 0)), meta = M.puntos[a], cam = M.camino || [];
+      let fin = 0, d = 1e9;
+      cam.forEach((p, k) => { const dd = Math.hypot(p[0] - meta[0], p[1] - meta[1]); if (dd < d) { d = dd; fin = k; } });
+      b.fillStyle = "#8a1a12";
+      for (let k = 0; k < fin; k++) { const [x0, y0] = cam[k], [x1, y1] = cam[k + 1], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let t = 0; t <= n; t += 2) b.fillRect(Math.round(x0 + (x1 - x0) * t / n), Math.round(y0 + (y1 - y0) * t / n), 1, 1); }
+      M.puntos.forEach((p, k) => { if (k > a) return; b.fillStyle = k < a ? "#5a2a10" : "#ffd76a"; b.fillRect(p[0] - 1, p[1] - 1, 3, 3); });
+      const bote = Math.floor(ahora / 300) % 2;
+      b.fillStyle = "#1a0a06"; b.fillRect(meta[0] - 2, meta[1] - 9 - bote, 5, 6); b.fillRect(meta[0], meta[1] - 3 - bote, 1, 3);
+      b.fillStyle = "#c8352a"; b.fillRect(meta[0] - 1, meta[1] - 8 - bote, 3, 4);
+      b.fillStyle = "#ffd76a"; b.fillRect(meta[0], meta[1] - 7 - bote, 1, 1);
     }
     /* Al aire libre la luz cambia con el avance por el mapa y hay clima. */
     const FUERA = new Set(["camino", "bosque", "aldea", "puente", "encrucijada", "pico", "ruinas"]);

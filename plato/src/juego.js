@@ -1670,7 +1670,7 @@ function siguienteActo() {
   S.historia = S.historia || {};
   const H = D.HISTORIA && D.HISTORIA[S.acto];
   S.siguiente = H && H.intro ? [{ historia: "intro" }] : [];
-  S.esc = { tipo: "relato", fondo: ACTOS[S.acto].fondos[0], titulo: `Acto ${ROMANOS[S.acto]}: ${ACTOS[S.acto].nombre}`, texto: ACTOS[S.acto].intro, boton: S.siguiente.length ? "Continuar" : "Ver el mapa" };
+  S.esc = { tipo: "relato", fondo: typeof MUNDO !== "undefined" ? "mundo" : ACTOS[S.acto].fondos[0], titulo: `Acto ${ROMANOS[S.acto]}: ${ACTOS[S.acto].nombre}`, texto: ACTOS[S.acto].intro, boton: S.siguiente.length ? "Continuar" : "Ver el mapa" };
   S.guardadoActo = null; S.guardadoActo = JSON.stringify(S);
   log(`Acto ${ROMANOS[S.acto]} · ${ACTOS[S.acto].nombre}`, "esc");
   guardar(); render();
@@ -3450,6 +3450,7 @@ function sincronizarEscenario() {
   const clima = (nodoClima && nodoClima.clima) || null, hora = S.mapa ? Math.min(1, (S.mapa.fila + (S.modo === "mapa" ? 0.5 : 0)) / 7) : 0;
   escJuego.mostrar({
     fondo, rivales, niebla: Math.max(niebla, clima === "niebla" ? 0.55 : 0), marcha, clima, hora,
+    ruta: Math.max(0, S.acto),
     companero: S.companero && COMPANEROS[S.companero.clave] ? { clave: COMPANEROS[S.companero.clave].sprite } : null, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
     heroes: S.players.map((p, i) => ({ fila: filaDe(i), look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
