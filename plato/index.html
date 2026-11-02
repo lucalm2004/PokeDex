@@ -28810,6 +28810,130 @@ const DATOS = (() => {
   );
 })();
 
+/* Dados y Mazmorras · codas del final: qué fue de cada cual según lo que hicisteis.
+   Se carga después de lugares.js y amplía el objeto global DATOS.
+
+   CODAS = [{ requiere, falta, final, texto, generica }]
+   · requiere: marca de S.memoria (o lista de marcas, todas necesarias).
+   · falta: marca que NO debe estar (opcional).
+   · final: "heroes" | "codicia" | null (sirve para ambos).
+   · generica: true para las de relleno, sin requiere, cuando la partida deja pocas marcas.
+   Ojo: muchas marcas se quitan al resolver su historieta; las que quedan al final son las que se
+   llevaron puestas, así que estas codas cuentan lo que pasó después, no lo que ya se vio en partida. */
+(() => {
+  "use strict";
+
+  DATOS.CODAS = [
+    /* ---------- Bosque y camino ---------- */
+    { requiere: "ciervo", final: null,
+      texto: "En el bosque de Valdren aún se ve a veces un ciervo blanco. No se acerca a nadie, salvo a quien huele a vosotros." },
+    { requiere: "furtivo", final: null,
+      texto: "Las astas del ciervo blanco acabaron en el salón de un barón. Desde entonces, en esa casa no crece ni el moho." },
+    { requiere: "sacrilegio", final: "heroes",
+      texto: "En el altar del bosque apareció plata nueva. No la dejasteis vosotros. Solara toma nota de todo." },
+    { requiere: "sacrilegio", final: "codicia",
+      texto: "Levantasteis una capilla a Solara con oro de dragón. En diez años no ha entrado un rayo de sol por sus ventanas." },
+
+    /* ---------- Brunilda, Thrain y Fizwick ---------- */
+    { requiere: "mercader", final: "heroes",
+      texto: "Brunilda abrió tienda en Villabruma. A vosotros os hace descuento; a los demás les cuenta cómo la salvasteis y les sube el precio." },
+    { requiere: "enano", falta: "aliado", final: null,
+      texto: "Thrain volvió a las minas y brinda por vosotros cada vez que encuentra una veta. Brinda mucho; encuentra poco." },
+    { requiere: "aliado", final: null,
+      texto: "Thrain colgó el hacha sobre la chimenea. Dice que la deuda está saldada. La pieza que os forjó opina que no." },
+    { requiere: "gnomo", final: null,
+      texto: "Fizwick patentó tres inventos con vuestro nombre. Dos explotaron. El tercero funciona, aunque nadie sabe para qué." },
+    { requiere: "fiado_fizwick", final: null,
+      texto: "En la libreta de Fizwick vuestra deuda sigue abierta. Los intereses ya tienen sus propios intereses, y un abogado." },
+
+    /* ---------- Mazmorra, castillo y sus fantasmas ---------- */
+    { requiere: "grimorio", final: null,
+      texto: "El grimorio de Malakar no ha vuelto a hablar. Pero si lo dejáis cerca del fuego, pasa las páginas solo para no quemarse." },
+    { requiere: "reina", final: null,
+      texto: "La reina Aldara ya no llora en la torre. En las bodas de Villabruma siempre sobra una silla, y nadie se atreve a ocuparla." },
+    { requiere: "aldeanos", final: "heroes",
+      texto: "Los aldeanos que sacasteis del castillo cuentan la fuga cada invierno. Cada invierno el desagüe es más estrecho y vosotros más altos." },
+    { requiere: "plata", final: null,
+      texto: "Los bardos dicen que Varkhul murió de plata en el vino. Los bardos exageran, pero esta vez no mucho." },
+    { requiere: "laud", final: null,
+      texto: "El laúd del juglar sigue en vuestra mochila y la canción sigue a medias. En la capilla hundida, alguien espera y cada vez tiene menos paciencia." },
+    { requiere: "llave_odo", final: null,
+      texto: "La llave de Odo cuelga detrás de la barra del Grifo Tuerto. El cofre sigue en el castillo; el perdón ya llegó." },
+    { requiere: "pip", falta: "pip_espia", final: null,
+      texto: "Pip sigue en las cocinas del castillo, silbando. Los lobos han aprendido a venir cuando silba. Él aún no ha aprendido a callarse." },
+    { requiere: "pip_espia", final: null,
+      texto: "Pip lleva todavía la llave del mayordomo al cuello. Ya no abre nada, pero le recuerda que una vez lo pillaron y nadie le pegó." },
+
+    /* ---------- Snig, el huevo y otras criaturas ---------- */
+    { requiere: "snig_amigo", final: null,
+      texto: "Snig reina sobre los kobolds con una corona de lata. Su única ley: «Los amigos de Snig no pagan». La cumple a medias." },
+    { requiere: "snig", final: null,
+      texto: "Nadie volvió a ver a Snig. En el campamento de Krug siguen desapareciendo gallinas, solo las que alguien mira mucho." },
+    { requiere: "polluelo", final: null,
+      texto: "En el bosque vive un oso-lechuza que deja medio esqueleto en la puerta de quien le cae bien. La vuestra está siempre llena." },
+    { requiere: "farol_fuego", final: null,
+      texto: "La llamita del río de lava vive ahora en vuestra linterna. Paga el alquiler en luz y se queja del frío." },
+
+    /* ---------- Ascua ---------- */
+    { requiere: ["ascua", "sacrificio"], final: null,
+      texto: "En Villabruma cuentan lo de Ascua, como ella pidió. Cada vez que alguien lo cuenta, la chimenea del Grifo Tuerto arde más alto." },
+    { requiere: "hija", falta: "sacrificio", final: "heroes",
+      texto: "Ascua volvió al Pico Cenizo a velar las cenizas de su padre. Os escribe con letra quemada, siempre demasiado corta." },
+    { requiere: "lealtad", falta: "sacrificio", final: null,
+      texto: "Cada solsticio, Ascua os manda una escama caliente. Dice que es costumbre dracónica. Se la acaba de inventar." },
+    { requiere: "traicion", final: null,
+      texto: "Ascua no volvió a cruzarse en vuestro camino. Desde entonces, ningún herrero de Valdren os vende cadenas de plata." },
+    { requiere: "recelo", falta: "hija", final: null,
+      texto: "Ascua caminó siempre unos pasos detrás, hasta que un día dejó de caminar. Nunca supisteis qué no os quiso contar." },
+    { requiere: "reverencia", final: null,
+      texto: "Algunos Hijos de la Ceniza dejaron de adorar al dragón y empezaron a adorar a Ascua. Ella les pide, por favor, que paren." },
+
+    /* ---------- Ulrika Mediaoreja ---------- */
+    { requiere: ["deuda", "compania"], final: "heroes",
+      texto: "La Compañía del Colmillo tiene canción propia sobre el dragón. Salís en la segunda estrofa; la primera es sobre la oreja de Ulrika." },
+    { requiere: "deuda", falta: "compania", final: null,
+      texto: "Ulrika rehízo su Compañía. En la oreja que le queda lleva un pendiente con vuestros nombres grabados, mal escritos." },
+    { requiere: "rencor", final: null,
+      texto: "Ulrika no os ha perdonado. De vez en cuando aparece un colmillo de lobo en vuestra puerta y falta algo en la despensa." },
+    { requiere: "jaula", final: null,
+      texto: "Nadie volvió a ver a Ulrika Mediaoreja. En el pozo del liche, dicen, una luz verde todavía pregunta por vosotros." },
+    { requiere: "sierva", final: null,
+      texto: "En el castillo de Varkhul sirve el vino una criada pálida con media oreja. A los viajeros que se os parecen les sirve más." },
+
+    /* ---------- Hijos de la Ceniza, el Ojo y la moneda negra ---------- */
+    { requiere: "tizon", final: null,
+      texto: "Tizón llegó por fin a casa. Su madre le dio un tortazo y un plato de sopa, por ese orden." },
+    { requiere: "tizon_aliado", final: null,
+      texto: "Tizón sigue de vigía en el Pico Cenizo, con la capucha del revés para que sepáis que es él." },
+    { requiere: "rito", final: null,
+      texto: "Madre Hollín no recuperó la voz. Predica por señas, y sus fieles, por no ofender, fingen entenderla." },
+    { requiere: "susurro", final: null,
+      texto: "Nhazgul aprendió vuestros nombres bajo el oro del dragón. Al borde del sueño aún los pronuncia, mal y a propósito." },
+    { requiere: "moneda", final: "heroes",
+      texto: "Guardasteis la moneda negra en el fondo de un cofre. Algunas noches llama a la tapa con los nudillos." },
+    { requiere: "moneda", final: "codicia",
+      texto: "La moneda negra sigue en vuestra bolsa. Cada año pesa un poco más, y vuestro oro, un poco menos." },
+    { requiere: "pagare", final: null,
+      texto: "El pagaré del diablillo sigue vigente. Vuestro oro crece; vuestra sombra, curiosamente, encoge." },
+    { requiere: "martillo_dorna", final: null,
+      texto: "El martillo de Borgar sigue con vosotros. Dorna espera en la gran forja. Ninguno de los tres tiene prisa, salvo ella." },
+
+    /* ---------- Genéricas, para partidas con pocas marcas ---------- */
+    { generica: true, final: "heroes",
+      texto: "En Villabruma pusieron vuestros nombres a una calle. Es corta, está en cuesta y se inunda, pero es vuestra." },
+    { generica: true, final: "heroes",
+      texto: "Los bardos cambian la canción cada año. En la última versión matáis dos dragones y os casáis con uno." },
+    { generica: true, final: "codicia",
+      texto: "Vuestros criados os llaman «señores». A vuestras espaldas, «los del dragón». No lo dicen con cariño." },
+    { generica: true, final: "codicia",
+      texto: "Contratasteis guardias para el oro y guardias para vigilar a los guardias. Dormís igual de mal." },
+    { generica: true, final: null,
+      texto: "El Grifo Tuerto sigue sirviendo la misma cerveza aguada. Os la cobra igual, pero ahora con una sonrisa." },
+    { generica: true, final: null,
+      texto: "En el Pico Cenizo ya no humea nada. Los niños de Valdren suben a jugar a dragones, y siempre gana el que hace de vosotros." }
+  ];
+})();
+
 /* Dados y Mazmorras · especializaciones de clase (subclases).
    Se carga después de datos.js: añade 32 habilidades (4 por clase) y DATOS.SUBCLASES,
    dos especializaciones por clase con una pasiva propia y cuatro nodos (niveles 4, 6, 8 y 10). */
@@ -28850,7 +28974,7 @@ const DATOS = (() => {
     infierno: { nombre: "Infierno abrasador", efecto: "dano", tipo: "arcana", stat: "raz", dado: [5, 6], bono: 2, area: true, aplica: ["quemadura", 3, 1], usos: 1, desc: "El aire mismo arde: todos los enemigos se queman." },
     /* Mago · Cronomante */
     ralentizar: { nombre: "Ralentizar", efecto: "debilita", area: true, usos: 1, desc: "El tiempo se espesa: todos los enemigos tienen −2 para atacar." },
-    paradoja: { nombre: "Paradoja", efecto: "aturde", area: true, usos: 1, desc: "Detienes el instante: todos los enemigos pierden su próximo turno." },
+    paradoja: { nombre: "Paradoja", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], area: true, aplica: ["paralisis", 1, 0.5], usos: 1, desc: "Detienes el instante: daña a todos los enemigos y la mitad pierde su próximo turno." },
 
     /* Brujo · Infernal */
     latigo: { nombre: "Látigo de brasas", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, aplica: ["quemadura", 2, 0.7], usos: 3, desc: "Un látigo de fuego del abismo. Usa Carisma." },
@@ -28861,7 +28985,7 @@ const DATOS = (() => {
 
     /* Clérigo · Luz */
     rayoAlba: { nombre: "Rayo del alba", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], tirada: true, noMuerto: 2, aplica: ["ciego", 2, 0.6], usos: 3, desc: "Un haz de amanecer. Doble contra no muertos y puede cegar." },
-    amanecer: { nombre: "Amanecer de Solara", efecto: "cura", a: "grupo", stat: "tem", dado: [3, 6], regen: 3, limpia: true, usos: 1, desc: "La Dama del Alba sonríe: cura, purifica y regenera a todo el grupo." },
+    amanecer: { nombre: "Amanecer de Solara", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 6], regen: 2, limpia: true, usos: 1, desc: "La Dama del Alba sonríe: cura, purifica y regenera a todo el grupo." },
     /* Clérigo · Tempestad */
     trueno: { nombre: "Martillo del trueno", efecto: "dano", tipo: "arcana", stat: "tem", dado: [2, 8], tirada: true, aplica: ["paralisis", 1, 0.4], usos: 3, desc: "Un martillo de relámpago que puede paralizar." },
     iraCielos: { nombre: "Ira de los cielos", efecto: "dano", tipo: "arcana", stat: "tem", dado: [4, 8], area: true, aplica: ["paralisis", 1, 0.6], usos: 1, desc: "La tormenta responde a tu plegaria y cae sobre todos los enemigos." },
@@ -28974,6 +29098,7 @@ const ESCENARIO = (() => {
   /* Pies de cada héroe (x centro, y suelo): tres delante y tres detrás. */
   const HUECOS = [[80, 140], [44, 137], [116, 135], [62, 125], [98, 124], [24, 125]];
   const POS_MASCOTA = [146, 141];
+  const POS_COMPA = [10, 132];
   /* Con varios enemigos se reparten a la derecha (el principal, delante). */
   const POS_RIVALES = [[[196, 137]], [[178, 139], [214, 128]], [[166, 140], [198, 132], [224, 124]]];
   const POS_RIVAL = POS_RIVALES[0][0];
@@ -29041,6 +29166,7 @@ const ESCENARIO = (() => {
     return v;
   }
   const spriteHeroe = look => sprite("h:" + JSON.stringify(look), [
+    tabla("HEROES_FR") && tabla("HEROES_FR").componer ? () => { const g = tabla("HEROES_FR").componer(look); if (g) g.escala = 0.5; return g; } : null,
     tabla("HEROES_BG") && tabla("HEROES_BG").componer ? () => { const g = tabla("HEROES_BG").componer(look); if (g) g.escala = 0.5; return g; } : null,
     tabla("HEROES_128") && tabla("HEROES_128").componer ? () => { const g = tabla("HEROES_128").componer(look); if (g) g.escala = 0.5; return g; } : null,
     tabla("HEROES_64") && tabla("HEROES_64").componer ? () => tabla("HEROES_64").componer(look) : null,
@@ -29220,9 +29346,18 @@ const ESCENARIO = (() => {
 
     const posRivales = () => POS_RIVALES[Math.min(3, Math.max(1, (vista.rivales || []).length)) - 1];
     function normalizar(obj) { const o = String(obj || "e"); return o === "e" ? "e0" : o; }
+    /* Delante: huecos 0–2; detrás: 3–5. */
+    function huecosHeroes() {
+      const hs = vista.heroes || [], libresDel = [0, 1, 2], libresDet = [3, 4, 5], out = [];
+      hs.forEach((h, i) => { if (h.fila !== "detras") out[i] = libresDel.length ? libresDel.shift() : libresDet.shift(); });
+      hs.forEach((h, i) => { if (h.fila === "detras") out[i] = libresDet.length ? libresDet.shift() : libresDel.shift(); });
+      return out.map(k => HUECOS[k] || HUECOS[0]);
+    }
     function posicion(obj) {
       const o = normalizar(obj);
       if (o === "m") return POS_MASCOTA;
+      if (o === "c") return POS_COMPA;
+      if (o[0] === "h") return huecosHeroes()[+o.slice(1)] || HUECOS[0];
       if (o[0] === "e") return posRivales()[+o.slice(1)] || POS_RIVAL;
       return HUECOS[+o.slice(1)] || HUECOS[0];
     }
@@ -29420,10 +29555,12 @@ const ESCENARIO = (() => {
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
       const marcha = (!!vista.marcha || efectos.some(e => e.tipo === "viaje")) && !reducido;
+      const huecosH = huecosHeroes();
       vista.heroes.forEach((h, i) => {
-        const [fx, fy] = HUECOS[i] || HUECOS[0];
+        const [fx, fy] = huecosH[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });
       });
+      if (vista.companero) actores.push({ id: "c", rival: { tipo: "pnj", clave: vista.companero.clave }, compa: true, fx: POS_COMPA[0], fy: POS_COMPA[1] });
       if (vista.mascota && hayMascota(vista.mascota)) actores.push({ id: "m", mascota: vista.mascota, fx: POS_MASCOTA[0], fy: POS_MASCOTA[1] });
       const pr = posRivales();
       (vista.rivales || []).forEach((rv, k) => { if (rv && pr[k]) actores.push({ id: "e" + k, k, rival: rv, fx: pr[k][0], fy: pr[k][1] }); });
@@ -29490,7 +29627,9 @@ const ESCENARIO = (() => {
           if (r.tipo === "enemigo" && !r.silueta) sombraSuelo(a.fx, a.fy, Math.max(18, (v.ancho * v.k) * 0.8));
           b.globalAlpha = alfa;
           if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = alfa * 0.25; b.drawImage(v.normal, ix - Math.sign(dx) * 6, iy, v.w * v.k, v.h * v.k); b.globalAlpha = alfa; }
+          if (a.compa) { b.save(); b.translate(ix * 2 + v.w * v.k, 0); b.scale(-1, 1); }
           b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy, v.w * v.k, v.h * v.k);
+          if (a.compa) b.restore();
           b.globalAlpha = 1;
           const cima = iy + (v.cima * v.k);
           marcas[a.id] = r.derrotado ? null : { alto: (v.pie * v.k) - (v.cima * v.k), x0: a.fx - (v.ancho * v.k) / 2, x1: a.fx + (v.ancho * v.k) / 2, y0: cima, y1: a.fy, cx: a.fx };
@@ -29773,7 +29912,13 @@ const ESCENARIO = (() => {
     return true;
   }
 
-  return { W, H, HUECOS, crear, dibujarDado, retrato, retratoRival, icono, hayIcono: k => !!(tabla("ICONOS_HD") || {})[k], limpiarCache() { cacheFondo.clear(); cacheSprite.clear(); cacheIcono.clear(); } };
+  /* Precalienta en los ratos libres el arte que va a hacer falta (fondos y rivales del acto) para que no haya tirones. */
+  function precalentar(lista) {
+    const cola = lista.slice(), ric = window.requestIdleCallback || (f => setTimeout(() => f({ timeRemaining: () => 8 }), 60));
+    const paso = dl => { while (cola.length && dl.timeRemaining() > 4) { const [t, k] = cola.shift(); try { if (t === "fondo") fondo(k); else if (t === "heroe") spriteHeroe(k); else spriteRival(t, k); } catch (e) {} } if (cola.length) ric(paso); };
+    ric(paso);
+  }
+  return { W, H, HUECOS, crear, precalentar, dibujarDado, retrato, retratoRival, icono, hayIcono: k => !!(tabla("ICONOS_HD") || {})[k], limpiarCache() { cacheFondo.clear(); cacheSprite.clear(); cacheIcono.clear(); } };
 })();
 
 /* ---------- Sonido medieval: efectos y música generativa sintetizados con Web Audio, sin archivos ----------
@@ -31752,6 +31897,7 @@ function aplicarFx(f = {}, actor) {
   if (f.curaPct) S.players.forEach(p => { p.pm = pmMax(p); });
   if (f.combate && ENEMIGOS[f.combate]) { S.siguiente = S.siguiente || []; S.siguiente.unshift({ pelea: f.combate }); out.push(`¡Pelea contra ${ENEMIGOS[f.combate].nombre}!`); }
   if (f.encargo) aceptarEncargo(f.encargo, out);
+  if (f.companero) unirCompanero(f.companero, out);
   if (f.mejora) { S.players.forEach(p => { p.mejora = Math.min(5, (p.mejora || 0) + f.mejora); }); out.push(`+${f.mejora} al daño de las armas`); }
   if (f.talento && actor) { const i = idx(actor); for (let k = 0; k < f.talento; k++) S.aprender.push({ i, talento: true }); out.push(`${actor.nombre}: talento extra`); }
   if (f.mascota) { adoptarMascota(f.mascota); out.push(`Mascota: ${MASCOTAS_DEF[f.mascota] ? MASCOTAS_DEF[f.mascota].nombre : f.mascota}`); }
@@ -32187,6 +32333,7 @@ function siguienteActo() {
   }
   S.acto++;
   S.descanso = null;
+  { const A = ACTOS[S.acto]; ESCENARIO.precalentar([...A.fondos.map(f => ["fondo", f]), ["fondo", A.fondoJefe], ...A.enemigos.map(e => ["enemigo", e]), ["enemigo", A.jefe], ...S.players.map(p => ["heroe", lookDe(p)])]); }
   S.mapa = generarMapa();
   if (!S.vistos.lugares.includes(S.acto)) S.vistos.lugares.push(S.acto);
   /* Los caídos no se levantan solos: hay que descansar (o pasar por una hoguera). */
@@ -32250,6 +32397,17 @@ function escenaHistoria(parte) {
   return { tipo: "prueba", historia: true, fondo: azarDe(ACTOS[S.acto].fondos), titulo: base.titulo, texto: base.texto, pnj: base.pnj, opciones: JSON.parse(JSON.stringify(base.opciones || [{ txt: "Seguir", stat: null, ok: { t: "", fx: {} } }])) };
 }
 function escenaViaje() {
+  /* A veces alguien se ofrece a acompañaros. */
+  if (!S.companero && Math.random() < 0.28) {
+    const ids = Object.keys(COMPANEROS).filter(k => !(S.vistosComp || []).includes(k));
+    if (ids.length) {
+      const id = azarDe(ids), C = COMPANEROS[id];
+      S.vistosComp = (S.vistosComp || []).concat(id);
+      return { tipo: "prueba", viaje: true, pnj: C.sprite, titulo: `${C.nombre} se ofrece`, texto: C.texto,
+        opciones: [{ txt: C.coste ? `Contratar (−${C.coste} po c/u)` : "Aceptar su compañía", stat: null, ok: { t: `${C.nombre} se pone a vuestro lado.`, fx: { oro: -C.coste, companero: id } } },
+          { txt: "Seguir solos", stat: null, ok: { t: "Cada uno por su camino.", fx: {} } }] };
+    }
+  }
   const pool = (D.VIAJE || []).filter(e => (!e.actos || e.actos.includes(S.acto)) && !S.vistosEv.includes(e.id));
   if (!pool.length) return null;
   const ev = azarDe(pool);
@@ -32598,6 +32756,44 @@ function adoptarMascota(k) {
   log(`${MASCOTAS_DEF[k].nombre} se une al grupo${antes ? ` (${antes.nombre} se queda atrás)` : ""}.`, "nivel");
   fx({ tipo: "nivel", texto: "¡Nueva mascota!", sub: `${MASCOTAS_DEF[k].nombre}: ${MASCOTAS_DEF[k].desc}` });
 }
+/* Compañeros de viaje: PNJ que se unen unos combates y actúan solos una vez por ronda. */
+const COMPANEROS = {
+  ulrika: { nombre: "Ulrika Mediaoreja", sprite: "forastero", desc: "Mercenaria de un solo ojo y peor humor.", ataque: "Tajo de mercenaria", tipo: "fisica", dado: [1, 10], combates: 3, coste: 12, texto: "Una mercenaria con media oreja os corta el paso: «Tres peleas, doce monedas por cabeza y no hago preguntas.»" },
+  fizwick: { nombre: "Fizwick", sprite: "gnomo", desc: "Gnomo inventor con bombas de dudosa fiabilidad.", ataque: "Bomba casera", tipo: "arcana", dado: [1, 6], area: true, aplica: ["quemadura", 2, 0.4], combates: 3, coste: 10, texto: "Fizwick asoma de un matorral con una mochila que hace tic-tac: «¿Necesitáis artillería? Cobro en monedas y en paciencia.»" },
+  thrain: { nombre: "Thrain", sprite: "herrero", desc: "Herrero enano que pega como trabaja.", ataque: "Martillazo", tipo: "fisica", dado: [2, 6], aplica: ["paralisis", 1, 0.25], combates: 3, coste: 14, texto: "Thrain se cuelga el martillo al hombro: «Mi forja puede esperar. Esos bichos, no. Pagad y voy.»" },
+  sauce: { nombre: "Sauce", sprite: "driada", desc: "Dríada que cura heridas con savia y canciones.", ataque: "Savia curativa", cura: [2, 4], combates: 3, coste: 10, texto: "Una dríada os sigue entre los árboles: «Vuestras heridas huelen a muerte. Dejadme acompañaros un trecho.»" },
+  ascua: { nombre: "Ascua", sprite: "forastero", desc: "El forastero de las brasas. Nadie sabe qué quiere.", ataque: "Lengua de fuego", tipo: "arcana", dado: [2, 6], aplica: ["quemadura", 2, 0.6], combates: 2, coste: 0, texto: "Ascua aparece junto al fuego, como siempre: «Caminaré con vosotros un rato. No me deis las gracias todavía.»" }
+};
+function unirCompanero(id, out = []) {
+  const C = COMPANEROS[id];
+  if (!C) return;
+  S.companero = { clave: id, quedan: C.combates };
+  out.push(`${C.nombre} se une`);
+  log(`${C.nombre} se une al grupo durante ${C.combates} combates.`, "nivel");
+  fx({ tipo: "anuncio", texto: `${C.nombre} se une`, sub: C.desc, tono: "turno" });
+}
+function companeroActua() {
+  const c = S.combate, A = S.companero, C = A && COMPANEROS[A.clave];
+  if (!C) return;
+  const bono = Math.max(0, S.acto) * 2 + Math.floor(S.players.reduce((a, p) => a + p.nivel, 0) / S.players.length / 2);
+  fx({ tipo: "anuncio", texto: C.ataque, sub: C.nombre, tono: C.cura ? "cura" : C.tipo });
+  if (C.cura) {
+    const objetivos = S.players.filter(p => p.alma > 0), partes = [];
+    objetivos.forEach(p => { const cu = curar(p, tirar(C.cura[0], C.cura[1], Math.floor(bono / 2))); if (cu) { fx({ tipo: "cura", objetivo: "h" + idx(p) }); partes.push(`${p.nombre} +${cu}`); } });
+    log(`${C.nombre}: ${C.ataque} → ${partes.join(", ") || "nadie herido"}.`, "ok");
+    return;
+  }
+  const t = objetivoValido(c.objetivo), blancos = C.area ? vivosR() : [t], partes = [];
+  fx({ tipo: "ataque", actor: "c", objetivo: "e" + t, corre: C.tipo === "fisica" });
+  blancos.forEach(k => {
+    const r = c.rivales[k];
+    if (!r || r.hp <= 0) return;
+    if (C.tipo !== "fisica") fx({ tipo: "proyectil", actor: "c", objetivo: "e" + k, forma: "orbe", rampa: RP.fuego, elem: "fuego" });
+    partes.push(danarRival(k, tirar(C.dado[0], C.dado[1], bono), C.tipo, false));
+    if (C.aplica && r.hp > 0 && Math.random() < C.aplica[2] && ponerEstado(r, C.aplica[0], C.aplica[1], false, "e" + k)) partes.push(ESTADOS[C.aplica[0]].nombre.toLowerCase());
+  });
+  log(`${C.nombre}: ${C.ataque} → ${partes.join(" · ")}`, "ok");
+}
 function mascotaActua() {
   const c = S.combate, M = S.mascota && MASCOTAS_DEF[S.mascota.clave];
   if (!M) return;
@@ -32759,6 +32955,7 @@ function iniciarCombate(sc) {
   const orden = S.players.map((p, i) => ({ t: "h", i, ini: d(20) + iniMod(p) }));
   rivales.forEach((r, k) => orden.push({ t: "e", r: k, ini: d(20) + ENEMIGOS[r.clave].ini }));
   if (S.mascota && MASCOTAS_DEF[S.mascota.clave]) orden.push({ t: "m", ini: d(20) + 2 });
+  if (S.companero && COMPANEROS[S.companero.clave]) orden.push({ t: "c", ini: d(20) + 3 });
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
   c.orden = orden;
   log(`${rivales.length > 1 ? `¡${rivales.length} enemigos! ` : ""}Iniciativa: ${orden.map(x => `${x.t === "e" ? rivales[x.r].nombre : x.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : S.players[x.i].nombre} ${x.ini}`).join(" · ")}`);
@@ -32862,7 +33059,7 @@ function planificar(i, tipo, arg) {
   }
   if (tipo === "anillo" && (!S.anillo || c.anilloUsado || Object.values(c.planes).some(x => x.tipo === "anillo"))) return rechazar("El anillo ya está en uso esta ronda.");
   if (tipo === "suceso" && (!c.suceso || Object.values(c.planes).some(x => x.tipo === "suceso"))) return rechazar("Otro héroe ya se encarga de eso.");
-  if (!["hab", "equipo", "objeto", "concentrar", "forcejeo", "anillo", "suceso"].includes(tipo)) return;
+  if (!["hab", "equipo", "objeto", "concentrar", "forcejeo", "anillo", "suceso", "fila"].includes(tipo)) return;
   c.planes[i] = { tipo, arg };
   const sig = S.online ? S.players.findIndex((x, k) => x.alma > 0 && !c.planes[k]) : heroePlan(miId);
   if (sig >= 0) S.turno = sig;
@@ -32914,6 +33111,7 @@ async function resolverRonda(reanudar = false) {
     c.actuando = true;
     const terminar = async ms => { c.hecho = c.pos; guardar(); render(); await esperar(ms); };
     if (a.t === "m") { mascotaActua(); await terminar(750); continue; }
+    if (a.t === "c") { companeroActua(); await terminar(750); continue; }
     if (a.t === "e") { if (c.rivales[a.r].hp <= 0) { c.hecho = c.pos; continue; } await turnoEnemigo(a.r, true); if (!sigue()) return salir(); finTurnoEstados(c.rivales[a.r]); await terminar(250); continue; }
     const p = S.players[a.i];
     if (p.alma <= 0) { c.hecho = c.pos; continue; }
@@ -32955,6 +33153,7 @@ function prepararTurno() {
     if (todosCaidos()) return victoria();
     const a = c.orden[c.pos];
     if (a.t === "m") { mascotaActua(); avanzar(); continue; }
+    if (a.t === "c") { companeroActua(); avanzar(); continue; }
     if (a.t === "e") { if (c.rivales[a.r].hp <= 0) { avanzar(); continue; } return turnoEnemigo(a.r); }
     const p = S.players[a.i];
     if (p.alma <= 0) { avanzar(); continue; }
@@ -32993,6 +33192,12 @@ function danarRival(k, base, clase, crit, extra = 1, rampa, porHeroe = -1) {
   if (r.hp <= 0) {
     fx({ tipo: "muerte", objetivo: o });
     avanzarEncargo("matar", r.clave);
+    if (k === 0 && !r.jefe && !c.furiaLider && c.rivales.some((x, j) => j > 0 && x.hp > 0)) {
+      c.furiaLider = true;
+      c.rivales.forEach((x, j) => { if (j > 0 && x.hp > 0) { x.danoExtra += 2; x.atkMod += 1; } });
+      fx({ tipo: "anuncio", texto: "¡Furia!", sub: "Han matado a su líder", tono: "ko" });
+      log("Al ver caer a su líder, los demás se enfurecen: +1 a golpear y +2 al daño.", "ko");
+    }
     const ph = porHeroe >= 0 && S.players[porHeroe], vamp = ph ? pasivas(ph).vampiro : 0;
     if (vamp && ph.alma > 0) { const cu = curar(ph, vamp); if (cu) { fx({ tipo: "cura", objetivo: "h" + porHeroe }); fx({ tipo: "numero", objetivo: "h" + porHeroe, texto: "+" + cu, color: RP.hoja[4], fila: 1 }); } }
   }
@@ -33023,6 +33228,7 @@ function danarHeroe(i, dmg, directo, rk = -1) {
   const red_ = pasivas(p).reduccion;
   if (red_) dmg = Math.max(1, dmg - red_);
   if (p.est && p.est.roca) dmg = Math.max(0, dmg - 3);
+  if (S.combate && filaDe(i) === "detras" && directo) dmg = Math.max(1, Math.round(dmg * 0.8));
   p.alma = Math.max(0, p.alma - dmg);
   if (S.stats && S.stats[i]) S.stats[i].recibido += dmg;
   fx({ tipo: "golpe", objetivo: "h" + i, fuerte: dmg >= 8 });
@@ -33114,7 +33320,8 @@ function accion(tipo, arg) {
             const tv = tirarVer(h.dado[0] * (crit ? 2 : 1), h.dado[1], m + (h.bono || 0) + extraArma);
             const herido = h.ejecuta && rr.hp <= rr.hpMax * h.ejecuta;
             const luzExtra = arma.especial === "amanecer" && h.tipo === "fisica" ? d(6) * (rr.nomuerto ? 2 : 1) : 0;
-            const final = Math.round(tv.total * mult * reparto * (herido ? 2 : 1)) + luzExtra;
+            const desdeAtras = filaDe(S.turno) === "detras" && h.tipo === "fisica" && forma === "tajo" ? 0.7 : 1;
+            const final = Math.round(tv.total * mult * reparto * (herido ? 2 : 1) * desdeAtras) + luzExtra;
             if (herido && g === 0) fx({ tipo: "numero", objetivo: "e" + k, texto: "¡EJECUCIÓN!", color: RP.sangre[4], fila: 2 });
             if (!visto) { visto = true; fx({ tipo: "dano", dados: tv.dados, caras: tv.caras, bono: tv.bono, total: final, color: h.tipo, crit, quien: p.nombre, accion: h.nombre }); }
             const antesG = rr.hp;
@@ -33292,6 +33499,12 @@ function accion(tipo, arg) {
     if (o === "sueno") { ponerEstado(r, "paralisis", 1, false, "e" + t); marcar(r); log(`${p.nombre} sopla polvo de sueño: ${r.nombre} se duerme un turno.`, "ok"); }
     return fin();
   }
+  if (tipo === "fila") {
+    p.fila = filaDe(S.turno) === "delante" ? "detras" : "delante";
+    fx({ tipo: "salto", actor: yo });
+    log(`${p.nombre} pasa a la fila de ${p.fila === "delante" ? "delante" : "atrás"}.`, "ok");
+    return fin();
+  }
   if (tipo === "concentrar") {
     const ant = p.pm;
     p.pm = Math.min(pmMax(p), (p.pm || 0) + 3);
@@ -33314,9 +33527,14 @@ function accion(tipo, arg) {
   }
 }
 /* La capa de las sombras esconde a su dueño la primera ronda (si queda alguien más a quien atacar). */
+/* Fila de cada héroe: delante pega y recibe más; detrás está protegido pero sus golpes cuerpo a cuerpo flojean. */
+const filaDe = i => { const p = S.players[i]; return p && p.fila ? p.fila : i >= 3 ? "detras" : "delante"; };
 function heroeAlAzarVivo() {
   let l = vivos();
   if (S.combate && S.combate.ronda === 1) { const vis = l.filter(i => !objEspecial(S.players[i], "sombras")); if (vis.length) l = vis; }
+  /* Los de delante reciben más golpes que los de atrás (dos tercios contra un tercio). */
+  const delante = l.filter(i => filaDe(i) === "delante");
+  if (delante.length && delante.length < l.length && Math.random() < 0.67) l = delante;
   const prov = l.filter(i => S.players[i].est && S.players[i].est.provocando);
   if (prov.length && Math.random() < 0.8) l = prov;
   return l.length ? l[Math.floor(Math.random() * l.length)] : -1;
@@ -33362,6 +33580,28 @@ async function turnoEnemigo(ri, enRonda = false) {
   guardar(); render();
   await esperar(450);
   if (!sigue()) return;
+  /* Enemigos que reaccionan: huyen malheridos, curan a un aliado o piden refuerzos. */
+  if (r.hp > 0 && !r.jefe && !c.jefe) {
+    const vivosE = c.rivales.filter(x => x.hp > 0);
+    if (!r.esbirro && !c.elite && r.hp <= r.hpMax * 0.18 && vivosE.length > 1 && Math.random() < 0.3) {
+      r.hp = 0; r.huido = true; fx({ tipo: "numero", objetivo: o, texto: "¡HUYE!", color: RP.hueso[4], grande: true }); fx({ tipo: "muerte", objetivo: o });
+      log(`${r.nombre} huye despavorido.`, "ok"); await esperar(500); c.enemigoActua = false; c.actua = -1; if (!enRonda) { ocupado = false; document.body.classList.remove("ocupado"); avanzar(); prepararTurno(); } return;
+    }
+    const herido = vivosE.find(x => x !== r && x.hp < x.hpMax * 0.4);
+    if (herido && ["goblin", "kobold", "diablillo", "esqueleto"].includes(r.clave) && (c.curados || 0) < 2 && Math.random() < 0.45) {
+      c.curados = (c.curados || 0) + 1;
+      const cu = Math.ceil(herido.hpMax * 0.25); herido.hp = Math.min(herido.hpMax, herido.hp + cu);
+      fx({ tipo: "cura", objetivo: "e" + c.rivales.indexOf(herido) }); fx({ tipo: "numero", objetivo: "e" + c.rivales.indexOf(herido), texto: "+" + cu, color: RP.hoja[4] });
+      log(`${r.nombre} venda a ${herido.nombre}: +${cu} PG.`, "ko"); await esperar(550); c.enemigoActua = false; c.actua = -1; if (!enRonda) { ocupado = false; document.body.classList.remove("ocupado"); avanzar(); prepararTurno(); } return;
+    }
+    if (c.rivales.indexOf(r) === 0 && !c.refuerzos && r.hp < r.hpMax * 0.5 && c.rivales.length < 3 && Math.random() < 0.35) {
+      c.refuerzos = true;
+      const nuevo = crearRival(azarDe(ESBIRROS[Math.max(0, S.acto)]), { esbirro: true, factor: 0.45 });
+      c.rivales.push(nuevo); c.orden.push({ t: "e", r: c.rivales.length - 1, ini: 0 }); nombrarRivales(c.rivales);
+      fx({ tipo: "anuncio", texto: "¡Refuerzos!", sub: `${r.nombre} pide ayuda`, tono: "ko" });
+      log(`${r.nombre} silba y llega ${nuevo.nombre}.`, "ko");
+    }
+  }
   if (c.trampa && r.hp > 0) {
     const por = c.trampa.por; c.trampa = null;
     fx({ tipo: "golpe", objetivo: o });
@@ -33512,6 +33752,7 @@ function victoria() {
   if (tiene("respiro")) { S.players.forEach(p => { if (p.alma > 0) curar(p, Math.ceil(maxAlma(p) * 0.3)); }); extra.push("Segundo respiro: +30 % PG"); }
   if (c.combos) extra.push(`${c.combos} combo${c.combos > 1 ? "s" : ""}`);
   avanzarEncargo("sobrevivir", c.jefe ? "jefe" : c.elite ? "elite" : "combate");
+  if (S.companero && COMPANEROS[S.companero.clave]) { S.companero.quedan--; if (S.companero.quedan <= 0) { extra.push(`${COMPANEROS[S.companero.clave].nombre} se despide`); log(`${COMPANEROS[S.companero.clave].nombre} se despide y sigue su camino.`, "esc"); S.companero = null; } }
   if (S.players.some(p => p.raza === "satiro" && p.alma > 0)) { S.players.forEach(p => { if (p.alma > 0) p.pm = Math.min(pmMax(p), (p.pm || 0) + 2); }); extra.push("Alegría salvaje: +2 PM al grupo"); }
   const oroT = S.players.reduce((a, p) => a + pasivas(p).oro, 0);
   if (oroT) { S.players.forEach(p => { p.oro += oroT; }); extra.push(`Bolsillos hondos: +${oroT} po c/u`); }
@@ -33878,8 +34119,9 @@ function sincronizarEscenario() {
   const nodoClima = S.modo === "mapa" && S.mapa ? (S.mapa.filas[S.mapa.fila + 1] || [])[caminoMirado()] : nodoActual();
   const clima = (nodoClima && nodoClima.clima) || null, hora = S.mapa ? Math.min(1, (S.mapa.fila + (S.modo === "mapa" ? 0.5 : 0)) / 7) : 0;
   escJuego.mostrar({
-    fondo, rivales, niebla: Math.max(niebla, clima === "niebla" ? 0.55 : 0), marcha, clima, hora, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
-    heroes: S.players.map((p, i) => ({ look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
+    fondo, rivales, niebla: Math.max(niebla, clima === "niebla" ? 0.55 : 0), marcha, clima, hora,
+    companero: S.companero && COMPANEROS[S.companero.clave] ? { clave: COMPANEROS[S.companero.clave].sprite } : null, mascota: S.mascota ? S.mascota.clave : null, objetivo: S.combate ? miObjetivo() : -1, activo: S.final || S.derrota ? -1 : S.combate ? heroeVista() : S.turno, esperaRival: !!(S.combate && S.combate.enemigoActua),
+    heroes: S.players.map((p, i) => ({ fila: filaDe(i), look: lookConGesto(i), caido: p.alma <= 0, aturdido: !!(p.est && (p.est.paralisis || p.est.congelado)), estados: S.combate ? colores(p) : [] }))
   });
 }
 function renderGrupo() {
@@ -34019,6 +34261,14 @@ function renderEscena() {
         S.players.forEach(x => { const k = D.ejesAlin(x.alin)[1]; (grupos[k] = grupos[k] || []).push(esc(x.nombre)); });
         return Object.keys(grupos).map(k => `<li><b>${grupos[k].length > 1 ? grupos[k].slice(0, -1).join(", ") + " y " + grupos[k].slice(-1) : grupos[k][0]}</b> ${EPILOGOS[k]}</li>`).join("");
       })()}</ul>
+      ${(() => {
+        /* Lo que fue de la gente y los lugares según vuestras decisiones. */
+        const mem = S.memoria || {}, tiene = m => (Array.isArray(m) ? m : [m]).every(x => mem[x]);
+        const todas = (D.CODAS || []).filter(c => (c.final === null || c.final === undefined || c.final === S.final));
+        let elegidas = todas.filter(c => !c.generica && c.requiere && tiene(c.requiere) && !(c.falta && mem[c.falta])).slice(0, 6);
+        if (elegidas.length < 3) elegidas = elegidas.concat(todas.filter(c => c.generica).slice(0, 3 - elegidas.length));
+        return elegidas.length ? `<h3>Lo que fue de los demás</h3>${elegidas.map(c => parrafo(c.texto)).join("")}` : "";
+      })()}
       ${htmlResumen()}
       ${!S.abismo ? `<p class="proxima">Bajo el tesoro algo se mueve… El Acto V, el Abismo, queda desbloqueado.</p>` : ""}
       <div class="pie">${!S.online || esHost() ? `<button type="button" class="boton" data-ui="otra">Otra aventura</button>` : `<p class="espera">¡Fin! El anfitrión puede empezar otra.</p>`}</div>`;
@@ -34164,7 +34414,7 @@ function renderCombate(el, sc, p0, mio0) {
   const apuntan = k => etiquetas.filter(e => e && (e.t === k || e.t === -2)).length;
   const lista = c.rivales.map((x, k) => `<button type="button" class="riv${k === t ? " sel" : ""}${x.hp <= 0 ? " muerto" : ""}${k === c.actua ? " actua" : ""}" ${varios && x.hp > 0 ? `data-ui="objetivo" data-k="${k}"` : `data-ui="bestia" data-k="${x.clave}"`} ${x.hp <= 0 ? "disabled" : ""}>
       <span class="rn">${plan && varios && apuntan(k) ? `<i class="apuntan" title="Héroes que le atacan esta ronda"><canvas data-icono="fisica" data-tam="12" aria-hidden="true"></canvas>${apuntan(k)}</i>` : ""}${esc(x.nombre)}</span><span class="barra-rival"><i style="width:${Math.round((100 * x.hp) / x.hpMax)}%"></i></span><b>${x.hp}/${x.hpMax}</b></button>`).join("");
-  const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : a.t === "m" ? " mascota" : ""}${(a.t === "h" && S.players[a.i].alma <= 0) || (a.t === "e" && c.rivales[a.r].hp <= 0) ? " caido" : ""}">${esc(a.t === "e" ? c.rivales[a.r].nombre.split(",")[0] : a.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : S.players[a.i].nombre)}</li>`).join("");
+  const orden = c.orden.map((a, k) => `<li class="${k === c.pos ? "ahora" : ""}${a.t === "e" ? " rival" : a.t === "m" ? " mascota" : ""}${(a.t === "h" && S.players[a.i].alma <= 0) || (a.t === "e" && c.rivales[a.r].hp <= 0) ? " caido" : ""}">${esc(a.t === "e" ? c.rivales[a.r].nombre.split(",")[0] : a.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : a.t === "c" ? (COMPANEROS[(S.companero || {}).clave] || { nombre: "Compañero" }).nombre : S.players[a.i].nombre)}</li>`).join("");
   /* Estado de la ronda: quién ha elegido ya, cuenta atrás y botón del anfitrión para no esperar. */
   const vivosH = S.players.map((x, i) => i).filter(i => S.players[i].alma > 0);
   const fichas = vivosH.map(i => { const x = S.players[i], pl = c.planes && c.planes[i]; return `<span class="${pl ? (pl.tipo === "nada" ? "nada" : "ok") : ""}${(S.online && x.uid === miId) || (mio && i === pi) ? " mio" : ""}"${pl && pl.tipo === "nada" ? ' title="No puede moverse esta ronda"' : ""}>${esc(x.nombre)} ${pl ? (pl.tipo === "nada" ? "✕" : "✓") : "…"}</span>`; }).join("");
@@ -34184,7 +34434,7 @@ function renderCombate(el, sc, p0, mio0) {
   else if (!plan) {
     const quien = S.players[S.turno], pl = quien && c.planes && c.planes[S.turno];
     const que = !pl ? "" : pl.tipo === "hab" ? H(quien.habs[+String(pl.arg).split(":")[0]]).nombre : pl.tipo === "equipo" ? "ataque en equipo"
-      : pl.tipo === "objeto" ? (OBJETOS[String(pl.arg).split(":")[0]] || {}).nombre || "objeto" : pl.tipo === "suceso" ? "aprovecha el suceso" : { forcejeo: "Forcejeo", concentrar: "Concentrarse", anillo: "Anillo", nada: "no puede moverse" }[pl.tipo] || "";
+      : pl.tipo === "objeto" ? (OBJETOS[String(pl.arg).split(":")[0]] || {}).nombre || "objeto" : pl.tipo === "suceso" ? "aprovecha el suceso" : { forcejeo: "Forcejeo", concentrar: "Concentrarse", anillo: "Anillo", fila: "cambiar de fila", nada: "no puede moverse" }[pl.tipo] || "";
     menu = c.actuando ? `<p class="quien espera">Ronda ${c.ronda} · <b>${esc(quien ? quien.nombre : "")}</b>${que ? `: ${esc(que)}${pl && pl.auto ? " (automático)" : ""}` : ""}…</p>`
       : `<p class="quien espera">Ronda ${c.ronda} · se resuelve por orden de iniciativa…</p>`;
   }
@@ -34204,7 +34454,7 @@ function renderCombate(el, sc, p0, mio0) {
       return boton(`data-juego="hab" data-v="${k}" data-tipo="${h.efecto === "dano" ? h.tipo : h.efecto === "cura" ? "cura" : "apoyo"}"${ef ? ` data-ef="${ef}"` : ""}`, h.nombre, coste ? `${coste} PM` : "∞", sub, !mio || (p.pm || 0) < coste);
     }).join("")}</div>
     ${p.habs.every(id => (p.pm || 0) < costeHab(p, H(id))) ? `<div class="menu">${boton('data-juego="accion" data-v="forcejeo" data-tipo="fisica"', "Forcejeo", "∞", `Sin maná: un golpe débil (1d4${fmt(stat(p, "ani"))})`, !mio)}</div>` : ""}
-    <div class="fila-extra">${ataqueEquipo(p) && (c.equipo || 0) < 100 ? `<p class="energia" title="Se carga golpeando, con críticos, combos y defensas perfectas"><span>⚡ Equipo</span><i><b style="width:${c.equipo || 0}%"></b></i></p>` : ""}${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}${boton('data-juego="accion" data-v="concentrar"', "Concentrarse", `${p.pm || 0}/${pmMax(p)}`, "+3 PM", !mio || (p.pm || 0) >= pmMax(p))}${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
+    <div class="fila-extra">${ataqueEquipo(p) && (c.equipo || 0) < 100 ? `<p class="energia" title="Se carga golpeando, con críticos, combos y defensas perfectas"><span>⚡ Equipo</span><i><b style="width:${c.equipo || 0}%"></b></i></p>` : ""}${boton('data-ui="objetos"', "Objetos", `${consumibles.reduce((a, k) => a + S.zurron[k], 0)}`, "", !mio || !consumibles.length)}${boton('data-juego="accion" data-v="fila"', filaDe(pi) === "delante" ? "Ir atrás" : "Ir delante", "", filaDe(pi) === "delante" ? "Menos golpes, −30 % cuerpo a cuerpo" : "Más daño, más golpes", !mio)}${boton('data-juego="accion" data-v="concentrar"', "Concentrarse", `${p.pm || 0}/${pmMax(p)}`, "+3 PM", !mio || (p.pm || 0) >= pmMax(p))}${S.anillo ? boton('data-juego="accion" data-v="anillo"', "Anillo", c.anilloUsado ? "usado" : "×1", "", !mio || c.anilloUsado) : ""}</div>`;
   el.innerHTML = `<div class="rivales${varios ? " varios" : ""}">${lista}</div>
     <div class="rival-info">${varios ? `<span class="etiqueta">Objetivo: ${esc(r.nombre)}</span>` : ""}<span class="chips">${chips.map(x => `<span>${x}</span>`).join("")}</span><button type="button" class="info" data-ui="bestia" data-k="${r.clave}" aria-label="Ver en el bestiario">ⓘ</button></div>
     <p class="intencion"><span>Su turno:</span> ${intencion(c, t)}</p>

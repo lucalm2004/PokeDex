@@ -38,7 +38,7 @@
     infierno: { nombre: "Infierno abrasador", efecto: "dano", tipo: "arcana", stat: "raz", dado: [5, 6], bono: 2, area: true, aplica: ["quemadura", 3, 1], usos: 1, desc: "El aire mismo arde: todos los enemigos se queman." },
     /* Mago · Cronomante */
     ralentizar: { nombre: "Ralentizar", efecto: "debilita", area: true, usos: 1, desc: "El tiempo se espesa: todos los enemigos tienen −2 para atacar." },
-    paradoja: { nombre: "Paradoja", efecto: "aturde", area: true, usos: 1, desc: "Detienes el instante: todos los enemigos pierden su próximo turno." },
+    paradoja: { nombre: "Paradoja", efecto: "dano", tipo: "arcana", stat: "raz", dado: [2, 6], area: true, aplica: ["paralisis", 1, 0.5], usos: 1, desc: "Detienes el instante: daña a todos los enemigos y la mitad pierde su próximo turno." },
 
     /* Brujo · Infernal */
     latigo: { nombre: "Látigo de brasas", efecto: "dano", tipo: "arcana", stat: "elo", dado: [2, 6], tirada: true, aplica: ["quemadura", 2, 0.7], usos: 3, desc: "Un látigo de fuego del abismo. Usa Carisma." },
@@ -49,7 +49,7 @@
 
     /* Clérigo · Luz */
     rayoAlba: { nombre: "Rayo del alba", efecto: "dano", tipo: "sagrada", stat: "tem", dado: [2, 6], tirada: true, noMuerto: 2, aplica: ["ciego", 2, 0.6], usos: 3, desc: "Un haz de amanecer. Doble contra no muertos y puede cegar." },
-    amanecer: { nombre: "Amanecer de Solara", efecto: "cura", a: "grupo", stat: "tem", dado: [3, 6], regen: 3, limpia: true, usos: 1, desc: "La Dama del Alba sonríe: cura, purifica y regenera a todo el grupo." },
+    amanecer: { nombre: "Amanecer de Solara", efecto: "cura", a: "grupo", stat: "tem", dado: [2, 6], regen: 2, limpia: true, usos: 1, desc: "La Dama del Alba sonríe: cura, purifica y regenera a todo el grupo." },
     /* Clérigo · Tempestad */
     trueno: { nombre: "Martillo del trueno", efecto: "dano", tipo: "arcana", stat: "tem", dado: [2, 8], tirada: true, aplica: ["paralisis", 1, 0.4], usos: 3, desc: "Un martillo de relámpago que puede paralizar." },
     iraCielos: { nombre: "Ira de los cielos", efecto: "dano", tipo: "arcana", stat: "tem", dado: [4, 8], area: true, aplica: ["paralisis", 1, 0.6], usos: 1, desc: "La tormenta responde a tu plegaria y cae sobre todos los enemigos." },

@@ -10,6 +10,7 @@ const ESCENARIO = (() => {
   /* Pies de cada héroe (x centro, y suelo): tres delante y tres detrás. */
   const HUECOS = [[80, 140], [44, 137], [116, 135], [62, 125], [98, 124], [24, 125]];
   const POS_MASCOTA = [146, 141];
+  const POS_COMPA = [10, 132];
   /* Con varios enemigos se reparten a la derecha (el principal, delante). */
   const POS_RIVALES = [[[196, 137]], [[178, 139], [214, 128]], [[166, 140], [198, 132], [224, 124]]];
   const POS_RIVAL = POS_RIVALES[0][0];
@@ -257,9 +258,18 @@ const ESCENARIO = (() => {
 
     const posRivales = () => POS_RIVALES[Math.min(3, Math.max(1, (vista.rivales || []).length)) - 1];
     function normalizar(obj) { const o = String(obj || "e"); return o === "e" ? "e0" : o; }
+    /* Delante: huecos 0–2; detrás: 3–5. */
+    function huecosHeroes() {
+      const hs = vista.heroes || [], libresDel = [0, 1, 2], libresDet = [3, 4, 5], out = [];
+      hs.forEach((h, i) => { if (h.fila !== "detras") out[i] = libresDel.length ? libresDel.shift() : libresDet.shift(); });
+      hs.forEach((h, i) => { if (h.fila === "detras") out[i] = libresDet.length ? libresDet.shift() : libresDel.shift(); });
+      return out.map(k => HUECOS[k] || HUECOS[0]);
+    }
     function posicion(obj) {
       const o = normalizar(obj);
       if (o === "m") return POS_MASCOTA;
+      if (o === "c") return POS_COMPA;
+      if (o[0] === "h") return huecosHeroes()[+o.slice(1)] || HUECOS[0];
       if (o[0] === "e") return posRivales()[+o.slice(1)] || POS_RIVAL;
       return HUECOS[+o.slice(1)] || HUECOS[0];
     }
@@ -457,10 +467,12 @@ const ESCENARIO = (() => {
       if (vista.niebla) pintarNiebla(ahora, vista.niebla * 0.55);
       const actores = [];
       const marcha = (!!vista.marcha || efectos.some(e => e.tipo === "viaje")) && !reducido;
+      const huecosH = huecosHeroes();
       vista.heroes.forEach((h, i) => {
-        const [fx, fy] = HUECOS[i] || HUECOS[0];
+        const [fx, fy] = huecosH[i] || HUECOS[0];
         actores.push({ id: "h" + i, h, fx, fy, i });
       });
+      if (vista.companero) actores.push({ id: "c", rival: { tipo: "pnj", clave: vista.companero.clave }, compa: true, fx: POS_COMPA[0], fy: POS_COMPA[1] });
       if (vista.mascota && hayMascota(vista.mascota)) actores.push({ id: "m", mascota: vista.mascota, fx: POS_MASCOTA[0], fy: POS_MASCOTA[1] });
       const pr = posRivales();
       (vista.rivales || []).forEach((rv, k) => { if (rv && pr[k]) actores.push({ id: "e" + k, k, rival: rv, fx: pr[k][0], fy: pr[k][1] }); });
@@ -527,7 +539,9 @@ const ESCENARIO = (() => {
           if (r.tipo === "enemigo" && !r.silueta) sombraSuelo(a.fx, a.fy, Math.max(18, (v.ancho * v.k) * 0.8));
           b.globalAlpha = alfa;
           if (Math.abs(dx) > 8 && !blanco) { b.globalAlpha = alfa * 0.25; b.drawImage(v.normal, ix - Math.sign(dx) * 6, iy, v.w * v.k, v.h * v.k); b.globalAlpha = alfa; }
+          if (a.compa) { b.save(); b.translate(ix * 2 + v.w * v.k, 0); b.scale(-1, 1); }
           b.drawImage(blanco ? v.blanco : r.silueta ? v.oscuro : r.petrificado || r.congelado ? v.piedra : v.normal, ix, iy, v.w * v.k, v.h * v.k);
+          if (a.compa) b.restore();
           b.globalAlpha = 1;
           const cima = iy + (v.cima * v.k);
           marcas[a.id] = r.derrotado ? null : { alto: (v.pie * v.k) - (v.cima * v.k), x0: a.fx - (v.ancho * v.k) / 2, x1: a.fx + (v.ancho * v.k) / 2, y0: cima, y1: a.fy, cx: a.fx };
@@ -810,5 +824,11 @@ const ESCENARIO = (() => {
     return true;
   }
 
-  return { W, H, HUECOS, crear, dibujarDado, retrato, retratoRival, icono, hayIcono: k => !!(tabla("ICONOS_HD") || {})[k], limpiarCache() { cacheFondo.clear(); cacheSprite.clear(); cacheIcono.clear(); } };
+  /* Precalienta en los ratos libres el arte que va a hacer falta (fondos y rivales del acto) para que no haya tirones. */
+  function precalentar(lista) {
+    const cola = lista.slice(), ric = window.requestIdleCallback || (f => setTimeout(() => f({ timeRemaining: () => 8 }), 60));
+    const paso = dl => { while (cola.length && dl.timeRemaining() > 4) { const [t, k] = cola.shift(); try { if (t === "fondo") fondo(k); else if (t === "heroe") spriteHeroe(k); else spriteRival(t, k); } catch (e) {} } if (cola.length) ric(paso); };
+    ric(paso);
+  }
+  return { W, H, HUECOS, crear, precalentar, dibujarDado, retrato, retratoRival, icono, hayIcono: k => !!(tabla("ICONOS_HD") || {})[k], limpiarCache() { cacheFondo.clear(); cacheSprite.clear(); cacheIcono.clear(); } };
 })();
