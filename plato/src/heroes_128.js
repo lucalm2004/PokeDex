@@ -101,13 +101,29 @@
     copia() { const o = new Capa128(this.w, this.h); o.m = this.m.slice(); return o; }
     borrarDesde(fila) { this.m.fill(0, Math.max(0, Math.min(this.h, fila)) * this.w); return this; }
     borrarHasta(fila) { this.m.fill(0, 0, Math.max(0, Math.min(this.h, fila)) * this.w); return this; }
+    on(x, y) {
+      x = Math.round(x); y = Math.round(y);
+      if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.m[y * this.w + x] = 1;
+      return this;
+    }
     disco(x, y, r) {
-      const r2 = r * r + 0.15;
-      for (let j = Math.floor(y - r); j <= Math.ceil(y + r); j++)
-        for (let i = Math.floor(x - r); i <= Math.ceil(x + r); i++) {
-          const dx = i - x, dy = j - y;
-          if (dx * dx + dy * dy <= r2) this.on(i, j);
-        }
+      const r2 = r * r + 0.15, w = this.w, m = this.m;
+      const j0 = Math.max(0, Math.floor(y - r)), j1 = Math.min(this.h - 1, Math.ceil(y + r));
+      const i0 = Math.max(0, Math.floor(x - r)), i1 = Math.min(w - 1, Math.ceil(x + r));
+      for (let j = j0; j <= j1; j++) {
+        const dy = j - y, o = j * w;
+        for (let i = i0; i <= i1; i++) { const dx = i - x; if (dx * dx + dy * dy <= r2) m[o + i] = 1; }
+      }
+      return this;
+    }
+    ell(cx, cy, rx, ry = rx) {
+      const w = this.w, m = this.m, ax = rx + 0.25, ay = ry + 0.25;
+      const j0 = Math.max(0, Math.floor(cy - ry)), j1 = Math.min(this.h - 1, Math.ceil(cy + ry));
+      const i0 = Math.max(0, Math.floor(cx - rx)), i1 = Math.min(w - 1, Math.ceil(cx + rx));
+      for (let j = j0; j <= j1; j++) {
+        const dy = (j - cy) / ay, o = j * w;
+        for (let i = i0; i <= i1; i++) { const dx = (i - cx) / ax; if (dx * dx + dy * dy <= 1) m[o + i] = 1; }
+      }
       return this;
     }
     linea(x0, y0, x1, y1, g = 1) {
@@ -167,8 +183,10 @@
         return rej;
       }
       const RR = op.relieve || 4;
-      const d = new Float32Array(w * h);
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * w + x; d[i] = m[i] ? 1e6 : 0; }
+      if (!BUF_D || BUF_D.length !== w * h) { BUF_D = new Float32Array(w * h); BUF_A = new Float32Array(w * h); }
+      const d = BUF_D, A = BUF_A;
+      /* Los búferes se comparten: se limpia la caja con un píxel de margen. */
+      for (let y = Math.max(0, y0 - 1); y <= Math.min(h - 1, y1 + 1); y++) for (let x = Math.max(0, x0 - 1); x <= Math.min(w - 1, x1 + 1); x++) { const i = y * w + x; d[i] = m[i] ? 1e6 : 0; A[i] = 0; }
       const D = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[y * w + x]);
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
         const i = y * w + x;
@@ -180,7 +198,6 @@
         if (!d[i]) continue;
         d[i] = Math.min(d[i], D(x + 1, y) + 1, D(x, y + 1) + 1, D(x + 1, y + 1) + 1.414, D(x - 1, y + 1) + 1.414);
       }
-      const A = new Float32Array(w * h);
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
         const i = y * w + x;
         if (m[i]) { const v = Math.min(d[i], RR) / RR; A[i] = Math.sqrt(1 - (1 - v) * (1 - v)); }
@@ -211,6 +228,7 @@
       return rej;
     }
   }
+  let BUF_D = null, BUF_A = null;
   const capa = () => new Capa128(W, H);
 
   /* ---------- Utilidades de pintura ---------- */
