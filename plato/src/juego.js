@@ -2295,7 +2295,7 @@ function iniciarCombate(sc) {
   if (S.companero && COMPANEROS[S.companero.clave]) orden.push({ t: "c", ini: d(20) + 3 });
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
   c.orden = orden;
-  log(`${rivales.length > 1 ? `¡${rivales.length} enemigos! ` : ""}Iniciativa: ${orden.map(x => `${x.t === "e" ? rivales[x.r].nombre : x.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : S.players[x.i].nombre} ${x.ini}`).join(" · ")}`);
+  log(`${rivales.length > 1 ? `¡${rivales.length} enemigos! ` : ""}Iniciativa: ${orden.map(x => `${x.t === "e" ? rivales[x.r].nombre : x.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : x.t === "c" ? COMPANEROS[S.companero.clave].nombre : (S.players[x.i] || {}).nombre} ${x.ini}`).join(" · ")}`);
   S.players.forEach((p, i) => {
     if (p.raza !== "draconido" || p.alma <= 0) return;
     fx({ tipo: "ataque", actor: "h" + i });
@@ -3322,10 +3322,10 @@ function limitesJuego() {
   const ancho = $("#p-juego").clientWidth;
   const bajo = window.innerHeight < 720;
   const f = S && S.modo === "mapa" && bajo ? 0.235 : S && S.combate && bajo ? 0.26 : 0.3;
-  return [ancho - 12, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
+  return [ancho, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
 }
 function renderJuego() {
-  if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
+  if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego, cubrir: true });
   if (leer("dym-tuto", null) === null && !modal) { escribir("dym-tuto", "1"); setTimeout(() => abrirModal({ tipo: "tuto" }), 300); }
   const enMapa = S.modo === "mapa" && !S.derrota && !S.final;
   /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */

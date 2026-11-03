@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+12&family=Outfit:wght@400;500;600;700;800&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Outfit:wght@400;500;600;700;800&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* Móvil primero: cada pantalla ocupa exactamente el alto visible (100dvh) y la página nunca hace scroll.
    Una sola columna centrada (máx. 540 px). Interfaz moderna y mínima: fondo noche azulada, tarjetas suaves,
@@ -889,91 +889,156 @@ h1, h2, h3 { text-wrap: balance; }
 @media (max-height: 720px) { .juego.modo-mapa .camino { padding: 6px 10px 6px 7px; } .juego.modo-mapa .acampar { padding: 6px 10px; } .juego.modo-mapa .panel { gap: 6px; } }
 
 /* =====================================================================
-   Piel medieval en pixel art: texturas de 36×36 (interfaz.js) en 9 partes,
-   a 2 px por píxel de arte. Madera y hierro para los paneles, losas de piedra
-   para los botones, cuero para los héroes, oro para lo elegido.
+   Piel «app»: interfaz limpia de juego móvil moderno. Noche fría, superficies
+   con cristal y bordes finos, esquinas redondeadas, oro como único acento.
+   El pixel art se queda en el mundo (escenario, retratos, iconos).
    ===================================================================== */
 :root {
-  --bg: #0c0a0d; --bg-2: #15111a;
-  --surface: #1f1612; --surface-2: #2a201a;
-  --line: #4a3628; --line-2: #6b4e36;
-  --text: #f4e8cf; --muted: #cbb894; --faint: #8f7b5e;
-  --accent: #e3a83f; --accent-2: #c4452f; --accent-soft: rgba(227, 168, 63, .16);
-  --gold: #ffd76a; --ok: #8fd462; --ko: #ff6a55;
-  --arcana: #8fb0ff; --apoyo: #6fd6ff;
-  --velo: rgba(8, 5, 4, .8);
-  --radio: 0px;
-  --f: "Pixelify Sans", "Outfit", system-ui, sans-serif;
-  --f-titulo: "Jacquard 12", "Pixelify Sans", serif;
+  --bg: #08090e; --bg-2: #10121b;
+  --surface: #141722; --surface-2: #1c2030; --surface-3: #252a3d;
+  --line: rgba(255, 255, 255, .07); --line-2: rgba(255, 255, 255, .14);
+  --text: #f4f1ea; --muted: #a9abbb; --faint: #6f7386;
+  --accent: #f0b85a; --accent-2: #e08a3c; --accent-soft: rgba(240, 184, 90, .13);
+  --gold: #f5c76b; --ok: #4fd18b; --ko: #ff5f6d;
+  --arcana: #86a8ff; --apoyo: #62d0ff; --fisica: #ff9a5a; --sagrada: #ffd76a; --cura: #4fd18b;
+  --velo: rgba(4, 5, 9, .72);
+  --radio: 18px; --radio-s: 14px;
+  --sombra: 0 10px 30px -12px rgba(0, 0, 0, .8);
+  --cristal: rgba(16, 18, 28, .78);
+  --f: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-titulo: "Cinzel", "Outfit", serif;
 }
-body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rendering: pixelated; font-size: 14px; -webkit-font-smoothing: none; }
-
-/* Todo cuadrado: en pixel art no hay curvas de ordenador. Lo redondo de verdad se recupera abajo. */
-.app *, .modal, .modal *, .precision *, .tirada, .tirada *, .aviso, .festejo, .anuncio { border-radius: 0 !important; }
-.nodo, .runa, .anillo, .anillo-obj, .nota-r, .luz, .grieta, .punto, .dedo, .blanco, .impacto, .golpe-linea, .votos, .chip-jugador canvas, .pista .golpe-linea { border-radius: 50% !important; }
-
-/* Marcos: un mixin hecho a mano con border-image (sin cambiar el tamaño de nada). */
-.panel, .modal, .prec-caja, .mapa, .selector, .aviso, .festejo, .anuncio, .tarjeta, .tirada .t-res,
-.opcion, .boton, .icono, .camino, .acampar, .talento-op, .suceso-btn, .riv, .chip-jugador, .sel-dif, .lado, .secuencia i,
-.heroe, .cerrar, .objeto, .hab-nueva, .chip-heroe, .chips span, .intencion, .energia i, .panel .texto, .sello, .tendero, .lista-habs li, .mochila li {
-  border: 0 solid transparent; border-image-slice: 6 fill; border-image-width: 12px; border-image-repeat: round; image-rendering: pixelated;
-  box-shadow: none !important; background: none;
+body {
+  background: radial-gradient(140% 70% at 50% -10%, #1a1d2e 0%, var(--bg) 60%) fixed, var(--bg);
+  font-size: 14.5px; -webkit-font-smoothing: antialiased;
 }
-.panel, .modal, .prec-caja, .mapa, .selector, .aviso, .festejo, .anuncio, .tarjeta, .tirada .t-res, .objeto, .hab-nueva, .tendero { border-image-source: var(--px-panel); }
-.opcion, .boton.sec, .icono, .camino, .acampar, .talento-op, .riv, .chip-jugador, .lado, .secuencia i, .cerrar, .sel-dif, .lista-habs li, .mochila li { border-image-source: var(--px-boton); }
-.boton:not(.sec) { border-image-source: var(--px-oro); color: #fff3d6; text-shadow: 0 2px 0 #3a0a10; }
-.heroe { border-image-source: var(--px-carta); }
-.chip-heroe, .chips span, .intencion, .energia i, .sello { border-image-source: var(--px-chip); border-image-slice: 3 fill; border-image-width: 6px; }
-.panel .texto { border-image-source: var(--px-pergamino); border-image-width: 8px; border-image-slice: 4 fill; color: #3b2814; padding: 8px 11px; font-size: 14px; }
-.panel .texto b, .panel .texto strong { color: #6a1a12; }
-.precision .prec-caja { padding: 16px 16px 14px; }
-.modal { padding: 18px 16px; }
 
-/* Pulsado y elegido. */
-.opcion:active:not(:disabled), .boton.sec:active:not(:disabled), .icono:active, .camino:active:not(:disabled), .acampar:active:not(:disabled), .talento-op:active:not(:disabled), .lado:active, .chip-jugador:active:not(:disabled), .cerrar:active { border-image-source: var(--px-botonOn); transform: translateY(1px); }
-.heroe.activo, .camino.visto, .rivales.varios .riv.sel, .chip-jugador.sel, .opcion[data-votado], .camino.votado, .secuencia i.ok, .nodo-t.cogido { border-image-source: var(--px-sel); }
-.sel-dif button { border-image: none; }
-.sel-dif button.sel, .sel-dif button[aria-pressed="true"] { border: 0 solid transparent; border-image: var(--px-sel) 6 fill / 12px round; }
-.secuencia i.mal { border-image-source: var(--px-oro); }
-.riv.actua { border-image-source: var(--px-oro); }
-.suceso-btn { border-image-source: var(--px-sel); animation: latido 1.6s ease-in-out infinite; }
-.equipo-btn { border: 0 solid transparent; border-image: var(--px-oro) 6 fill / 12px round; box-shadow: none !important; background: none; color: #fff3d6; }
-.equipo-btn small { color: #f6d9a6; }
+/* Tipografía: Cinzel para títulos (fantasía elegante), Outfit para todo lo demás. */
+.logo { font-family: var(--f-titulo); font-weight: 700; letter-spacing: .02em; font-size: clamp(30px, 9.5vw, 44px);
+  background: linear-gradient(180deg, #fff6df, #f0b85a 70%, #c97a2c); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 18px rgba(240, 184, 90, .25)); }
+.logo span { background: none; -webkit-text-fill-color: currentColor; color: #f4f1ea; opacity: .55; font-weight: 600; }
+.panel h2, .modal h2, .sel-titulo h2, .cabecera h2, .prec-tit { font-family: var(--f-titulo); font-weight: 700; letter-spacing: .01em; }
+.panel h2, .modal h2 { font-size: 20px; line-height: 1.15; color: var(--text); }
+.festejo p, .anuncio b { font-family: var(--f-titulo); font-weight: 700; }
+.barra-titulo > span:last-child { font-family: var(--f-titulo); font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: .01em; }
+.etiqueta { color: var(--faint); }
 
-/* El escenario lleva un marco de hierro por fuera, sin tocar su tamaño. */
-.escenario canvas { border: 0 solid transparent; border-image: var(--px-panel) 6 / 12px / 6px round; box-shadow: none !important; }
+/* Superficies */
+.panel, .tarjeta, .mapa, .selector, .tendero, .objeto, .hab-nueva { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); border-radius: var(--radio); }
+.modal { background: linear-gradient(180deg, #1a1e2c, var(--surface) 120px); box-shadow: inset 0 0 0 1px var(--line-2), 0 -20px 60px -10px #000; border-radius: 26px 26px 20px 20px; padding: 22px 18px 18px; }
+.modal::before { content: ""; position: absolute; left: 50%; top: 8px; width: 38px; height: 4px; margin-left: -19px; border-radius: 4px; background: var(--line-2); }
+.capa { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.cerrar { width: 34px; height: 34px; top: 14px; right: 14px; border-radius: 50%; background: var(--surface-3); color: var(--muted); }
+.panel .texto { color: #d9d6cf; font-size: 14.5px; line-height: 1.5; }
+.panel .texto b, .panel .texto strong { color: var(--gold); }
 
-/* Tipografía pixelada; títulos con letra gótica de píxeles. */
-.logo { font-family: var(--f-titulo); font-weight: 400; letter-spacing: .01em; }
-.panel h2, .modal h2, .festejo p, .anuncio b, .sel-titulo h2, .cabecera h2 { font-family: var(--f-titulo); font-weight: 400; letter-spacing: .01em; }
-.panel h2, .modal h2 { font-size: 26px; line-height: 1; color: var(--gold); text-shadow: 0 2px 0 #2a1408; }
-.festejo p { font-size: 40px; }
-.prec-tit { font-family: var(--f-titulo); font-weight: 400; font-size: 26px; line-height: 1; color: var(--gold); }
-.barra-titulo > span:last-child { font-family: var(--f-titulo); font-weight: 400; font-size: 21px; color: var(--gold); }
+/* Botones */
+.boton { border-radius: 16px; color: #1c1206; font-weight: 700; letter-spacing: .01em;
+  background: linear-gradient(180deg, #ffd88a, #f0b85a 45%, #dc8a3a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 10px 24px -12px rgba(240, 160, 70, .9); }
+.boton.sec { color: var(--text); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.boton.grande { padding: 16px 18px; font-size: 16.5px; }
+.icono { width: 42px; height: 42px; border-radius: 50%; background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 1px var(--line-2); backdrop-filter: blur(6px); }
+.icono canvas { width: 24px !important; height: 24px !important; }
+.botones-inicio { gap: 10px; }
 
-/* Barras de vida, maná y PX en bloques. */
-.barra-alma, .barra-pm, .barra-xp, .barra-rival { border-radius: 0 !important; background: #0d0907; box-shadow: 0 0 0 1px #000, inset 0 1px 0 #2a1d15; }
-.barra-alma i, .barra-pm i, .barra-xp i, .barra-rival i { border-radius: 0 !important; background-image: linear-gradient(180deg, rgba(255, 255, 255, .28) 0 34%, transparent 34% 70%, rgba(0, 0, 0, .25) 70%); }
-.barra-alma i { background-color: #5fb83a; }
-.heroe.grave .barra-alma i { background-color: #d23b2a; }
-.barra-pm i { background-color: #3a7fd8; }
-.barra-xp i { background-color: #e0b040; }
-.barra-rival i { background-color: #c8352a; }
+/* Opciones y tarjetas pulsables */
+.opcion, .camino, .acampar, .talento-op, .chip-jugador, .lista-habs li, .mochila li, .articulo, .logros li, .premios li, .tuto li, .bestia {
+  border-radius: var(--radio-s); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line);
+}
+.opcion { min-height: 52px; padding: 10px 12px 10px 16px; font-size: 14.5px; }
+.opcion[data-tipo]::before { left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; }
+.opcion .chip { background: rgba(255, 255, 255, .06); color: var(--muted); padding: 3px 8px; border-radius: 999px; font-size: 11.5px; }
+.opcion small { color: var(--faint); font-size: 11.5px; }
+.opcion:active:not(:disabled), .camino:active:not(:disabled), .talento-op:active:not(:disabled) { background: var(--surface-3); transform: scale(.98); }
+.opcion[data-votado], .camino.votado { box-shadow: inset 0 0 0 2px var(--gold); }
 
-/* Iconos de la barra (36×36). */
-.icono { width: 44px; height: 44px; }
-.icono canvas { display: block; }
-.cerrar { display: grid; place-items: center; padding: 0; width: 40px; height: 40px; top: 8px; right: 8px; }
+/* Caminos: tarjetas de lista estilo app con icono en baldosa y flecha */
+.caminos { gap: 8px; }
+.camino { padding: 10px 12px 10px 10px; gap: 2px 12px; }
+.camino canvas, .acampar canvas { padding: 6px; border-radius: 12px; background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px var(--line); }
+.camino b { color: var(--text); font-size: 14.5px; font-weight: 700; }
+.camino .c-txt > span { font-style: normal; color: var(--muted); font-size: 12.5px; }
+.camino .c-txt > span:last-child { color: var(--faint); font-size: 12px; }
+.camino::after { content: "›"; grid-row: 1 / span 3; grid-column: 3; align-self: center; font-size: 22px; line-height: 1; color: var(--faint); }
+.camino:has(.ir)::after { content: none; }
+.camino.visto { background: linear-gradient(180deg, rgba(240, 184, 90, .14), rgba(240, 184, 90, .05)); box-shadow: inset 0 0 0 1.5px var(--accent), 0 10px 26px -14px rgba(240, 184, 90, .7); }
+.camino.visto b { color: var(--gold); }
+.camino .ir { background: linear-gradient(180deg, #ffd88a, #e9a64c); color: #1c1206; padding: 8px 14px; border-radius: 999px; font-weight: 800; font-size: 13px; }
+.camino.jefe b { color: var(--ko); }
+.acampar { background: linear-gradient(180deg, rgba(255, 154, 90, .1), rgba(255, 154, 90, .04)); box-shadow: inset 0 0 0 1px rgba(255, 154, 90, .22); padding: 10px 12px 10px 10px; }
+.acampar b { color: #ffb37a; }
+.camino .clima { border-radius: 999px; }
+.sello, .chips span, .intencion, .chip-heroe, .t-tag, .camino .c-tipo, .rasgo { border-radius: 999px; }
+.intencion { border-radius: 12px; }
 
-/* Detalles que con la piel nueva sobraban o se veían mal. */
-.opcion[data-tipo]::before { top: 8px; bottom: 8px; left: 5px; width: 3px; }
-.heroe .retrato { background: #140d09; }
-.capa { backdrop-filter: none; }
-.nodo { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px var(--line-2); }
-.chip-jugador.sel, .heroe.activo { background: none; }
+/* Héroes del grupo: tarjetas compactas con anillo de vida */
+.grupo { gap: 8px; }
+.heroe { border-radius: var(--radio-s); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); padding: 6px 9px 6px 6px; }
+.heroe.activo { background: linear-gradient(180deg, rgba(240, 184, 90, .16), rgba(240, 184, 90, .05)); box-shadow: inset 0 0 0 1.5px var(--accent), 0 8px 22px -12px rgba(240, 184, 90, .8); }
+.heroe .retrato { border-radius: 10px; background: radial-gradient(circle at 50% 30%, #2b3046, #151824); }
+.heroe-datos strong { font-size: 13px; font-weight: 700; }
+.cifras { font-size: 10.5px; }
+.cifras .nv { color: var(--gold); }
+
+/* Barras: finas y redondeadas con brillo */
+.barra-alma, .barra-pm, .barra-xp, .barra-rival { border-radius: 99px; background: rgba(255, 255, 255, .07); box-shadow: none; overflow: hidden; }
+.barra-alma i, .barra-pm i, .barra-xp i, .barra-rival i { border-radius: 99px; }
+.barra-alma i { background: linear-gradient(90deg, #36b871, #6fe39f); }
+.heroe.grave .barra-alma i { background: linear-gradient(90deg, #d8364a, #ff7a6b); }
+.barra-pm i { background: linear-gradient(90deg, #3b74e6, #78a9ff); }
+.barra-xp i { background: linear-gradient(90deg, #e09a3a, #ffd27a); }
+.barra-rival i { background: linear-gradient(90deg, #e0344a, #ff8a6b); }
+
+/* Escenario: tarjeta con esquinas redondeadas y viñeta suave */
+.escenario canvas { border-radius: var(--radio); box-shadow: 0 0 0 1px var(--line), var(--sombra); }
+
+/* Selección de dificultad y pestañas: control segmentado */
+.sel-dif, .pestanas { border-radius: 14px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px var(--line); padding: 4px; }
+.sel-dif button, .pestanas button { border-radius: 10px; }
+.sel-dif button.sel, .pestanas button[aria-selected="true"] { background: var(--surface-3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2), 0 4px 10px -6px #000; }
+.chip-jugador { border-radius: 999px; }
+.chip-jugador.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.selector { border-radius: var(--radio); }
+.flecha { color: var(--gold); }
+.nodo { box-shadow: inset 0 0 0 1px var(--line-2); background: var(--surface-2); }
+.nodo.libre { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent), 0 0 18px -4px var(--accent); }
+.equipo-btn { border-radius: var(--radio-s); }
+.suceso-btn { border-radius: var(--radio-s); }
 .planes-aliados { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11.5px; color: var(--muted); }
 .planes-aliados b { color: var(--accent); font-weight: 600; }
 .riv .apuntan { font-style: normal; font-size: 11px; font-weight: 700; color: var(--gold); margin-right: 4px; }
+.aviso { border-radius: 16px; background: var(--cristal); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px var(--line-2), var(--sombra); }
+.festejo { border-radius: 22px; background: var(--cristal); backdrop-filter: blur(10px); }
+.anuncio { background: var(--cristal); backdrop-filter: blur(8px); }
+.tirada .t-res { background: var(--cristal); backdrop-filter: blur(10px); border-radius: 18px; }
+.prec-caja { border-radius: 24px; background: var(--cristal); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+
+/* ---------- Pantalla de partida: escenario de borde a borde y hoja inferior ---------- */
+.juego { gap: 10px; padding-bottom: 0; }
+.juego .barra { padding-top: 2px; }
+.juego #caja-juego { margin: 0 -16px; }
+.juego #caja-juego > canvas { border-radius: 0; box-shadow: none; }
+.juego:not(.modo-combate) #caja-juego { position: relative; }
+.juego:not(.modo-combate) #caja-juego::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 28px; pointer-events: none; background: linear-gradient(180deg, transparent, var(--bg)); }
+.juego:not(.modo-combate) #caja-juego::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; z-index: 1; pointer-events: none; background: linear-gradient(0deg, transparent, rgba(8, 9, 14, .7)); }
+.juego:not(.modo-combate) .grupo { margin-top: -30px; position: relative; z-index: 2; }
+.juego:not(.modo-combate) .heroe { background: var(--cristal); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.juego .panel { margin: 0 -16px; border-radius: 26px 26px 0 0; padding: 18px 16px 10px; background: linear-gradient(180deg, #171a26, var(--surface) 80px);
+  box-shadow: inset 0 1px 0 var(--line-2), 0 -14px 40px -16px #000; }
+.juego .panel::before { content: ""; position: sticky; top: -12px; align-self: center; flex: none; width: 36px; height: 4px; margin: -10px 0 -2px; border-radius: 4px; background: var(--line-2); z-index: 2; }
+.juego .mesa { margin: 0 -16px; padding: 8px 16px max(10px, env(safe-area-inset-bottom, 0px)); background: var(--surface); box-shadow: inset 0 1px 0 var(--line); }
+.juego .mesa .icono { width: 38px; height: 38px; }
+.mapa-cab .boton.mini { border-radius: 999px; padding: 7px 14px; }
+
+/* Acciones de combate: rejilla limpia; los extras como píldoras en una fila. */
+.juego .acciones { gap: 8px; }
+.juego .panel .fila-extra { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.juego .panel .fila-extra .energia { flex: 1 0 100%; padding: 0 2px; }
+.juego .panel .fila-extra .opcion { flex: 1 1 0; min-width: 0; min-height: 38px; padding: 6px 10px; border-radius: 999px; grid-template-columns: minmax(0, 1fr) auto; font-size: 12.5px; font-weight: 600; }
+.juego .panel .fila-extra .opcion small { display: none !important; }
+.juego .panel .fila-extra .opcion .chip { padding: 1px 6px; font-size: 10.5px; }
+.juego .panel .fila-extra .equipo-btn { flex: 1 0 100%; }
 
 /* ---------- Compactación en móviles bajos ---------- */
 @media (max-height: 700px) {
@@ -1022,26 +1087,26 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 .juego.modo-combate #caja-juego { position: fixed; inset: 0; z-index: 0; display: block !important; height: auto !important; overflow: hidden; pointer-events: auto; }
 .juego.modo-combate #caja-juego > canvas { border-image: none !important; box-shadow: none !important; position: absolute; left: 0; top: 0; cursor: crosshair; }
 .juego.modo-combate > :not(#caja-juego) { position: relative; z-index: 2; }
-.juego.modo-combate .barra { margin: -10px -16px 0; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 14px; background: linear-gradient(180deg, rgba(6, 4, 8, .82), rgba(6, 4, 8, .45) 70%, transparent); }
+.juego.modo-combate .barra { margin: -10px -16px 0; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 18px; background: linear-gradient(180deg, rgba(8, 9, 14, .85), rgba(8, 9, 14, .4) 70%, transparent); }
 .juego.modo-combate #grupo { margin-top: auto; }
-.juego.modo-combate .panel { flex: none !important; max-height: 54vh; border-image-source: var(--px-hud) !important; padding: 10px 11px; }
+.juego.modo-combate .panel { flex: none !important; max-height: 54vh; padding: 16px 14px 10px; background: rgba(14, 16, 25, .86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .juego.modo-combate .panel .rivales, .juego.modo-combate .panel .rival-info, .juego.modo-combate .panel .intencion { display: none; }
-.juego.modo-combate .mesa { padding: 4px 8px; margin: 0 -6px; background: rgba(6, 4, 8, .6); }
+.juego.modo-combate .mesa { background: rgba(14, 16, 25, .92); }
 .juego.modo-combate .anuncio { top: 70px; }
-.juego.modo-combate .opcion, .juego.modo-combate .boton.sec, .juego.modo-combate .lado { border-image-source: var(--px-boton); }
-.juego.modo-combate .heroe { border-image-source: var(--px-carta); }
+.juego.modo-combate .heroe { background: var(--cristal); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.juego.modo-combate #grupo { margin-bottom: 2px; }
 
 /* Ficha flotante del objetivo (con pico apuntando al enemigo). */
 .hud-obj { position: absolute; left: 0; top: 0; z-index: 3; width: min(220px, 62vw); display: grid; gap: 3px; padding: 7px 9px 8px; pointer-events: auto;
-  border: 0 solid transparent; border-image: var(--px-hud) 6 fill / 12px round; image-rendering: pixelated; transition: transform .18s steps(4); }
-.hud-obj::after { content: ""; position: absolute; left: var(--pico, 50%); bottom: -7px; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(70, 62, 80, .95); border-bottom: 0; }
-.hud-obj.pop { animation: popPx .32s steps(5); }
+  border-radius: 14px; background: var(--cristal); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px var(--line-2), var(--sombra); transition: transform .18s; }
+.hud-obj::after { content: ""; position: absolute; left: var(--pico, 50%); bottom: -7px; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(16, 18, 28, .85); border-bottom: 0; }
+.hud-obj.pop { animation: popPx .32s cubic-bezier(.2,.9,.25,1); }
 .ho-cab { margin: 0; display: flex; align-items: center; gap: 6px; }
 .ho-cab b { flex: 1; min-width: 0; font-size: 13px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ho-cab span { font-size: 10px; color: var(--muted); }
 .ho-info { width: 18px; height: 18px; padding: 0; border: 0; background: rgba(255, 255, 255, .08); color: var(--muted); font-size: 11px; font-weight: 700; }
-.ho-vida { position: relative; display: block; height: 9px; background: #0d0907; box-shadow: 0 0 0 1px #000; }
-.ho-vida i { display: block; height: 100%; background: #c8352a; background-image: linear-gradient(180deg, rgba(255, 255, 255, .3) 0 34%, transparent 34% 70%, rgba(0, 0, 0, .25) 70%); transition: width .3s steps(6); }
+.ho-vida { position: relative; display: block; height: 8px; border-radius: 99px; overflow: hidden; background: rgba(255, 255, 255, .08); }
+.ho-vida i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #e0344a, #ff8a6b); transition: width .3s; }
 .ho-vida em { position: absolute; right: 3px; top: -1px; font-style: normal; font-size: 9px; line-height: 11px; color: #fff; text-shadow: 0 1px 0 #000; }
 .ho-rasgos { margin: 0; display: flex; flex-wrap: wrap; gap: 3px; }
 .ho-rasgos span, .ho-rasgos i { font-style: normal; font-size: 9.5px; padding: 0 5px; line-height: 15px; background: rgba(255, 255, 255, .07); color: var(--muted); }
@@ -1055,19 +1120,20 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 @keyframes caePx { 0% { transform: translate(-50%, -40px); opacity: 0; } 70% { transform: translate(-50%, 4px); opacity: 1; } 100% { transform: translate(-50%, 0); } }
 @keyframes subePx { 0% { transform: translateY(26px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
 @keyframes brillaPx { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
-.modal { animation: popPx .3s steps(5); transform-origin: 50% 80%; }
-.capa:not([hidden]) { animation: fundido .18s steps(3); }
+.modal { animation: subeHoja .32s cubic-bezier(.2, .9, .25, 1); }
+@keyframes subeHoja { from { transform: translateY(40px); opacity: 0; } }
+.capa:not([hidden]) { animation: fundido .18s ease-out; }
 @keyframes fundido { from { opacity: 0; } }
-.aviso:not([hidden]) { animation: caePx .35s steps(6); }
-.precision .prec-caja { animation: popPx .26s steps(5); }
-.panel.entra > * { animation: subePx .32s steps(5) backwards; }
+.aviso:not([hidden]) { animation: caePx .35s cubic-bezier(.2,.9,.25,1); }
+.precision .prec-caja { animation: popPx .26s cubic-bezier(.2,.9,.25,1); }
+.panel.entra > * { animation: subePx .32s cubic-bezier(.2,.9,.25,1) backwards; }
 .panel.entra > *:nth-child(2) { animation-delay: .04s; } .panel.entra > *:nth-child(3) { animation-delay: .08s; }
 .panel.entra > *:nth-child(4) { animation-delay: .12s; } .panel.entra > *:nth-child(5) { animation-delay: .16s; }
-.panel.entra .menu > .opcion, .panel.entra .talentos-op > .talento-op, .panel.entra .caminos > .camino { animation: subePx .3s steps(5) backwards; }
+.panel.entra .menu > .opcion, .panel.entra .talentos-op > .talento-op, .panel.entra .caminos > .camino { animation: subePx .3s cubic-bezier(.2,.9,.25,1) backwards; }
 .panel.entra .menu > .opcion:nth-child(2), .panel.entra .talentos-op > :nth-child(2), .panel.entra .caminos > :nth-child(2) { animation-delay: .05s; }
 .panel.entra .menu > .opcion:nth-child(3), .panel.entra .talentos-op > :nth-child(3), .panel.entra .caminos > :nth-child(3) { animation-delay: .1s; }
 .panel.entra .menu > .opcion:nth-child(4), .panel.entra .caminos > :nth-child(4) { animation-delay: .15s; }
-.heroe.activo { animation: brillaPx 1.2s steps(4) infinite; }
+.heroe.activo { animation: brillaPx 1.2s ease-in-out infinite; }
 .opcion:not(:disabled):hover { filter: brightness(1.12); }
 @media (max-height: 700px) {
   .juego.ver-grafo .mapa { padding: 6px; }
@@ -1079,15 +1145,15 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 
 /* ---------- Línea de turnos con retratos ---------- */
 .hud-turnos { position: absolute; left: 50%; transform: translateX(-50%); z-index: 3; margin: 0; padding: 3px 5px; list-style: none; display: flex; gap: 3px; align-items: center;
-  border: 0 solid transparent; border-image: var(--px-hud) 6 fill / 12px round; image-rendering: pixelated; max-width: calc(100% - 20px); overflow: hidden; }
-.hud-turnos li { width: 26px; height: 26px; display: grid; place-items: center; background: rgba(0, 0, 0, .45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); transition: transform .15s steps(3); }
+  border-radius: 999px; background: var(--cristal); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px var(--line-2); max-width: calc(100% - 20px); overflow: hidden; }
+.hud-turnos li { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: rgba(0, 0, 0, .45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); transition: transform .15s ease-out; }
 .hud-turnos li canvas { width: 22px !important; height: 22px !important; }
 .hud-turnos li.enemigo { box-shadow: inset 0 0 0 1px rgba(255, 106, 85, .55); }
 .hud-turnos li.aliado { box-shadow: inset 0 0 0 1px rgba(143, 212, 98, .45); }
 .hud-turnos li.ahora { transform: translateY(2px) scale(1.18); box-shadow: inset 0 0 0 2px var(--gold), 0 0 10px rgba(255, 215, 106, .6); }
 .hud-turnos li.hecho { opacity: .45; }
 .hud-turnos li.muerto { opacity: .2; filter: grayscale(1); }
-.hud-turnos li.ronda { width: auto; padding: 0 4px; font-size: 10px; font-weight: 700; color: var(--gold); background: none; box-shadow: none; }
+.hud-turnos li.ronda { width: auto; border-radius: 0; padding: 0 4px; font-size: 10px; font-weight: 700; color: var(--gold); background: none; box-shadow: none; }
 
 /* ---------- Festejos con rayos de luz ---------- */
 .festejo .rayos { position: absolute; left: 50%; top: 50%; width: 320px; height: 320px; margin: -160px 0 0 -160px; z-index: -1; pointer-events: none;
@@ -1110,6 +1176,17 @@ body { background: var(--px-losas) 0 0 / 72px 72px repeat, var(--bg); image-rend
 .t-tag.esp { background: rgba(255, 106, 85, .16); color: #ff9a85; }
 .arbol-sub { margin-top: 6px; display: grid; gap: 4px; }
 .sub-nodos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.juego.modo-combate #caja-juego { margin: 0 !important; }
+.ho-info { border-radius: 50%; }
+.juego.modo-panel .panel { border-radius: 26px 26px 0 0; }
+/* Ajustes finos de la piel app */
+.barra-titulo > span:last-child { font-family: var(--f); font-weight: 700; font-size: 16px; letter-spacing: 0; }
+.camino > canvas, .acampar > canvas { width: 34px !important; height: 34px !important; padding: 5px; box-sizing: border-box; border-radius: 12px !important; }
+.juego .panel .fila-extra .opcion { height: auto; min-height: 36px; padding: 7px 12px; }
+.juego .panel .fila-extra .opcion > span:first-child { white-space: nowrap; }
+.juego .panel .fila-extra .energia span { font-size: 10px; }
+.juego .panel .fila-extra .energia i { height: 5px; border-radius: 99px; }
+.juego.modo-panel .grupo, .juego.modo-mapa.ver-grafo .grupo { margin-top: 0 !important; }
 
 </style>
 </head>
@@ -33654,6 +33731,18 @@ const ESCENARIO = (() => {
       if (buf.height !== H * SS) buf.height = H * SS;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
+      if (opciones.cubrir) {
+        /* De borde a borde: llena el ancho; si falta alto se recortan los lados (como mucho un 20 %). */
+        const sc = Math.min(Math.max(aw / W, Math.max(ah, 40) / H), aw / (W * 0.8));
+        offX = Math.max(0, (W - aw / sc) / 2);
+        escCss = sc;
+        const pw = Math.round(aw * dpr), ph = Math.round(H * sc * dpr);
+        if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
+        const cw = aw + "px", ch = Math.round(H * sc) + "px";
+        if (lienzo.style.width !== cw || lienzo.style.height !== ch) { lienzo.style.width = cw; lienzo.style.height = ch; }
+        if (caja.style.height !== ch) caja.style.height = ch;
+        return;
+      }
       let s = Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H);
       /* Un múltiplo entero queda más nítido: se usa si apenas encoge la imagen. */
       const ent = Math.floor(s);
@@ -37446,7 +37535,7 @@ function iniciarCombate(sc) {
   if (S.companero && COMPANEROS[S.companero.clave]) orden.push({ t: "c", ini: d(20) + 3 });
   orden.sort((a, b) => b.ini - a.ini || (a.t === "h" ? -1 : 1));
   c.orden = orden;
-  log(`${rivales.length > 1 ? `¡${rivales.length} enemigos! ` : ""}Iniciativa: ${orden.map(x => `${x.t === "e" ? rivales[x.r].nombre : x.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : S.players[x.i].nombre} ${x.ini}`).join(" · ")}`);
+  log(`${rivales.length > 1 ? `¡${rivales.length} enemigos! ` : ""}Iniciativa: ${orden.map(x => `${x.t === "e" ? rivales[x.r].nombre : x.t === "m" ? MASCOTAS_DEF[S.mascota.clave].nombre : x.t === "c" ? COMPANEROS[S.companero.clave].nombre : (S.players[x.i] || {}).nombre} ${x.ini}`).join(" · ")}`);
   S.players.forEach((p, i) => {
     if (p.raza !== "draconido" || p.alma <= 0) return;
     fx({ tipo: "ataque", actor: "h" + i });
@@ -38473,10 +38562,10 @@ function limitesJuego() {
   const ancho = $("#p-juego").clientWidth;
   const bajo = window.innerHeight < 720;
   const f = S && S.modo === "mapa" && bajo ? 0.235 : S && S.combate && bajo ? 0.26 : 0.3;
-  return [ancho - 12, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
+  return [ancho, Math.max(108, Math.min(window.innerHeight * f, (ancho * 9) / 16))];
 }
 function renderJuego() {
-  if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego });
+  if (!escJuego) escJuego = ESCENARIO.crear($("#lienzo"), { observar: $("#p-juego"), limites: limitesJuego, cubrir: true });
   if (leer("dym-tuto", null) === null && !modal) { escribir("dym-tuto", "1"); setTimeout(() => abrirModal({ tipo: "tuto" }), 300); }
   const enMapa = S.modo === "mapa" && !S.derrota && !S.final;
   /* Tienda, aprender habilidad y reparto de botín necesitan sitio: se oculta el escenario. */

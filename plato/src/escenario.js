@@ -239,6 +239,18 @@ const ESCENARIO = (() => {
       if (buf.height !== H * SS) buf.height = H * SS;
       const [aw, ah] = opciones.limites ? opciones.limites() : [caja.clientWidth, caja.clientHeight || 1e9];
       if (!aw || aw < 40) return;
+      if (opciones.cubrir) {
+        /* De borde a borde: llena el ancho; si falta alto se recortan los lados (como mucho un 20 %). */
+        const sc = Math.min(Math.max(aw / W, Math.max(ah, 40) / H), aw / (W * 0.8));
+        offX = Math.max(0, (W - aw / sc) / 2);
+        escCss = sc;
+        const pw = Math.round(aw * dpr), ph = Math.round(H * sc * dpr);
+        if (lienzo.width !== pw || lienzo.height !== ph) { lienzo.width = pw; lienzo.height = ph; }
+        const cw = aw + "px", ch = Math.round(H * sc) + "px";
+        if (lienzo.style.width !== cw || lienzo.style.height !== ch) { lienzo.style.width = cw; lienzo.style.height = ch; }
+        if (caja.style.height !== ch) caja.style.height = ch;
+        return;
+      }
       let s = Math.min((aw * dpr) / W, (Math.max(ah, 40) * dpr) / H);
       /* Un múltiplo entero queda más nítido: se usa si apenas encoge la imagen. */
       const ent = Math.floor(s);
