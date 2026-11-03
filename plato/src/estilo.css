@@ -1176,3 +1176,36 @@ body {
 .juego .panel .fila-extra .energia span { font-size: 10px; }
 .juego .panel .fila-extra .energia i { height: 5px; border-radius: 99px; }
 .juego.modo-panel .grupo, .juego.modo-mapa.ver-grafo .grupo { margin-top: 0 !important; }
+
+/* ---------- Portada cinematográfica ---------- */
+.pantalla.inicio { position: relative; justify-content: space-between; gap: 0; padding-bottom: max(14px, env(safe-area-inset-bottom, 0px)); }
+.inicio #caja-inicio { position: fixed; inset: 0; z-index: 0; display: block; overflow: hidden; }
+.inicio #caja-inicio > canvas { position: absolute; left: 0; top: 0; border-radius: 0; box-shadow: none; }
+.inicio::before { content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8, 9, 14, .92) 0%, rgba(8, 9, 14, .35) 22%, transparent 34%, transparent 52%, rgba(8, 9, 14, .55) 64%, rgba(8, 9, 14, .96) 86%); }
+.inicio > :not(#caja-inicio) { position: relative; z-index: 2; }
+.inicio .portada { padding-top: 8px; animation: subeHoja .6s cubic-bezier(.2, .9, .25, 1) both; }
+.inicio .logo { font-size: clamp(32px, 10.5vw, 46px); line-height: .95; }
+.inicio .lema { margin-top: 6px; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: rgba(244, 241, 234, .7); }
+.inicio-cap { margin: auto 0 10px; align-self: flex-start; display: grid; gap: 1px; padding: 7px 14px 8px 12px; border-radius: 14px;
+  background: rgba(8, 9, 14, .55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--line); opacity: 0; }
+.inicio-cap small { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.inicio-cap b { font-family: var(--f-titulo); font-size: 16px; font-weight: 700; color: var(--text); }
+.inicio-cap.ver { animation: capPortada 5.8s ease-out forwards; }
+@keyframes capPortada { 0% { opacity: 0; transform: translateX(-16px); } 8% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
+.inicio-menu { display: grid; gap: 12px; padding: 14px; border-radius: 26px; background: rgba(16, 18, 28, .72);
+  backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); box-shadow: inset 0 0 0 1px var(--line-2), 0 24px 60px -20px #000;
+  animation: subeHoja .55s .12s cubic-bezier(.2, .9, .25, 1) both; }
+.inicio-pasos { display: flex; justify-content: center; gap: 5px; }
+.inicio-pasos i { width: 6px; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .2); transition: width .3s, background .3s; }
+.inicio-pasos i.ahora { width: 20px; background: var(--accent); }
+.inicio .botones-inicio { gap: 8px; }
+.inicio-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.inicio-fila .boton { padding: 13px 8px; font-size: 14px; border-radius: 14px; background: rgba(255, 255, 255, .07); }
+.inicio .altar { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; padding: 6px; background: none; color: var(--muted) !important; font-size: 13px; font-weight: 500; }
+.inicio .altar span { color: var(--gold); font-weight: 800; }
+.inicio .altar b { color: var(--gold); }
+.inicio .altar em { font-style: normal; color: var(--faint); padding-left: 8px; margin-left: 2px; border-left: 1px solid var(--line-2); }
+.inicio .nota { margin: 0; font-size: 11.5px; }
+.inicio .intro { display: none; }
+@media (max-height: 640px) { .inicio .lema { display: block; } .inicio-cap { display: none; } }

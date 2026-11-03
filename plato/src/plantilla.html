@@ -9,13 +9,16 @@
 <!--CUERPO-->
 <main class="app">
 <section id="p-inicio" class="pantalla inicio" hidden>
+  <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="Escenas de la aventura"></canvas></div>
   <header class="portada">
     <h1 class="logo">Dados <span>y</span> Mazmorras</h1>
     <p class="lema">Rol de fantasía por turnos · 1 a 4 héroes</p>
   </header>
-  <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="La taberna del Grifo Tuerto"></canvas></div>
-  <p class="intro">Bosque, mazmorra, castillo y volcán. Cuatro jefes os esperan entre vosotros y el tesoro del dragón.</p>
-  <div class="botones-inicio" id="inicio-botones"></div>
+  <p class="inicio-cap" id="inicio-cap" aria-live="off"><small></small><b></b></p>
+  <nav class="inicio-menu" aria-label="Menú principal">
+    <div class="inicio-pasos" id="inicio-pasos" aria-hidden="true"></div>
+    <div class="botones-inicio" id="inicio-botones"></div>
+  </nav>
 </section>
 
 <section id="p-unirse" class="pantalla unirse" hidden>

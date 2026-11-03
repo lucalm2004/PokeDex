@@ -3217,18 +3217,94 @@ function render() {
   if (vista === "juego") renderJuego();
   if (modal) renderModal();
 }
+/* ---------- Portada: cortos de 5–6 s de la aventura detrás de un menú flotante ---------- */
+const CORTOS = [
+  { cap: ["Acto I", "Emboscada en el bosque"], fondo: "bosque", rivales: [["goblin", 14], ["lobo", 16]], guion: [
+    [400, { tipo: "ataque", actor: "h0", objetivo: "e0", corre: true }],
+    [760, { tipo: "golpe", objetivo: "e0" }, { tipo: "numero", objetivo: "e0", texto: "-8" }, { r: 0, hp: 6 }],
+    [1500, { tipo: "conjuro", actor: "h1" }],
+    [1800, { tipo: "proyectil", actor: "h1", objetivo: "e1", forma: "orbe", elem: "fuego", rampa: "fuego" }],
+    [2250, { tipo: "golpe", objetivo: "e1", fuerte: true }, { tipo: "numero", objetivo: "e1", texto: "-16", fila: 1 }, { r: 1, hp: 0 }, { tipo: "muerte", objetivo: "e1" }],
+    [3000, { tipo: "ataque", actor: "e0", objetivo: "h0", corre: true }],
+    [3380, { tipo: "golpe", objetivo: "h0" }, { tipo: "numero", objetivo: "h0", texto: "-4" }],
+    [3900, { tipo: "ataque", actor: "h3" }],
+    [4050, { tipo: "proyectil", actor: "h3", objetivo: "e0", forma: "flecha" }],
+    [4400, { tipo: "golpe", objetivo: "e0", fuerte: true }, { tipo: "numero", objetivo: "e0", texto: "CRITICO!", fila: 1 }, { r: 0, hp: 0 }, { tipo: "muerte", objetivo: "e0" }],
+    [4900, { tipo: "salto", actor: "h*" }]] },
+  { cap: ["Elige camino", "Cada cruce, una historia"], cenital: { acto: 0, n: 3, semilla: 11, carteles: ["combate", "tesoro", "misterio"] }, guion: [
+    [1700, { sel: 0 }], [2300, { sel: 2 }], [2900, { sel: 1 }],
+    [3500, { tipo: "ir", rama: 1, dur: 1600 }]] },
+  { cap: ["Acto II", "La Mazmorra"], fondo: "cripta", rivales: [["esqueleto", 18], ["esqueleto", 18]], guion: [
+    [400, { tipo: "ataque", actor: "e0", objetivo: "h0", corre: true }],
+    [780, { tipo: "golpe", objetivo: "h0", fuerte: true }, { tipo: "numero", objetivo: "h0", texto: "-7" }],
+    [1500, { tipo: "conjuro", actor: "h2" }],
+    [1750, { tipo: "cura", objetivo: "h0" }, { tipo: "numero", objetivo: "h0", texto: "+9", color: "hoja" }],
+    [2500, { tipo: "ataque", actor: "h0", objetivo: "e0", corre: true }],
+    [2880, { tipo: "tajo", objetivo: "e0" }, { tipo: "golpe", objetivo: "e0", fuerte: true }, { tipo: "numero", objetivo: "e0", texto: "-18", fila: 1 }, { r: 0, hp: 0 }, { tipo: "muerte", objetivo: "e0" }],
+    [3600, { tipo: "conjuro", actor: "h1" }],
+    [3850, { tipo: "proyectil", actor: "h1", objetivo: "e1", forma: "orbe", elem: "hielo", rampa: "mar" }],
+    [4300, { tipo: "golpe", objetivo: "e1", fuerte: true }, { tipo: "numero", objetivo: "e1", texto: "-15" }, { r: 1, hp: 0 }, { tipo: "muerte", objetivo: "e1" }],
+    [4800, { tipo: "salto", actor: "h*" }]] },
+  { cap: ["Acto IV", "Ignárax, el dragón"], fondo: "guarida", rivales: [["dragon", 120]], guion: [
+    [500, { tipo: "ataque", actor: "e0", objetivo: "h0" }, { tipo: "destello", color: "rgba(255,120,40,0.35)" }],
+    [900, { tipo: "golpe", objetivo: "h0", fuerte: true }, { tipo: "golpe", objetivo: "h1" }, { tipo: "numero", objetivo: "h0", texto: "-12" }, { tipo: "numero", objetivo: "h1", texto: "-9" }],
+    [1700, { tipo: "ataque", actor: "h0", objetivo: "e0", corre: true }],
+    [2080, { tipo: "golpe", objetivo: "e0" }, { tipo: "numero", objetivo: "e0", texto: "-14" }, { r: 0, hp: 96 }],
+    [2700, { tipo: "conjuro", actor: "h1" }, { tipo: "conjuro", actor: "h2" }],
+    [3000, { tipo: "proyectil", actor: "h1", objetivo: "e0", forma: "orbe", elem: "rayo", rampa: "magia" }, { tipo: "proyectil", actor: "h2", objetivo: "e0", forma: "luz", rampa: "bronce" }],
+    [3450, { tipo: "golpe", objetivo: "e0", fuerte: true }, { tipo: "destello" }, { tipo: "numero", objetivo: "e0", texto: "CRITICO -31", fila: 1 }, { r: 0, hp: 65 }],
+    [4200, { tipo: "ataque", actor: "h3" }],
+    [4350, { tipo: "proyectil", actor: "h3", objetivo: "e0", forma: "flecha" }],
+    [4700, { tipo: "golpe", objetivo: "e0" }, { tipo: "numero", objetivo: "e0", texto: "-11" }, { r: 0, hp: 54 }]] },
+  { cap: ["En marcha", "Bosque, mazmorra, castillo y volcán"], fondo: "camino", marcha: true, guion: [[100, { tipo: "viaje", dur: 5200 }]] }
+];
+const HEROES_PORTADA = [
+  ...EJEMPLO,
+  { nombre: "Sylva", raza: "elfo", clase: "explorador", look: { piel: "clara", pelo: "negro", tela: "verde", peinado: "largo" } }
+];
+const portada = { k: -1, timers: [], rivales: [] };
+function pararPortada() { portada.timers.forEach(clearTimeout); portada.timers = []; }
+function siguienteCorto() {
+  pararPortada();
+  if (vista !== "inicio" || !escInicio) return;
+  portada.k = (portada.k + 1) % CORTOS.length;
+  const C = CORTOS[portada.k];
+  const heroes = HEROES_PORTADA.map((h, i) => ({ look: lookDe(nuevoHeroe(h)), fila: i >= 3 ? "detras" : "delante" }));
+  portada.rivales = (C.rivales || []).map(([clave, hp]) => ({ tipo: "enemigo", clave, hp, max: hp }));
+  const cen = C.cenital ? Object.assign({ sel: null }, C.cenital) : null;
+  escInicio.mostrar({ fondo: C.fondo || "camino", cenital: cen, heroes, rivales: portada.rivales.slice(), activo: -1, marcha: !!C.marcha, niebla: 0, clima: null, hora: portada.k === 3 ? 0.9 : 0.2, ruta: 0 });
+  const cap = $("#inicio-cap");
+  cap.querySelector("small").textContent = C.cap[0]; cap.querySelector("b").textContent = C.cap[1];
+  cap.classList.remove("ver"); void cap.offsetWidth; cap.classList.add("ver");
+  $("#inicio-pasos").innerHTML = CORTOS.map((_, i) => `<i class="${i === portada.k ? "ahora" : ""}"></i>`).join("");
+  for (const [t, ...pasos] of C.guion) portada.timers.push(setTimeout(() => {
+    if (vista !== "inicio") return pararPortada();
+    for (const e of pasos) {
+      if ("sel" in e) { escInicio.mostrar({ cenital: Object.assign({}, escInicio.vista.cenital, { sel: e.sel }) }); continue; }
+      if ("r" in e) { portada.rivales[e.r] = Object.assign({}, portada.rivales[e.r], { hp: e.hp, derrotado: e.hp <= 0 }); escInicio.mostrar({ rivales: portada.rivales.slice() }); continue; }
+      const x = Object.assign({}, e);
+      if (typeof x.rampa === "string") x.rampa = RP[x.rampa];
+      if (typeof x.color === "string" && RP[x.color]) x.color = RP[x.color][4];
+      escInicio.efecto(x);
+    }
+  }, t));
+  portada.timers.push(setTimeout(siguienteCorto, 5800));
+}
 function renderInicio() {
-  if (!escInicio) escInicio = ESCENARIO.crear($("#lienzo-inicio"), { observar: $("#p-inicio"), limites: () => [$("#caja-inicio").clientWidth - 12, Math.max(110, window.innerHeight * 0.3)] });
+  if (!escInicio) escInicio = ESCENARIO.crear($("#lienzo-inicio"), { observar: $("#p-inicio") });
+  escInicio.completa(Math.round(window.innerHeight * 0.6));
   escInicio.ajustar();
-  escInicio.mostrar({ fondo: "taberna", heroes: EJEMPLO.map(h => ({ look: lookDe(nuevoHeroe(h)) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: -1 });
+  if (!portada.timers.length) { portada.k = -1; siguienteCorto(); }
   const guardada = cargar();
   const online = red.listo ? !!(red.db && red.room) : true;
   $("#inicio-botones").innerHTML = `
     ${guardada ? `<button type="button" class="boton grande" data-ui="cargar">Continuar partida</button>` : ""}
     <button type="button" class="boton grande${guardada ? " sec" : ""}" data-ui="crear" ${online ? "" : "disabled"}>Crear partida en línea</button>
-    <button type="button" class="boton grande sec" data-ui="ir-unirse" ${online ? "" : "disabled"}>Unirse con un código</button>
-    <button type="button" class="boton grande sec" data-ui="local">Jugar en este móvil</button>
-    <button type="button" class="boton sec altar" data-ui="altar">Altar de runas · ${meta().runas} ᚱ · ${Object.keys(meta().logros).length}/${Object.keys(LOGROS).length} logros</button>
+    <div class="inicio-fila">
+      <button type="button" class="boton sec" data-ui="ir-unirse" ${online ? "" : "disabled"}>Unirse con código</button>
+      <button type="button" class="boton sec" data-ui="local">Jugar en este móvil</button>
+    </div>
+    <button type="button" class="altar" data-ui="altar"><span>ᚱ</span> Altar de runas <b>${meta().runas}</b><em>${Object.keys(meta().logros).length}/${Object.keys(LOGROS).length} logros</em></button>
     ${online ? "" : `<p class="nota">Para jugar en línea, abre el juego en claude.ai con tu cuenta.</p>`}`;
 }
 function renderUnirse() {

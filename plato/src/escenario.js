@@ -592,6 +592,16 @@ const ESCENARIO = (() => {
       b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, buf.width, buf.height);
       b.setTransform(SS, 0, 0, SS, 0, 0); b.imageSmoothingEnabled = false;
       if (vista.cenital && tabla("CENITAL")) {
+        /* A pantalla completa, el cruce se prolonga arriba y abajo en espejo, oscurecido. */
+        const Ec = (ext.arriba || ext.abajo) && escenaCen(vista.cenital);
+        if (Ec) {
+          b.save(); b.translate(0, ext.arriba); b.scale(1, -1); b.drawImage(Ec.cv, 0, 0); b.restore();
+          b.save(); b.translate(0, ext.arriba + 2 * H); b.scale(1, -1); b.drawImage(Ec.cv, 0, 0); b.restore();
+          const g1 = b.createLinearGradient(0, 0, 0, ext.arriba); g1.addColorStop(0, "rgba(8,9,14,0.92)"); g1.addColorStop(1, "rgba(8,9,14,0.25)");
+          b.fillStyle = g1; b.fillRect(0, 0, W, ext.arriba);
+          const g2 = b.createLinearGradient(0, ext.arriba + H, 0, ext.arriba + H + ext.abajo); g2.addColorStop(0, "rgba(8,9,14,0.3)"); g2.addColorStop(1, "rgba(8,9,14,0.95)");
+          b.fillStyle = g2; b.fillRect(0, ext.arriba + H, W, ext.abajo);
+        }
         b.save(); b.translate(0, ext.arriba);
         const ok = pintarCenital(ahora, vista.cenital);
         if (!reducido) pintarParticulas(ahora);

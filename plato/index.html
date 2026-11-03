@@ -1188,19 +1188,55 @@ body {
 .juego .panel .fila-extra .energia i { height: 5px; border-radius: 99px; }
 .juego.modo-panel .grupo, .juego.modo-mapa.ver-grafo .grupo { margin-top: 0 !important; }
 
+/* ---------- Portada cinematográfica ---------- */
+.pantalla.inicio { position: relative; justify-content: space-between; gap: 0; padding-bottom: max(14px, env(safe-area-inset-bottom, 0px)); }
+.inicio #caja-inicio { position: fixed; inset: 0; z-index: 0; display: block; overflow: hidden; }
+.inicio #caja-inicio > canvas { position: absolute; left: 0; top: 0; border-radius: 0; box-shadow: none; }
+.inicio::before { content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8, 9, 14, .92) 0%, rgba(8, 9, 14, .35) 22%, transparent 34%, transparent 52%, rgba(8, 9, 14, .55) 64%, rgba(8, 9, 14, .96) 86%); }
+.inicio > :not(#caja-inicio) { position: relative; z-index: 2; }
+.inicio .portada { padding-top: 8px; animation: subeHoja .6s cubic-bezier(.2, .9, .25, 1) both; }
+.inicio .logo { font-size: clamp(32px, 10.5vw, 46px); line-height: .95; }
+.inicio .lema { margin-top: 6px; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: rgba(244, 241, 234, .7); }
+.inicio-cap { margin: auto 0 10px; align-self: flex-start; display: grid; gap: 1px; padding: 7px 14px 8px 12px; border-radius: 14px;
+  background: rgba(8, 9, 14, .55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--line); opacity: 0; }
+.inicio-cap small { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.inicio-cap b { font-family: var(--f-titulo); font-size: 16px; font-weight: 700; color: var(--text); }
+.inicio-cap.ver { animation: capPortada 5.8s ease-out forwards; }
+@keyframes capPortada { 0% { opacity: 0; transform: translateX(-16px); } 8% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
+.inicio-menu { display: grid; gap: 12px; padding: 14px; border-radius: 26px; background: rgba(16, 18, 28, .72);
+  backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); box-shadow: inset 0 0 0 1px var(--line-2), 0 24px 60px -20px #000;
+  animation: subeHoja .55s .12s cubic-bezier(.2, .9, .25, 1) both; }
+.inicio-pasos { display: flex; justify-content: center; gap: 5px; }
+.inicio-pasos i { width: 6px; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .2); transition: width .3s, background .3s; }
+.inicio-pasos i.ahora { width: 20px; background: var(--accent); }
+.inicio .botones-inicio { gap: 8px; }
+.inicio-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.inicio-fila .boton { padding: 13px 8px; font-size: 14px; border-radius: 14px; background: rgba(255, 255, 255, .07); }
+.inicio .altar { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; padding: 6px; background: none; color: var(--muted) !important; font-size: 13px; font-weight: 500; }
+.inicio .altar span { color: var(--gold); font-weight: 800; }
+.inicio .altar b { color: var(--gold); }
+.inicio .altar em { font-style: normal; color: var(--faint); padding-left: 8px; margin-left: 2px; border-left: 1px solid var(--line-2); }
+.inicio .nota { margin: 0; font-size: 11.5px; }
+.inicio .intro { display: none; }
+@media (max-height: 640px) { .inicio .lema { display: block; } .inicio-cap { display: none; } }
+
 </style>
 </head>
 <body>
 
 <main class="app">
 <section id="p-inicio" class="pantalla inicio" hidden>
+  <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="Escenas de la aventura"></canvas></div>
   <header class="portada">
     <h1 class="logo">Dados <span>y</span> Mazmorras</h1>
     <p class="lema">Rol de fantasía por turnos · 1 a 4 héroes</p>
   </header>
-  <div class="escenario" id="caja-inicio"><canvas id="lienzo-inicio" aria-label="La taberna del Grifo Tuerto"></canvas></div>
-  <p class="intro">Bosque, mazmorra, castillo y volcán. Cuatro jefes os esperan entre vosotros y el tesoro del dragón.</p>
-  <div class="botones-inicio" id="inicio-botones"></div>
+  <p class="inicio-cap" id="inicio-cap" aria-live="off"><small></small><b></b></p>
+  <nav class="inicio-menu" aria-label="Menú principal">
+    <div class="inicio-pasos" id="inicio-pasos" aria-hidden="true"></div>
+    <div class="botones-inicio" id="inicio-botones"></div>
+  </nav>
 </section>
 
 <section id="p-unirse" class="pantalla unirse" hidden>
@@ -34084,6 +34120,16 @@ const ESCENARIO = (() => {
       b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, buf.width, buf.height);
       b.setTransform(SS, 0, 0, SS, 0, 0); b.imageSmoothingEnabled = false;
       if (vista.cenital && tabla("CENITAL")) {
+        /* A pantalla completa, el cruce se prolonga arriba y abajo en espejo, oscurecido. */
+        const Ec = (ext.arriba || ext.abajo) && escenaCen(vista.cenital);
+        if (Ec) {
+          b.save(); b.translate(0, ext.arriba); b.scale(1, -1); b.drawImage(Ec.cv, 0, 0); b.restore();
+          b.save(); b.translate(0, ext.arriba + 2 * H); b.scale(1, -1); b.drawImage(Ec.cv, 0, 0); b.restore();
+          const g1 = b.createLinearGradient(0, 0, 0, ext.arriba); g1.addColorStop(0, "rgba(8,9,14,0.92)"); g1.addColorStop(1, "rgba(8,9,14,0.25)");
+          b.fillStyle = g1; b.fillRect(0, 0, W, ext.arriba);
+          const g2 = b.createLinearGradient(0, ext.arriba + H, 0, ext.arriba + H + ext.abajo); g2.addColorStop(0, "rgba(8,9,14,0.3)"); g2.addColorStop(1, "rgba(8,9,14,0.95)");
+          b.fillStyle = g2; b.fillRect(0, ext.arriba + H, W, ext.abajo);
+        }
         b.save(); b.translate(0, ext.arriba);
         const ok = pintarCenital(ahora, vista.cenital);
         if (!reducido) pintarParticulas(ahora);
@@ -38457,18 +38503,94 @@ function render() {
   if (vista === "juego") renderJuego();
   if (modal) renderModal();
 }
+/* ---------- Portada: cortos de 5–6 s de la aventura detrás de un menú flotante ---------- */
+const CORTOS = [
+  { cap: ["Acto I", "Emboscada en el bosque"], fondo: "bosque", rivales: [["goblin", 14], ["lobo", 16]], guion: [
+    [400, { tipo: "ataque", actor: "h0", objetivo: "e0", corre: true }],
+    [760, { tipo: "golpe", objetivo: "e0" }, { tipo: "numero", objetivo: "e0", texto: "-8" }, { r: 0, hp: 6 }],
+    [1500, { tipo: "conjuro", actor: "h1" }],
+    [1800, { tipo: "proyectil", actor: "h1", objetivo: "e1", forma: "orbe", elem: "fuego", rampa: "fuego" }],
+    [2250, { tipo: "golpe", objetivo: "e1", fuerte: true }, { tipo: "numero", objetivo: "e1", texto: "-16", fila: 1 }, { r: 1, hp: 0 }, { tipo: "muerte", objetivo: "e1" }],
+    [3000, { tipo: "ataque", actor: "e0", objetivo: "h0", corre: true }],
+    [3380, { tipo: "golpe", objetivo: "h0" }, { tipo: "numero", objetivo: "h0", texto: "-4" }],
+    [3900, { tipo: "ataque", actor: "h3" }],
+    [4050, { tipo: "proyectil", actor: "h3", objetivo: "e0", forma: "flecha" }],
+    [4400, { tipo: "golpe", objetivo: "e0", fuerte: true }, { tipo: "numero", objetivo: "e0", texto: "CRITICO!", fila: 1 }, { r: 0, hp: 0 }, { tipo: "muerte", objetivo: "e0" }],
+    [4900, { tipo: "salto", actor: "h*" }]] },
+  { cap: ["Elige camino", "Cada cruce, una historia"], cenital: { acto: 0, n: 3, semilla: 11, carteles: ["combate", "tesoro", "misterio"] }, guion: [
+    [1700, { sel: 0 }], [2300, { sel: 2 }], [2900, { sel: 1 }],
+    [3500, { tipo: "ir", rama: 1, dur: 1600 }]] },
+  { cap: ["Acto II", "La Mazmorra"], fondo: "cripta", rivales: [["esqueleto", 18], ["esqueleto", 18]], guion: [
+    [400, { tipo: "ataque", actor: "e0", objetivo: "h0", corre: true }],
+    [780, { tipo: "golpe", objetivo: "h0", fuerte: true }, { tipo: "numero", objetivo: "h0", texto: "-7" }],
+    [1500, { tipo: "conjuro", actor: "h2" }],
+    [1750, { tipo: "cura", objetivo: "h0" }, { tipo: "numero", objetivo: "h0", texto: "+9", color: "hoja" }],
+    [2500, { tipo: "ataque", actor: "h0", objetivo: "e0", corre: true }],
+    [2880, { tipo: "tajo", objetivo: "e0" }, { tipo: "golpe", objetivo: "e0", fuerte: true }, { tipo: "numero", objetivo: "e0", texto: "-18", fila: 1 }, { r: 0, hp: 0 }, { tipo: "muerte", objetivo: "e0" }],
+    [3600, { tipo: "conjuro", actor: "h1" }],
+    [3850, { tipo: "proyectil", actor: "h1", objetivo: "e1", forma: "orbe", elem: "hielo", rampa: "mar" }],
+    [4300, { tipo: "golpe", objetivo: "e1", fuerte: true }, { tipo: "numero", objetivo: "e1", texto: "-15" }, { r: 1, hp: 0 }, { tipo: "muerte", objetivo: "e1" }],
+    [4800, { tipo: "salto", actor: "h*" }]] },
+  { cap: ["Acto IV", "Ignárax, el dragón"], fondo: "guarida", rivales: [["dragon", 120]], guion: [
+    [500, { tipo: "ataque", actor: "e0", objetivo: "h0" }, { tipo: "destello", color: "rgba(255,120,40,0.35)" }],
+    [900, { tipo: "golpe", objetivo: "h0", fuerte: true }, { tipo: "golpe", objetivo: "h1" }, { tipo: "numero", objetivo: "h0", texto: "-12" }, { tipo: "numero", objetivo: "h1", texto: "-9" }],
+    [1700, { tipo: "ataque", actor: "h0", objetivo: "e0", corre: true }],
+    [2080, { tipo: "golpe", objetivo: "e0" }, { tipo: "numero", objetivo: "e0", texto: "-14" }, { r: 0, hp: 96 }],
+    [2700, { tipo: "conjuro", actor: "h1" }, { tipo: "conjuro", actor: "h2" }],
+    [3000, { tipo: "proyectil", actor: "h1", objetivo: "e0", forma: "orbe", elem: "rayo", rampa: "magia" }, { tipo: "proyectil", actor: "h2", objetivo: "e0", forma: "luz", rampa: "bronce" }],
+    [3450, { tipo: "golpe", objetivo: "e0", fuerte: true }, { tipo: "destello" }, { tipo: "numero", objetivo: "e0", texto: "CRITICO -31", fila: 1 }, { r: 0, hp: 65 }],
+    [4200, { tipo: "ataque", actor: "h3" }],
+    [4350, { tipo: "proyectil", actor: "h3", objetivo: "e0", forma: "flecha" }],
+    [4700, { tipo: "golpe", objetivo: "e0" }, { tipo: "numero", objetivo: "e0", texto: "-11" }, { r: 0, hp: 54 }]] },
+  { cap: ["En marcha", "Bosque, mazmorra, castillo y volcán"], fondo: "camino", marcha: true, guion: [[100, { tipo: "viaje", dur: 5200 }]] }
+];
+const HEROES_PORTADA = [
+  ...EJEMPLO,
+  { nombre: "Sylva", raza: "elfo", clase: "explorador", look: { piel: "clara", pelo: "negro", tela: "verde", peinado: "largo" } }
+];
+const portada = { k: -1, timers: [], rivales: [] };
+function pararPortada() { portada.timers.forEach(clearTimeout); portada.timers = []; }
+function siguienteCorto() {
+  pararPortada();
+  if (vista !== "inicio" || !escInicio) return;
+  portada.k = (portada.k + 1) % CORTOS.length;
+  const C = CORTOS[portada.k];
+  const heroes = HEROES_PORTADA.map((h, i) => ({ look: lookDe(nuevoHeroe(h)), fila: i >= 3 ? "detras" : "delante" }));
+  portada.rivales = (C.rivales || []).map(([clave, hp]) => ({ tipo: "enemigo", clave, hp, max: hp }));
+  const cen = C.cenital ? Object.assign({ sel: null }, C.cenital) : null;
+  escInicio.mostrar({ fondo: C.fondo || "camino", cenital: cen, heroes, rivales: portada.rivales.slice(), activo: -1, marcha: !!C.marcha, niebla: 0, clima: null, hora: portada.k === 3 ? 0.9 : 0.2, ruta: 0 });
+  const cap = $("#inicio-cap");
+  cap.querySelector("small").textContent = C.cap[0]; cap.querySelector("b").textContent = C.cap[1];
+  cap.classList.remove("ver"); void cap.offsetWidth; cap.classList.add("ver");
+  $("#inicio-pasos").innerHTML = CORTOS.map((_, i) => `<i class="${i === portada.k ? "ahora" : ""}"></i>`).join("");
+  for (const [t, ...pasos] of C.guion) portada.timers.push(setTimeout(() => {
+    if (vista !== "inicio") return pararPortada();
+    for (const e of pasos) {
+      if ("sel" in e) { escInicio.mostrar({ cenital: Object.assign({}, escInicio.vista.cenital, { sel: e.sel }) }); continue; }
+      if ("r" in e) { portada.rivales[e.r] = Object.assign({}, portada.rivales[e.r], { hp: e.hp, derrotado: e.hp <= 0 }); escInicio.mostrar({ rivales: portada.rivales.slice() }); continue; }
+      const x = Object.assign({}, e);
+      if (typeof x.rampa === "string") x.rampa = RP[x.rampa];
+      if (typeof x.color === "string" && RP[x.color]) x.color = RP[x.color][4];
+      escInicio.efecto(x);
+    }
+  }, t));
+  portada.timers.push(setTimeout(siguienteCorto, 5800));
+}
 function renderInicio() {
-  if (!escInicio) escInicio = ESCENARIO.crear($("#lienzo-inicio"), { observar: $("#p-inicio"), limites: () => [$("#caja-inicio").clientWidth - 12, Math.max(110, window.innerHeight * 0.3)] });
+  if (!escInicio) escInicio = ESCENARIO.crear($("#lienzo-inicio"), { observar: $("#p-inicio") });
+  escInicio.completa(Math.round(window.innerHeight * 0.6));
   escInicio.ajustar();
-  escInicio.mostrar({ fondo: "taberna", heroes: EJEMPLO.map(h => ({ look: lookDe(nuevoHeroe(h)) })), rival: { tipo: "pnj", clave: "tabernero" }, activo: -1 });
+  if (!portada.timers.length) { portada.k = -1; siguienteCorto(); }
   const guardada = cargar();
   const online = red.listo ? !!(red.db && red.room) : true;
   $("#inicio-botones").innerHTML = `
     ${guardada ? `<button type="button" class="boton grande" data-ui="cargar">Continuar partida</button>` : ""}
     <button type="button" class="boton grande${guardada ? " sec" : ""}" data-ui="crear" ${online ? "" : "disabled"}>Crear partida en línea</button>
-    <button type="button" class="boton grande sec" data-ui="ir-unirse" ${online ? "" : "disabled"}>Unirse con un código</button>
-    <button type="button" class="boton grande sec" data-ui="local">Jugar en este móvil</button>
-    <button type="button" class="boton sec altar" data-ui="altar">Altar de runas · ${meta().runas} ᚱ · ${Object.keys(meta().logros).length}/${Object.keys(LOGROS).length} logros</button>
+    <div class="inicio-fila">
+      <button type="button" class="boton sec" data-ui="ir-unirse" ${online ? "" : "disabled"}>Unirse con código</button>
+      <button type="button" class="boton sec" data-ui="local">Jugar en este móvil</button>
+    </div>
+    <button type="button" class="altar" data-ui="altar"><span>ᚱ</span> Altar de runas <b>${meta().runas}</b><em>${Object.keys(meta().logros).length}/${Object.keys(LOGROS).length} logros</em></button>
     ${online ? "" : `<p class="nota">Para jugar en línea, abre el juego en claude.ai con tu cuenta.</p>`}`;
 }
 function renderUnirse() {
